@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: booking-core-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: bookingcore
+      MYSQL_USER: bookingcore
+      MYSQL_PASSWORD: bookingcore
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "23306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: booking-core-redis
+    restart: unless-stopped
+    ports:
+      - "26379:6379"
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: booking-core-backend
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/bookingcore?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USERNAME: bookingcore
+      DB_PASSWORD: bookingcore
+      JWT_SECRET: 0123456789abcdef0123456789abcdef
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "28080:8080"
+    depends_on:
+      - mysql
+      - redis
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: /api
+    container_name: booking-core-frontend
+    restart: unless-stopped
+    ports:
+      - "25173:80"
+    depends_on:
+      - backend
+
+volumes:
+  redis-data:
+  mysql-data:

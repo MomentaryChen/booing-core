@@ -1,0 +1,18 @@
+spring:
+  profiles:
+    default: dev
+
+server:
+  port: 28080
+
+# Platform defaults (command center boundaries, optional /api/system protection)
+booking:
+  platform:
+    time-zone: Asia/Taipei
+    # Leave empty for local dev: no token required on /api/system/**
+    system-admin-token: ""
+    # When jwt.secret is non-blank: JWT auth is enforced for /api/merchant/** and /api/system/**.
+    # Static system-admin-token still works for /api/system/** when JWT mode is on.
+    jwt:
+      secret: ${JWT_SECRET:}
+      expiration-seconds: ${JWT_EXPIRATION_SECONDS:86400}

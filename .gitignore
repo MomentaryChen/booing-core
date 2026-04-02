@@ -1,0 +1,53 @@
+# OS / Editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Archives
+*.zip
+*.tar
+*.gz
+*.7z
+
+# Java / Maven (backend)
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Node / pnpm / Vite (frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+frontend/.pnpm-store/
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# QA / Playwright
+qa-agent/node_modules/
+qa-agent/playwright-report/
+qa-agent/test-results/
+
+# Docker / Infra local state
+infra/.env
+infra/.env.*
+infra/*.local.yml
+
+# Runtime temp files
+tmp/
+temp/

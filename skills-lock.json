@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "fix": {
+      "source": "facebook/react",
+      "sourceType": "github",
+      "computedHash": "fbcb5ad8268f75d363f1cc1a1f1b52f35996695d384550b1c2562cdf9c70c881"
+    },
+    "flow": {
+      "source": "facebook/react",
+      "sourceType": "github",
+      "computedHash": "0058628576ac08ac0aa0f612a97f09c1551b505b279726aadd1a6cd72fb47989"
+    },
+    "springboot-patterns": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "15fe91e6fdca18ec9a4322c78010fc6788ee2df0f6828b5fd07a05c869c8b79f"
+    },
+    "springboot-security": {
+      "source": "affaan-m/everything-claude-code",
+      "sourceType": "github",
+      "computedHash": "974845d84516b792408e7e9bccfe861e3b678423f90eea9b479d219c36f64cdd"
+    }
+  }
+}

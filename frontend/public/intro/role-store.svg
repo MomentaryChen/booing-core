@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-labelledby="t">
+  <title id="t">Public storefront</title>
+  <defs>
+    <linearGradient id="p" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff7ed"/>
+      <stop offset="100%" style="stop-color:#ffedd5"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#p)"/>
+  <rect x="100" y="80" width="440" height="240" rx="20" fill="#fff" stroke="#fdba74" stroke-width="2"/>
+  <rect x="100" y="80" width="440" height="72" rx="20" fill="#ea580c" opacity="0.85"/>
+  <rect x="130" y="108" width="120" height="18" rx="6" fill="#fff" opacity="0.95"/>
+  <rect x="130" y="180" width="200" height="14" rx="5" fill="#9a3412" opacity="0.45"/>
+  <rect x="130" y="206" width="280" height="10" rx="4" fill="#64748b" opacity="0.3"/>
+  <rect x="130" y="230" width="260" height="10" rx="4" fill="#64748b" opacity="0.2"/>
+  <rect x="130" y="260" width="100" height="36" rx="10" fill="#f97316"/>
+  <rect x="420" y="170" width="90" height="90" rx="12" fill="#fed7aa" stroke="#fb923c"/>
+  <rect x="440" y="200" width="50" height="8" rx="3" fill="#c2410c" opacity="0.4"/>
+  <rect x="440" y="218" width="40" height="6" rx="2" fill="#9a3412" opacity="0.3"/>
+</svg>

@@ -1,0 +1,21 @@
+---
+description: 每次 commit 後必經 reviewer-agent 審查
+globs: "**/*"
+alwaysApply: true
+---
+
+# Commit and Delivery Review Gate
+
+所有程式碼提交後，或 frontend/backend 任務完成時，必須先經過 `reviewer-agent` 一次完整審查，才可進入後續合併或發佈流程。
+
+## 必須執行
+
+- 每次完成一個 commit，立即觸發 `reviewer-agent`。
+- 每次 frontend 或 backend agent 回報「已完成」前，必須先觸發 `reviewer-agent`。
+- reviewer 需以缺陷與風險為主：功能正確性、回歸風險、安全性、多租戶隔離、狀態轉移合法性、測試覆蓋。
+- 若 reviewer 有未解決的 high/critical 問題，不可視為可合併狀態。
+
+## 回報格式
+
+- 先列 Findings（依嚴重度排序），再附上 open questions / residual risks。
+- 若無問題，仍需明確註記「No critical findings」與尚未覆蓋的測試風險。

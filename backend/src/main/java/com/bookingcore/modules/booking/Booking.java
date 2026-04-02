@@ -1,0 +1,110 @@
+package com.bookingcore.modules.booking;
+
+import com.bookingcore.modules.merchant.Merchant;
+import com.bookingcore.modules.service.ServiceItem;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "bookings")
+public class Booking {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "merchant_id", nullable = false)
+  @JsonIgnore
+  private Merchant merchant;
+
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "service_item_id", nullable = false)
+  private ServiceItem serviceItem;
+
+  @Column(nullable = false)
+  private LocalDateTime startAt;
+
+  @Column(nullable = false)
+  private LocalDateTime endAt;
+
+  @Column(nullable = false, length = 120)
+  private String customerName;
+
+  @Column(nullable = false, length = 120)
+  private String customerContact;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  private BookingStatus status = BookingStatus.PENDING;
+
+  public Long getId() {
+    return id;
+  }
+
+  public Merchant getMerchant() {
+    return merchant;
+  }
+
+  public void setMerchant(Merchant merchant) {
+    this.merchant = merchant;
+  }
+
+  public ServiceItem getServiceItem() {
+    return serviceItem;
+  }
+
+  public void setServiceItem(ServiceItem serviceItem) {
+    this.serviceItem = serviceItem;
+  }
+
+  public LocalDateTime getStartAt() {
+    return startAt;
+  }
+
+  public void setStartAt(LocalDateTime startAt) {
+    this.startAt = startAt;
+  }
+
+  public LocalDateTime getEndAt() {
+    return endAt;
+  }
+
+  public void setEndAt(LocalDateTime endAt) {
+    this.endAt = endAt;
+  }
+
+  public String getCustomerName() {
+    return customerName;
+  }
+
+  public void setCustomerName(String customerName) {
+    this.customerName = customerName;
+  }
+
+  public String getCustomerContact() {
+    return customerContact;
+  }
+
+  public void setCustomerContact(String customerContact) {
+    this.customerContact = customerContact;
+  }
+
+  public BookingStatus getStatus() {
+    return status;
+  }
+
+  public void setStatus(BookingStatus status) {
+    this.status = status;
+  }
+}

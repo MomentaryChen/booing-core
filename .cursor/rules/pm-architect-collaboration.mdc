@@ -1,0 +1,14 @@
+---
+description: PM planning must include architect discussion
+alwaysApply: true
+---
+
+# PM + Architect Joint Planning
+
+- Whenever a request asks `pm-agent` to do planning, the workflow must include `architect-agent` in the same planning round.
+- PM output must capture architect feedback on:
+  - resource/slot abstraction fit
+  - strategy extensibility (avoid hardcoded business flow)
+  - state transition legality
+  - multi-tenant isolation impact
+- If architect input is missing, the planning result is incomplete and should not be treated as final.

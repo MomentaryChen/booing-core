@@ -1,0 +1,4 @@
+target/
+
+# Maven wrapper binary (optional, usually not required)
+.mvn/wrapper/maven-wrapper.jar
