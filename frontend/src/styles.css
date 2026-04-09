@@ -501,14 +501,55 @@ select:focus {
 }
 
 .home-intro__hero-lead {
-  margin: 0;
+  margin: 0 0 10px;
   color: var(--muted);
   line-height: 1.55;
   max-width: 65ch;
   font-size: 0.98rem;
 }
 
-.home-intro__values {
+.home-intro__hero-proof {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #475569;
+  max-width: 65ch;
+  line-height: 1.45;
+}
+
+.home-intro__intents {
+  margin: 0;
+}
+
+.home-intro__intents-title {
+  margin: 0 0 10px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.home-intro__intent-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-intro__intent-chip {
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+.home-intro__benefits {
   padding: 18px 20px 20px;
   border-radius: 16px;
   border: 1px solid var(--border);
@@ -516,27 +557,154 @@ select:focus {
   box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
 }
 
-.home-intro__values-title {
+.home-intro__benefits-title {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.home-intro__benefit-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .home-intro__benefit-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.home-intro__benefit-card {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.home-intro__benefit-card-text {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.home-intro__included {
+  margin: 0;
+  padding: 18px 20px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.home-intro__included-title {
   margin: 0 0 12px;
   font-size: 1.05rem;
   font-weight: 700;
   color: #1e293b;
 }
 
-.home-intro__value-list {
+.home-intro__included-list {
   margin: 0;
-  padding-left: 1.15rem;
+  padding-left: 1.25rem;
   color: #475569;
   line-height: 1.55;
   font-size: 0.95rem;
 }
 
-.home-intro__value-list li {
+.home-intro__included-list li {
   margin-bottom: 8px;
 }
 
-.home-intro__value-list li:last-child {
+.home-intro__included-list li:last-child {
   margin-bottom: 0;
+}
+
+.home-intro__closing {
+  margin: 0;
+  padding: 22px 20px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 55%);
+  text-align: center;
+}
+
+.home-intro__closing-title {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.home-intro__closing-lead {
+  margin: 0 auto 18px;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #475569;
+  max-width: 48ch;
+}
+
+.home-intro__closing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+}
+
+.home-intro__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.home-intro__cta--primary {
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid transparent;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
+}
+
+.home-intro__cta--primary:hover {
+  background: #2563eb;
+  color: #fff;
+}
+
+.home-intro__cta--primary:focus-visible {
+  outline: 2px solid #1d4ed8;
+  outline-offset: 3px;
+}
+
+.home-intro__cta--secondary {
+  color: #1e40af;
+  background: #fff;
+  border: 1px solid #bfdbfe;
+}
+
+.home-intro__cta--secondary:hover {
+  border-color: #60a5fa;
+  background: #eff6ff;
+}
+
+.home-intro__cta--secondary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-intro__cta {
+    transition: none;
+  }
 }
 
 .home-intro__destinations {
