@@ -466,7 +466,7 @@ select:focus {
 .home-intro {
   display: grid;
   gap: 28px;
-  padding-bottom: 32px;
+  padding-bottom: 36px;
 }
 
 .home-intro__hero {
@@ -495,19 +495,58 @@ select:focus {
 
 .home-intro__hero-copy h1 {
   margin: 0 0 8px;
-  font-size: clamp(1.35rem, 2.5vw, 1.75rem);
+  font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
-.home-intro__hero-copy p {
+.home-intro__hero-lead {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
-  max-width: 62ch;
+  max-width: 65ch;
+  font-size: 0.98rem;
+}
+
+.home-intro__values {
+  padding: 18px 20px 20px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05);
+}
+
+.home-intro__values-title {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.home-intro__value-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #475569;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.home-intro__value-list li {
+  margin-bottom: 8px;
+}
+
+.home-intro__value-list li:last-child {
+  margin-bottom: 0;
+}
+
+.home-intro__destinations {
+  margin: 0;
 }
 
 .home-intro__section-title {
   margin: 0 0 14px;
   font-size: 1.1rem;
+  font-weight: 700;
   color: #334155;
 }
 
@@ -515,6 +554,21 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-intro__grid-item {
+  display: flex;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.home-intro__grid-item > .home-intro__card {
+  flex: 1;
+  min-height: 100%;
 }
 
 .home-intro__card {
@@ -527,12 +581,27 @@ select:focus {
   border: 1px solid var(--border);
   background: var(--panel);
   box-shadow: var(--shadow);
-  transition: transform 0.18s ease, box-shadow 0.2s ease;
+  transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .home-intro__card:hover {
   transform: translateY(-3px);
   box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12);
+}
+
+.home-intro__card:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.home-intro__card--demo {
+  border-style: dashed;
+  border-color: #cbd5e1;
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfc 100%);
+}
+
+.home-intro__card--demo:hover {
+  border-color: #94a3b8;
 }
 
 .home-intro__card-media {
@@ -552,9 +621,35 @@ select:focus {
   padding: 14px 16px 16px;
 }
 
-.home-intro__card-body h3 {
-  margin: 0 0 6px;
+.home-intro__card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.home-intro__card-head h3 {
+  margin: 0;
   font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+.home-intro__badge {
+  flex-shrink: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #0369a1;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  padding: 4px 8px;
+  border-radius: 999px;
+  line-height: 1;
 }
 
 .home-intro__card-body p {
@@ -562,6 +657,79 @@ select:focus {
   font-size: 14px;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.home-intro__loading {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: #f8fafc;
+}
+
+.home-intro__loading-skel {
+  height: 100px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+  background-size: 200% 100%;
+  animation: home-intro-shimmer 1.2s ease-in-out infinite;
+}
+
+.home-intro__loading-text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.home-intro__empty {
+  margin: 0;
+  padding: 18px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+@keyframes home-intro-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-intro__card {
+    transition: border-color 0.2s ease;
+  }
+
+  .home-intro__card:hover {
+    transform: none;
+  }
+
+  .home-intro__loading-skel {
+    animation: none;
+    background: #e2e8f0;
+  }
+}
+
+.home-intro__footer {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.home-intro__footer p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 75ch;
 }
 
 /* Merchant login */
