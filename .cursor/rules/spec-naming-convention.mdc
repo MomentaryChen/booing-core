@@ -1,0 +1,31 @@
+---
+description: 規範 doc/specs 規格文件命名格式
+globs: doc/specs/**/*.md
+alwaysApply: true
+---
+
+# Spec Naming Convention
+
+`doc/specs/` 與 `doc/specs/done/` 下的規格文件，檔名一律使用：
+
+- `YYYY-MM-DD_<kebab-case-topic>.md`
+
+## 活躍 vs 已結案
+
+- **進行中／待結案**：放在 `doc/specs/` **根目錄**。
+- **已結案**：移至 `doc/specs/done/`（檔名不變）。流程見 `spec-done-archive.mdc`。
+
+## Rules
+
+- 必須以日期前綴（`YYYY-MM-DD`）開頭。
+- 日期後使用底線 `_` 連接主題。
+- 主題使用 `kebab-case`（小寫英文與連字號）。
+- 不可使用無日期前綴的檔名（例如 `unified-login-workplan.md`）。
+
+## Examples
+
+- `doc/specs/2026-MM-DD_feature-in-progress.md`（進行中 — 根目錄）
+- `doc/specs/done/2026-04-09_home-intro-page-redesign.md`（已結案）
+- `doc/specs/done/2026-04-09_visual-assets-dashboard-guidelines.md`（已結案）
+- `doc/specs/done/2026-04-02_booking-flow-pm-spec.md`
+

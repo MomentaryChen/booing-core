@@ -29,3 +29,4 @@ description: >-
 
 - Architecture boundaries: `.cursor/rules/booking-rule-engine-architecture.mdc`
 - Product overview: `README.md`
+- **Spec lifecycle:** active specs in `doc/specs/`; when **結案**, archive to `doc/specs/done/` per `.cursor/rules/spec-done-archive.mdc` (update links).

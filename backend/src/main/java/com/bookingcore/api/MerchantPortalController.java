@@ -5,6 +5,9 @@ import com.bookingcore.api.ApiDtos.AvailabilityExceptionSummary;
 import com.bookingcore.api.ApiDtos.BusinessHoursSummary;
 import com.bookingcore.api.ApiDtos.BusinessHoursRequest;
 import com.bookingcore.api.ApiDtos.CreateMerchantRequest;
+import com.bookingcore.api.ApiDtos.PublicRegisterRequest;
+import com.bookingcore.api.ApiDtos.PublicRegisterResponse;
+import com.bookingcore.api.PublicRegisterType;
 import com.bookingcore.api.ApiDtos.CustomizationRequest;
 import com.bookingcore.api.ApiDtos.DynamicFieldSummary;
 import com.bookingcore.api.ApiDtos.DynamicFieldRequest;
@@ -40,9 +43,12 @@ import com.bookingcore.modules.service.ServiceItem;
 import com.bookingcore.modules.service.ServiceItemRepository;
 import com.bookingcore.service.BookingCommandService;
 import com.bookingcore.service.MerchantProvisioningService;
+import com.bookingcore.service.PublicRegistrationService;
+import com.bookingcore.service.PlatformAuditService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.HttpStatus;
@@ -58,6 +64,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/merchant")
+@PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.portal.access')")
 public class MerchantPortalController {
   private final MerchantProfileRepository profileRepository;
   private final ServiceItemRepository serviceItemRepository;
@@ -68,7 +75,9 @@ public class MerchantPortalController {
   private final ResourceItemRepository resourceItemRepository;
   private final AvailabilityExceptionRepository availabilityExceptionRepository;
   private final MerchantProvisioningService merchantProvisioningService;
+  private final PublicRegistrationService publicRegistrationService;
   private final BookingCommandService bookingCommandService;
+  private final PlatformAuditService platformAuditService;
 
   public MerchantPortalController(
       MerchantProfileRepository profileRepository,
@@ -80,7 +89,9 @@ public class MerchantPortalController {
       ResourceItemRepository resourceItemRepository,
       AvailabilityExceptionRepository availabilityExceptionRepository,
       MerchantProvisioningService merchantProvisioningService,
-      BookingCommandService bookingCommandService) {
+      PublicRegistrationService publicRegistrationService,
+      BookingCommandService bookingCommandService,
+      PlatformAuditService platformAuditService) {
     this.profileRepository = profileRepository;
     this.serviceItemRepository = serviceItemRepository;
     this.businessHoursRepository = businessHoursRepository;
@@ -90,7 +101,9 @@ public class MerchantPortalController {
     this.resourceItemRepository = resourceItemRepository;
     this.availabilityExceptionRepository = availabilityExceptionRepository;
     this.merchantProvisioningService = merchantProvisioningService;
+    this.publicRegistrationService = publicRegistrationService;
     this.bookingCommandService = bookingCommandService;
+    this.platformAuditService = platformAuditService;
   }
 
   private void assertMerchantScope(Long merchantId) {
@@ -117,6 +130,7 @@ public class MerchantPortalController {
   }
 
   @PostMapping("/merchants")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.registry.manage')")
   public MerchantSummary createMerchant(@RequestBody @Valid CreateMerchantRequest request) {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     boolean systemAdmin = auth != null
@@ -126,14 +140,21 @@ public class MerchantPortalController {
       throw new ApiException("Forbidden", HttpStatus.FORBIDDEN);
     }
     Merchant merchant = merchantProvisioningService.createMerchant(request);
+    platformAuditService.recordForCurrentUser(
+        "merchant.created",
+        "merchant",
+        merchant.getId(),
+        "name=" + request.name() + " slug=" + request.slug());
     return new MerchantSummary(merchant.getId(), merchant.getName(), merchant.getSlug(), merchant.getActive());
   }
 
   /** Self-service merchant signup from the merchant portal. */
   @PostMapping("/register")
-  public MerchantSummary registerMerchant(@RequestBody @Valid CreateMerchantRequest request) {
-    Merchant merchant = merchantProvisioningService.createMerchant(request);
-    return new MerchantSummary(merchant.getId(), merchant.getName(), merchant.getSlug(), merchant.getActive());
+  @PreAuthorize("permitAll()")
+  public PublicRegisterResponse registerMerchant(@RequestBody @Valid CreateMerchantRequest request) {
+    return publicRegistrationService.register(
+        new PublicRegisterRequest(
+            PublicRegisterType.MERCHANT, request.name(), request.slug(), null, null));
   }
 
   @GetMapping("/{merchantId}/profile")

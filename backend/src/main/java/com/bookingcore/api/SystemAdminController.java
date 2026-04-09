@@ -17,6 +17,7 @@ import com.bookingcore.modules.booking.BookingStatus;
 import com.bookingcore.modules.merchant.Merchant;
 import com.bookingcore.modules.merchant.MerchantRepository;
 import com.bookingcore.service.BookingCommandService;
+import com.bookingcore.service.PlatformAuditService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -30,6 +31,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -49,6 +51,7 @@ public class SystemAdminController {
   private final AuditLogRepository auditLogRepository;
   private final BookingPlatformProperties platformProperties;
   private final BookingCommandService bookingCommandService;
+  private final PlatformAuditService platformAuditService;
 
   public SystemAdminController(
       MerchantRepository merchantRepository,
@@ -57,7 +60,8 @@ public class SystemAdminController {
       SystemSettingsRepository systemSettingsRepository,
       AuditLogRepository auditLogRepository,
       BookingPlatformProperties platformProperties,
-      BookingCommandService bookingCommandService) {
+      BookingCommandService bookingCommandService,
+      PlatformAuditService platformAuditService) {
     this.merchantRepository = merchantRepository;
     this.bookingRepository = bookingRepository;
     this.domainTemplateRepository = domainTemplateRepository;
@@ -65,9 +69,11 @@ public class SystemAdminController {
     this.auditLogRepository = auditLogRepository;
     this.platformProperties = platformProperties;
     this.bookingCommandService = bookingCommandService;
+    this.platformAuditService = platformAuditService;
   }
 
   @GetMapping("/overview")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.dashboard.read')")
   public Map<String, Object> adminOverview() {
     long activeMerchants = merchantRepository.findAll().stream().filter(Merchant::getActive).count();
     return Map.of(
@@ -78,50 +84,60 @@ public class SystemAdminController {
   }
 
   @GetMapping("/merchants")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.dashboard.read')")
   public List<Merchant> adminMerchants() {
     return merchantRepository.findAll();
   }
 
   @PutMapping("/merchants/{merchantId}/status")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.registry.manage')")
   public Merchant adminUpdateMerchantStatus(@PathVariable Long merchantId, @RequestBody MerchantStatusRequest request) {
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     merchant.setActive(request.active());
     Merchant saved = merchantRepository.save(merchant);
-    createAuditLog("merchant.status.updated", "merchant", merchantId, "active=" + request.active());
+    platformAuditService.recordForCurrentUser(
+        "merchant.status.updated", "merchant", merchantId, "active=" + request.active());
     return saved;
   }
 
   @PutMapping("/merchants/{merchantId}/service-limit")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.settings.write')")
   public Merchant adminUpdateServiceLimit(@PathVariable Long merchantId, @RequestBody MerchantLimitRequest request) {
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     merchant.setServiceLimit(request.serviceLimit());
     Merchant saved = merchantRepository.save(merchant);
-    createAuditLog("merchant.limit.updated", "merchant", merchantId, "serviceLimit=" + request.serviceLimit());
+    platformAuditService.recordForCurrentUser(
+        "merchant.limit.updated", "merchant", merchantId, "serviceLimit=" + request.serviceLimit());
     return saved;
   }
 
   @GetMapping("/domain-templates")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.dashboard.read')")
   public List<DomainTemplate> adminGetDomainTemplates() {
     return domainTemplateRepository.findAll();
   }
 
   @PostMapping("/domain-templates")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.settings.write')")
   public DomainTemplate adminCreateDomainTemplate(@Valid @RequestBody DomainTemplateRequest request) {
     DomainTemplate template = new DomainTemplate();
     template.setDomainName(request.domainName());
     template.setFieldsJson(request.fieldsJson());
     DomainTemplate saved = domainTemplateRepository.save(template);
-    createAuditLog("domain-template.created", "domain_template", saved.getId(), request.domainName());
+    platformAuditService.recordForCurrentUser(
+        "domain-template.created", "domain_template", saved.getId(), request.domainName());
     return saved;
   }
 
   @DeleteMapping("/domain-templates/{templateId}")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.settings.write')")
   public void adminDeleteDomainTemplate(@PathVariable Long templateId) {
     domainTemplateRepository.deleteById(templateId);
-    createAuditLog("domain-template.deleted", "domain_template", templateId, "deleted");
+    platformAuditService.recordForCurrentUser("domain-template.deleted", "domain_template", templateId, "deleted");
   }
 
   @GetMapping("/system-settings")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.dashboard.read')")
   public SystemSettings adminGetSystemSettings() {
     return systemSettingsRepository.findAll().stream().findFirst().orElseGet(() -> {
       SystemSettings settings = new SystemSettings();
@@ -130,17 +146,20 @@ public class SystemAdminController {
   }
 
   @PutMapping("/system-settings")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.settings.write')")
   public SystemSettings adminUpdateSystemSettings(@RequestBody SystemSettingsRequest request) {
     SystemSettings settings = systemSettingsRepository.findAll().stream().findFirst().orElseGet(SystemSettings::new);
     settings.setEmailTemplate(request.emailTemplate());
     settings.setSmsTemplate(request.smsTemplate());
     settings.setMaintenanceAnnouncement(request.maintenanceAnnouncement());
     SystemSettings saved = systemSettingsRepository.save(settings);
-    createAuditLog("system-settings.updated", "system_settings", saved.getId(), "templates updated");
+    platformAuditService.recordForCurrentUser(
+        "system-settings.updated", "system_settings", saved.getId(), "templates updated");
     return saved;
   }
 
   @GetMapping("/audit-logs")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.dashboard.read')")
   public List<AuditLog> adminGetAuditLogs() {
     return auditLogRepository.findTop100ByOrderByCreatedAtDesc();
   }
@@ -149,6 +168,7 @@ public class SystemAdminController {
    * Aggregated metrics, weekly hour heat-map, sparkline, and live feed for the System Command Center UI.
    */
   @GetMapping("/command-center")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.dashboard.read')")
   public Map<String, Object> systemCommandCenter() {
     ZoneId zone = resolvePlatformZoneId();
     LocalDate today = LocalDate.now(zone);
@@ -263,12 +283,4 @@ public class SystemAdminController {
     }
   }
 
-  private void createAuditLog(String action, String targetType, Long targetId, String detail) {
-    AuditLog log = new AuditLog();
-    log.setAction(action);
-    log.setTargetType(targetType);
-    log.setTargetId(targetId);
-    log.setDetail(detail);
-    auditLogRepository.save(log);
-  }
 }

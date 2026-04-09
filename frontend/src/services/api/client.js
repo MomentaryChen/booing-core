@@ -1,3 +1,9 @@
+import {
+  getUnauthorizedRedirect,
+  inferLoginIntentFromPath,
+  parseAuthOverlayFromSearch,
+} from "../auth/sessionRouting";
+
 const API_BASE =
   (typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_BASE : undefined) ||
   "http://localhost:28080/api";
@@ -24,6 +30,20 @@ const SYSTEM_ADMIN_TOKEN =
 const ENV_ACCESS_TOKEN =
   typeof import.meta !== "undefined" ? import.meta.env?.VITE_API_ACCESS_TOKEN : undefined;
 
+function isAnyLoginPath(fullPath) {
+  if (typeof fullPath !== "string") return false;
+  const q = fullPath.indexOf("?");
+  const pathname = q >= 0 ? fullPath.slice(0, q) : fullPath;
+  const search = q >= 0 ? fullPath.slice(q) : "";
+  if (parseAuthOverlayFromSearch(search)) return true;
+  return (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/merchant/login") ||
+    pathname.startsWith("/system/login") ||
+    pathname.startsWith("/client/login")
+  );
+}
+
 function storedOrEnvAccessToken() {
   if (typeof localStorage === "undefined") {
     return ENV_ACCESS_TOKEN;
@@ -37,7 +57,16 @@ function mergeHeaders(path, optionHeaders, forceAuth) {
     headers["X-System-Admin-Token"] = SYSTEM_ADMIN_TOKEN;
   }
   const access = storedOrEnvAccessToken();
-  if (access && (forceAuth || path.startsWith("/merchant") || path.startsWith("/system") || path.startsWith("/me"))) {
+  const authPathNeedsBearer =
+    path.startsWith("/auth/") && path !== "/auth/login" && !path.startsWith("/auth/login?");
+  if (
+    access &&
+    (forceAuth ||
+      path.startsWith("/merchant") ||
+      path.startsWith("/system") ||
+      path.startsWith("/me") ||
+      authPathNeedsBearer)
+  ) {
     headers.Authorization = `Bearer ${access}`;
   }
   return headers;
@@ -62,7 +91,13 @@ export async function api(path, options = {}) {
     ...fetchOptions,
   });
   if (!res.ok) {
-    if (res.status === 401 && (path.startsWith("/merchant") || path.startsWith("/system") || path.startsWith("/me"))) {
+    if (
+      res.status === 401 &&
+      (path.startsWith("/merchant") ||
+        path.startsWith("/system") ||
+        path.startsWith("/me") ||
+        (path.startsWith("/auth/") && path !== "/auth/login" && !path.startsWith("/auth/login?")))
+    ) {
       clearStoredAccessToken();
       try {
         const { clearStoredMerchantId } = await import("../merchant/merchantStorage");
@@ -70,12 +105,18 @@ export async function api(path, options = {}) {
       } catch {
         // ignore
       }
-      if (
-        typeof window !== "undefined" &&
-        !window.location.pathname.startsWith("/merchant/login") &&
-        !window.location.pathname.startsWith("/merchant/register")
-      ) {
-        window.location.assign("/merchant/login");
+      if (typeof window !== "undefined") {
+        const pathname = window.location.pathname || "/";
+        const search = window.location.search || "";
+        const hash = window.location.hash || "";
+        const currentPath = `${pathname}${search}${hash}`;
+        const intent = inferLoginIntentFromPath(pathname);
+        const loc = { pathname, search, hash };
+        if (!isAnyLoginPath(currentPath)) {
+          window.location.assign(getUnauthorizedRedirect({ location: loc, intent }));
+        } else {
+          window.location.assign(getUnauthorizedRedirect({ location: { pathname: "/", search: "", hash: "" }, intent }));
+        }
       }
     }
     let message = "Request failed";

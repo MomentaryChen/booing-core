@@ -18,6 +18,17 @@ description: >-
 |--------|--------|
 | Lint/format when the repo wires them up | `.agents/skills/fix/SKILL.md` (adapt commands to **pnpm** if instructions say yarn) |
 | Client / merchant / system routes | `.agents/skills/booking-client-domain/SKILL.md` (and sibling domain skills) |
+| UI copy, surfaces, a11y, i18n tone | `.agents/skills/booking-uiux/SKILL.md` — **read before building or changing user-facing pages** |
+
+## UI/UX alignment (required before implementation)
+
+Do **not** implement new pages, major layout changes, or flow-level copy/structure changes **until** UI/UX has been in the loop (same planning round or explicit handoff). Small fixes (typos, non-visual refactors) may skip a full round if already spec-approved.
+
+**UI/UX should provide before coding:** IA (hierarchy, primary actions), copy structure and i18n intent (zh-TW + en-US), key states (loading / empty / error / forbidden), responsive intent, a11y notes (focus, semantics). Follow domain skills so `/client`, `/merchant`, `/system` stay consistent.
+
+**Frontend returns for sign-off:** PR or scoped diff, screenshots of agreed states, responsive spot-check, and a short note on any intentional deviation.
+
+**Disagreement:** document UX intent vs FE constraint; default tie-breaker is **PM + authoritative spec** (`doc/specs/YYYY-MM-DD_*.md`); architectural/security issues may need architect/backend.
 
 ## Notes
 

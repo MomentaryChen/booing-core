@@ -1,5 +1,7 @@
 # Deterministic command-center tests; merge with main application.yml
 spring:
+  profiles:
+    active: test
   datasource:
     url: jdbc:h2:mem:bookingcore-test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
@@ -14,13 +16,37 @@ booking:
   platform:
     time-zone: UTC
     system-admin-token: ""
+    auth:
+      login:
+        rate-limit-enabled: false
+        lockout-enabled: false
+      bootstrap-default-merchant:
+        enabled: ${BOOTSTRAP_DEFAULT_MERCHANT_ENABLED:true}
+        name: ${BOOTSTRAP_DEFAULT_MERCHANT_NAME:Demo Merchant}
+        slug: ${BOOTSTRAP_DEFAULT_MERCHANT_SLUG:demo-merchant}
+      bootstrap-default-merchant-user:
+        enabled: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_ENABLED:true}
+        username: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_USERNAME:merchant}
+        password: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_PASSWORD:merchant}
+        merchant-slug: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_MERCHANT_SLUG:demo-merchant}
+      bootstrap-system-admin:
+        enabled: ${BOOTSTRAP_SYSTEM_ADMIN_ENABLED:true}
+        username: ${BOOTSTRAP_SYSTEM_ADMIN_USERNAME:admin}
+        password: ${BOOTSTRAP_SYSTEM_ADMIN_PASSWORD:admin}
+      bootstrap-default-client:
+        enabled: ${BOOTSTRAP_DEFAULT_CLIENT_ENABLED:true}
+        username: ${BOOTSTRAP_DEFAULT_CLIENT_USERNAME:client}
+        password: ${BOOTSTRAP_DEFAULT_CLIENT_PASSWORD:client}
     jwt:
       secret: "0123456789abcdef0123456789abcdef"
       expiration-seconds: 86400
     dev-users:
-      - username: merchant
-        password: merchant
+      - username: ${DEV_USER_MERCHANT_USERNAME:merchant}
+        password: ${DEV_USER_MERCHANT_PASSWORD:merchant}
         role: MERCHANT
-      - username: admin
-        password: admin
+      - username: ${DEV_USER_ADMIN_USERNAME:admin}
+        password: ${DEV_USER_ADMIN_PASSWORD:admin}
         role: SYSTEM_ADMIN
+      - username: ${DEV_USER_CLIENT_USERNAME:client}
+        password: ${DEV_USER_CLIENT_PASSWORD:client}
+        role: CLIENT

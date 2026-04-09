@@ -1,8 +1,9 @@
 # Public home page (`/`) redesign — PM spec
 
-**Status:** Draft for stakeholder alignment  
+**Status:** **已結案**（歸檔於 `doc/specs/done/`）  
 **Surface:** `frontend/src/pages/home/HomeIntroPage.jsx` (route `/`)  
-**Locales:** `en-US`, `zh-TW`
+**Locales:** `en-US`, `zh-TW`  
+**Delivered（摘要）：** 與本規格及 benchmark 附檔對齊之版面／文案已於 `HomeIntroPage` + `i18n` 落地；目的地載入採 **Loader2**（nice-to-have Skeleton 未納入本票必達，與 `doc/specs/done/2026-04-09_visual-assets-dashboard-guidelines.md` 結案註記一致）。分析事件埋設未納入。
 
 ---
 
@@ -60,20 +61,20 @@ Copy is **directional** for UI/UX and i18n to finalize; tone: confident, short, 
 
 ## 3. Success metrics & acceptance criteria (“done”)
 
-**Qualitative acceptance (required for v1)**
+**Qualitative acceptance (required for v1)** — **本票已驗收**
 
-- [ ] **Value in 5 seconds:** A new visitor can state what the product is and that four distinct entry types exist (merchant / client / system / public demo).
-- [ ] **Demo discoverability:** The public demo storefront is at least as visible as today (ideally stronger visual or copy emphasis without hiding other tiles).
-- [ ] **Namespace clarity:** Copy does not imply `/client` is only “customer booking”—if needed, microcopy distinguishes **client app area** vs **public storefront demo**.
-- [ ] **i18n parity:** All new/changed strings exist in **both** `en-US` and `zh-TW` with comparable meaning and length that does not break layout at common breakpoints.
-- [ ] **RBAC parity:** Behavior matches current logic: if `isMerchantAuthRequired()`, user has a token, and navigation has loaded, only tiles whose `routeKey` is in `routeKeys` render; loading state shows no misleading CTAs (or an explicit loading pattern—see scope).
-- [ ] **Routes unchanged:** No new routes; links remain `/merchant`, `/client`, `/system`, `/client/booking/demo-merchant` (or whatever the canonical `ROUTE_KEYS.STORE_PUBLIC` target is today).
-- [ ] **Accessibility:** Semantic structure preserved or improved (one H1, section label for tile region, images with meaningful `alt` in both locales).
+- [x] **Value in 5 seconds:** A new visitor can state what the product is and that four distinct entry types exist (merchant / client / system / public demo).
+- [x] **Demo discoverability:** The public demo storefront is at least as visible as today (ideally stronger visual or copy emphasis without hiding other tiles).
+- [x] **Namespace clarity:** Copy does not imply `/client` is only “customer booking”—if needed, microcopy distinguishes **client app area** vs **public storefront demo**.
+- [x] **i18n parity:** All new/changed strings exist in **both** `en-US` and `zh-TW` with comparable meaning and length that does not break layout at common breakpoints.
+- [x] **RBAC parity:** Behavior matches current logic: if `isMerchantAuthRequired()`, user has a token, and navigation has loaded, only tiles whose `routeKey` is in `routeKeys` render; loading state shows no misleading CTAs (or an explicit loading pattern—see scope).
+- [x] **Routes unchanged:** No new routes; links remain `/merchant`, `/client`, `/system`, `/client/booking/demo-merchant` (or whatever the canonical `ROUTE_KEYS.STORE_PUBLIC` target is today).
+- [x] **Accessibility:** Semantic structure preserved or improved (one H1, section label for tile region, images with meaningful `alt` in both locales).
 
-**Success metrics (lightweight, if analytics exist or can be added later)**
+**Success metrics (lightweight, if analytics exist or can be added later)** — **未導入（非本票必達）**
 
-- Click-through to demo storefront from `/` (optional event).
-- Bounce from `/` without any tile click (baseline vs after—only if instrumentation is in scope).
+- [ ] Click-through to demo storefront from `/` (optional event).
+- [ ] Bounce from `/` without any tile click (baseline vs after—only if instrumentation is in scope).
 
 ---
 
@@ -88,10 +89,10 @@ Copy is **directional** for UI/UX and i18n to finalize; tone: confident, short, 
 
 **Nice-to-have (v1 if time; otherwise backlog)**
 
-- New or refined **hero illustration** (SVG) aligned with updated copy.
-- **Skeleton/loading** state for the tile grid when `loading === true` and merchant filter applies—clear “loading destinations” instead of empty grid.
-- **Micro-interactions** (motion) respecting `prefers-reduced-motion`.
-- **Analytics** on tile clicks (if product agrees).
+- New or refined **hero illustration** (SVG) aligned with updated copy. **（沿用既有 `/intro/hero-booking.svg`，未強制替換。）**
+- **Skeleton/loading** state for the tile grid when `loading === true` and merchant filter applies—clear “loading destinations” instead of empty grid. **（已交付：Loader2 + 文案；非 shadcn Skeleton。）**
+- **Micro-interactions** (motion) respecting `prefers-reduced-motion`. **（卡片 hover／背景裝飾已部分具備；`prefers-reduced-motion` 於 Loader／裝飾有考量。）**
+- **Analytics** on tile clicks (if product agrees). **（未做。）**
 
 **Out of scope for this redesign**
 
@@ -138,4 +139,4 @@ If a future change moved “which links appear on `/`” to the API, that would 
 
 ---
 
-*Single source of truth for this initiative: this document until superseded.*
+*本 initiative 已結案並歸檔至 `doc/specs/done/`。若重開首頁疊代，請於 `doc/specs/` 根目錄新增日期前綴規格並註明與本檔關係。*

@@ -25,7 +25,8 @@ Deliver **clear, consistent** user experiences across `/client`, `/merchant`, an
 1. Work from **PM-aligned** requirements when the change is non-trivial.
 2. Do not propose routes that violate the domain skills above.
 3. Prefer patterns in `README.md` app areas table when mapping screens to URLs.
+4. **Partner with `frontend-engineer-agent`:** For new pages or major UI changes, participate in the **same planning round** and deliver IA, copy structure (zh-TW + en-US), states, and a11y notes **before** FE implements (see `.cursor/rules/fe-uiux-collaboration.mdc`). Be available for sign-off (screenshots, responsive checks) after implementation.
 
 ## Output expectations
 
-- Flows, wireframe-level structure, and copy/i18n notes—not implementation unless explicitly paired with frontend-engineer.
+- Flows, wireframe-level structure, and copy/i18n notes—provide enough for FE to implement without guessing; coordinate implementation only when explicitly paired with `frontend-engineer-agent`.

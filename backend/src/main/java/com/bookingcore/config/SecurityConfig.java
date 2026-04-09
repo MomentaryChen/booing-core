@@ -58,14 +58,23 @@ public class SecurityConfig {
                   .permitAll()
                   .requestMatchers("/api/client/**")
                   .permitAll()
-                  .requestMatchers("/api/auth/**")
+                  .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register")
                   .permitAll()
+                  .requestMatchers(HttpMethod.GET, "/api/auth/me")
+                  .hasAnyRole("CLIENT", "MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  .requestMatchers(HttpMethod.POST, "/api/auth/logout", "/api/auth/refresh")
+                  .hasAnyRole("CLIENT", "MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  .requestMatchers(HttpMethod.POST, "/api/auth/context/select")
+                  .hasAnyRole("CLIENT", "MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
                   .requestMatchers(HttpMethod.POST, "/api/merchant/register")
                   .permitAll()
                   .requestMatchers("/api/me/**")
-                  .hasAnyRole("MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  .hasAnyRole("CLIENT", "MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  // Explicit system operation endpoint under merchant namespace (legacy route).
+                  .requestMatchers(HttpMethod.POST, "/api/merchant/merchants")
+                  .hasRole("SYSTEM_ADMIN")
                   .requestMatchers("/api/merchant/**")
-                  .hasAnyRole("MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  .hasAnyRole("MERCHANT", "SUB_MERCHANT")
                   .requestMatchers("/api/system/**")
                   .hasRole("SYSTEM_ADMIN")
                   .anyRequest()
@@ -79,8 +88,10 @@ public class SecurityConfig {
                   .permitAll()
                   .requestMatchers("/api/client/**")
                   .permitAll()
-                  .requestMatchers("/api/auth/**")
+                  .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register")
                   .permitAll()
+                  .requestMatchers("/api/auth/**")
+                  .denyAll()
                   .requestMatchers("/api/me/**")
                   .denyAll()
                   .requestMatchers("/api/merchant/**")
@@ -97,9 +108,17 @@ public class SecurityConfig {
   @Bean
   CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(List.of("http://localhost:25173"));
+    configuration.setAllowedOriginPatterns(
+        List.of(
+            "http://localhost:25173",
+            "http://localhost:25174",
+            "http://localhost:25175",
+            "http://127.0.0.1:25173",
+            "http://127.0.0.1:25174",
+            "http://127.0.0.1:25175"));
     configuration.setAllowedMethods(List.of("*"));
     configuration.setAllowedHeaders(List.of("*"));
+    configuration.setAllowCredentials(true);
     UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
     source.registerCorsConfiguration("/api/**", configuration);
     return source;

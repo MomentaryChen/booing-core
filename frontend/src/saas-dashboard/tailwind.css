@@ -1,0 +1,15 @@
+@tailwind components;
+@tailwind utilities;
+
+/* Scoped box model for dashboard (preflight disabled) */
+#saas-dashboard-root {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#saas-dashboard-root *,
+#saas-dashboard-root *::before,
+#saas-dashboard-root *::after {
+  box-sizing: border-box;
+}

@@ -12,6 +12,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
@@ -40,14 +42,42 @@ public class PlatformUser {
   @Column(nullable = false)
   private Boolean enabled = true;
 
-  @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
+  @Column(name = "credential_version", nullable = false)
+  private int credentialVersion = 0;
+
+  @Column(name = "failed_login_count", nullable = false)
+  private int failedLoginCount = 0;
+
+  @Column(name = "failed_login_window_started_at")
+  private LocalDateTime failedLoginWindowStartedAt;
+
+  @Column(name = "locked_until")
+  private LocalDateTime lockedUntil;
+
+  @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
-  @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
+  @Column(name = "updated_at", nullable = false)
   private LocalDateTime updatedAt;
 
   @Column(name = "last_login_at")
   private LocalDateTime lastLoginAt;
+
+  @PrePersist
+  public void prePersist() {
+    LocalDateTime n = LocalDateTime.now();
+    if (createdAt == null) {
+      createdAt = n;
+    }
+    if (updatedAt == null) {
+      updatedAt = n;
+    }
+  }
+
+  @PreUpdate
+  public void preUpdate() {
+    updatedAt = LocalDateTime.now();
+  }
 
   public Long getId() {
     return id;
@@ -91,6 +121,38 @@ public class PlatformUser {
 
   public void setEnabled(Boolean enabled) {
     this.enabled = enabled;
+  }
+
+  public int getCredentialVersion() {
+    return credentialVersion;
+  }
+
+  public void setCredentialVersion(int credentialVersion) {
+    this.credentialVersion = credentialVersion;
+  }
+
+  public int getFailedLoginCount() {
+    return failedLoginCount;
+  }
+
+  public void setFailedLoginCount(int failedLoginCount) {
+    this.failedLoginCount = failedLoginCount;
+  }
+
+  public LocalDateTime getFailedLoginWindowStartedAt() {
+    return failedLoginWindowStartedAt;
+  }
+
+  public void setFailedLoginWindowStartedAt(LocalDateTime failedLoginWindowStartedAt) {
+    this.failedLoginWindowStartedAt = failedLoginWindowStartedAt;
+  }
+
+  public LocalDateTime getLockedUntil() {
+    return lockedUntil;
+  }
+
+  public void setLockedUntil(LocalDateTime lockedUntil) {
+    this.lockedUntil = lockedUntil;
   }
 
   public LocalDateTime getCreatedAt() {

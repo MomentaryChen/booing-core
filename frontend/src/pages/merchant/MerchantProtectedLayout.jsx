@@ -4,6 +4,7 @@ import { getMerchantIdFromAccessToken, getRoleFromAccessToken } from "../../serv
 import { isMerchantAuthRequired } from "../../services/merchant/merchantAuth";
 import { clearStoredMerchantId, getStoredMerchantId, setStoredMerchantId } from "../../services/merchant/merchantStorage";
 import { useNavigation } from "../../navigation/NavigationContext";
+import { getUnauthorizedRedirect, hasNamespaceCapability } from "../../services/auth/sessionRouting";
 
 export function MerchantProtectedLayout() {
   const location = useLocation();
@@ -15,7 +16,7 @@ export function MerchantProtectedLayout() {
 
   const token = getStoredAccessToken();
   if (!token) {
-    return <Navigate to="/merchant/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to={getUnauthorizedRedirect({ location, intent: "merchant" })} replace />;
   }
   const role = getRoleFromAccessToken(token);
   if (role === "SYSTEM_ADMIN") {
@@ -23,12 +24,12 @@ export function MerchantProtectedLayout() {
   }
   if (role !== "MERCHANT" && role !== "SUB_MERCHANT") {
     clearStoredMerchantId();
-    return <Navigate to="/merchant/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to={getUnauthorizedRedirect({ location, intent: "merchant" })} replace />;
   }
   const merchantIdFromToken = getMerchantIdFromAccessToken(token);
   if (!merchantIdFromToken) {
     clearStoredMerchantId();
-    return <Navigate to="/merchant/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to={getUnauthorizedRedirect({ location, intent: "merchant" })} replace />;
   }
   const storedMerchantId = getStoredMerchantId();
   if (storedMerchantId !== merchantIdFromToken) {
@@ -43,14 +44,9 @@ export function MerchantProtectedLayout() {
     );
   }
 
-  const canMerchant = routeKeys.some((k) => k.startsWith("nav.merchant"));
-  if (canMerchant) {
+  if (hasNamespaceCapability({ intent: "merchant", role, routeKeys })) {
     return <Outlet />;
   }
 
-  if (role === "MERCHANT" || role === "SUB_MERCHANT") {
-    return <Outlet />;
-  }
-
-  return <Navigate to="/" replace />;
+  return <Navigate to="/403" replace />;
 }

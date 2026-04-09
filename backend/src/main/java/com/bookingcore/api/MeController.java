@@ -5,6 +5,7 @@ import com.bookingcore.config.BookingPlatformProperties;
 import com.bookingcore.security.PlatformUserRole;
 import com.bookingcore.service.PlatformNavigationService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -32,6 +33,7 @@ public class MeController {
    * returns all active pages (local dev: same catalog as production DB rules).
    */
   @GetMapping("/navigation")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'me.navigation.read')")
   public NavigationResponse navigation() {
     if (!StringUtils.hasText(properties.getJwt().getSecret())) {
       return platformNavigationService.allActivePages();

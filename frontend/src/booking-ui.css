@@ -1,0 +1,14 @@
+@tailwind components;
+@tailwind utilities;
+
+#booking-ui-root {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#booking-ui-root *,
+#booking-ui-root *::before,
+#booking-ui-root *::after {
+  box-sizing: border-box;
+}

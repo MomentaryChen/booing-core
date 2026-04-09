@@ -5,6 +5,8 @@ import { App } from "./App";
 import { I18nProvider } from "./i18n";
 import { NavigationProvider } from "./navigation/NavigationContext";
 import "./styles.css";
+import "./booking-ui.css";
+import "./saas-dashboard/tailwind.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

@@ -1,6 +1,9 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
+import { ChevronDown, Inbox, RefreshCw } from "lucide-react";
 import { api } from "../../services/api/client";
 import { useI18n } from "../../i18n";
+import { SystemHeaderArt } from "../../components/illustrations/ModuleThumbnails";
+import { cn } from "../../lib/cn";
 
 function formatMoney(value, locale) {
   const n = Number(value);
@@ -106,7 +109,7 @@ function HeatMap({ heatMap, heatMax, dayLabels, isZh }) {
 }
 
 export function SystemDashboard() {
-  const { locale } = useI18n();
+  const { locale, t } = useI18n();
   const isZh = locale === "zh-TW";
   const [cc, setCc] = useState(null);
   const [overview, setOverview] = useState(null);
@@ -211,17 +214,28 @@ export function SystemDashboard() {
   return (
     <div className="system-command-center">
       <header className="sys-header">
-        <div>
-          <p className="sys-eyebrow">{isZh ? "系統控制台" : "Command Center"}</p>
-          <h1>{isZh ? "營運態勢儀表板" : "Operations overview"}</h1>
-          <p className="sys-sub">
-            {isZh
-              ? "30 秒內掌握預約熱點、人力負荷與待處理事項。"
-              : "Staffing decisions from visual density within seconds of login."}
-          </p>
+        <div className="flex min-w-0 flex-1 flex-wrap items-start gap-6">
+          <div className="min-w-0 flex-1">
+            <p className="sys-eyebrow">{isZh ? "系統控制台" : "Command Center"}</p>
+            <h1>{isZh ? "營運態勢儀表板" : "Operations overview"}</h1>
+            <p className="sys-sub">
+              {isZh
+                ? "30 秒內掌握預約熱點、人力負荷與待處理事項。"
+                : "Staffing decisions from visual density within seconds of login."}
+            </p>
+          </div>
+          <div className="hidden shrink-0 lg:block" aria-hidden>
+            <SystemHeaderArt className="h-28 w-44 max-w-[11rem]" />
+          </div>
         </div>
         <div className="sys-header-actions">
-          <button type="button" className="sys-btn sys-btn--ghost" onClick={() => refreshAll()}>
+          <button
+            type="button"
+            className="sys-btn sys-btn--ghost inline-flex items-center gap-2"
+            onClick={() => refreshAll()}
+            aria-label={t("systemDashboardRefreshAria")}
+          >
+            <RefreshCw className="size-4 shrink-0" aria-hidden />
             {isZh ? "重新整理" : "Refresh"}
           </button>
         </div>
@@ -341,15 +355,27 @@ export function SystemDashboard() {
             </div>
           ))}
           {!(cc?.liveFeed || []).length && (
-            <p className="sys-muted sys-feed__empty">{isZh ? "尚無預約紀錄。" : "No bookings yet."}</p>
+            <div className="sys-feed__empty flex flex-col items-center gap-3 px-4 py-12 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full bg-slate-800/90 text-slate-400 ring-1 ring-slate-600/60">
+                <Inbox className="size-5" aria-hidden />
+              </span>
+              <strong className="text-[15px] font-semibold text-slate-200">{t("systemDashboardFeedEmptyTitle")}</strong>
+              <p className="sys-muted !m-0 max-w-sm text-sm leading-relaxed">{t("systemDashboardFeedEmptyDescription")}</p>
+            </div>
           )}
         </div>
       </section>
 
       <section className="sys-ops">
-        <button type="button" className="sys-ops-toggle" onClick={() => setOpsOpen((v) => !v)}>
+        <button type="button" className="sys-ops-toggle inline-flex items-center gap-2" onClick={() => setOpsOpen((v) => !v)}>
           {isZh ? "平台營運設定" : "Platform operations"}
-          <span className="sys-ops-chevron">{opsOpen ? "▾" : "▸"}</span>
+          <ChevronDown
+            className={cn(
+              "sys-ops-chevron size-4 shrink-0 transition-transform motion-reduce:transition-none",
+              opsOpen && "rotate-180"
+            )}
+            aria-hidden
+          />
         </button>
         {opsOpen && (
           <div className="sys-ops-body">

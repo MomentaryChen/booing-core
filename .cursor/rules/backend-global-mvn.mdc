@@ -1,0 +1,15 @@
+---
+description: backend 任務統一使用全域 mvn 指令
+globs: "backend/**"
+alwaysApply: false
+---
+
+# Backend Build Command Rule
+
+針對 `backend/` 相關任務，請直接使用系統已安裝的全域 `mvn`。
+
+## 必須遵守
+
+- 執行建置、測試、驗證時，使用 `mvn`（例如：`mvn test`、`mvn -DskipTests package`）。
+- 不使用 Maven Wrapper（`./mvnw`、`mvnw.cmd`）。
+- 回覆執行步驟時，命令範例應以全域 `mvn` 為準。

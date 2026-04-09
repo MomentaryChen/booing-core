@@ -1,0 +1,11 @@
+---
+description: Frontend page work must align with UI/UX before implementation
+alwaysApply: true
+---
+
+# Frontend + UI/UX collaboration
+
+- When `frontend-engineer-agent` (or any agent) **creates or substantially redesigns a user-facing page** (new route, major layout, flow-level copy), the workflow must include **`uiux-agent`** in the same round **before** writing implementation code—unless the change is trivial and already covered by an approved spec.
+- UI/UX input should cover: information architecture, copy/i18n structure (zh-TW + en-US), critical UI states, responsive intent, and accessibility expectations—aligned with `.agents/skills/booking-uiux/SKILL.md` and the relevant **client / merchant / system** domain skill.
+- If UI/UX and engineering disagree, record the gap and resolve via **PM + spec** (`doc/specs/`); do not ship ambiguous UX without an explicit decision.
+- After implementation, FE should provide material for UI/UX sign-off (PR, screenshots, responsive notes) as described in `booking-frontend` skill.

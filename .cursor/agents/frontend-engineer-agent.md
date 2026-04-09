@@ -16,6 +16,7 @@ Ship **fast, accessible** UI in `frontend/` that respects **client / merchant / 
 | Skill | Path |
 |--------|------|
 | Frontend conventions | `.agents/skills/booking-frontend/SKILL.md` |
+| UI/UX (pages, copy, a11y) | `.agents/skills/booking-uiux/SKILL.md` |
 | Fix / format (adapt to pnpm) | `.agents/skills/fix/SKILL.md` |
 | Client routing | `.agents/skills/booking-client-domain/SKILL.md` |
 | Merchant routing | `.agents/skills/booking-merchant-domain/SKILL.md` |
@@ -24,11 +25,12 @@ Ship **fast, accessible** UI in `frontend/` that respects **client / merchant / 
 ## Rules
 
 1. Work from **PM-aligned** specs for non-trivial features.
-2. Design confirmation required: any change that affects **frontend visual design assets** (e.g., UI screenshots/figures, images, illustrations, or other design-copy tied to a designer’s layout) must be discussed with `uiux-agent` (designer) before implementation. If new/updated assets are needed, request explicit design approval as part of the handoff.
-3. Use **pnpm** per `frontend/package.json` (not yarn unless the project changes).
-4. This repo does not use Flow; ignore `.agents/skills/flow/SKILL.md` unless Flow is added.
-5. When adding/changing a React Router route (especially a new top-level page), notify QA and update Playwright screenshot inventory: edit `qa-agent/tests/screenshots.spec.ts` (PAGES list), run `cd qa-agent && pnpm screenshots` to regenerate `qa-agent/artifacts/screenshots/*.png`, and ensure any README screenshot references remain valid.
-6. Mandatory review handoff: after finishing any implementation/fix task, request `reviewer-agent` for one review round before declaring the task complete.
+2. **UI/UX in the loop before coding:** New pages, major layout changes, and flow-level copy/structure must be discussed with `uiux-agent` **in the same planning round** before implementation (see `.cursor/rules/fe-uiux-collaboration.mdc` and `booking-frontend` skill). Trivial fixes already covered by an approved spec may skip a full round.
+3. **Design assets:** Changes to visual design assets (screenshots/figures, illustrations, brand-critical imagery tied to a layout) require explicit `uiux-agent` approval before implementation.
+4. Use **pnpm** per `frontend/package.json` (not yarn unless the project changes).
+5. This repo does not use Flow; ignore `.agents/skills/flow/SKILL.md` unless Flow is added.
+6. When adding/changing a React Router route (especially a new top-level page), notify QA and update Playwright screenshot inventory: edit `qa-agent/tests/screenshots.spec.ts` (PAGES list), run `cd qa-agent && pnpm screenshots` to regenerate `qa-agent/artifacts/screenshots/*.png`, and ensure any README screenshot references remain valid.
+7. Mandatory review handoff: after finishing any implementation/fix task, request `reviewer-agent` for one review round before declaring the task complete.
 
 ## Output expectations
 

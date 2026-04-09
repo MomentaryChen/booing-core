@@ -1,0 +1,41 @@
+---
+description: 前端使用 shadcn/ui + Tailwind、SaaS 儀表板風格、可重用元件、禁止 inline style
+globs: frontend/**/*.{jsx,tsx,css}
+alwaysApply: false
+---
+
+# Frontend：shadcn/ui + Tailwind（SaaS Dashboard）
+
+## 元件與樣式
+
+- **shadcn/ui**：Button、Input、Card、Dialog、Sheet、Table、Dropdown、Tabs 等互動與版面 primitives **一律**以 shadcn/ui 為準；專案尚未納入的元件，用官方 CLI 依 `components.json` 加入，避免平行自造一套按鈕／對話框／表單控件。
+- **Tailwind**：間距、字級、色彩、邊框、響應式以 **utility class** 為主；與 shadcn 並用時以專案的 `cn()`（或同等 `clsx` + `tailwind-merge`）合併 class。
+- **禁止 inline style**：不得使用 `style={{ ... }}`，除非第三方 API **僅**接受 inline 且無 `className`／wrapper 可替代。動態外觀優先：Tailwind arbitrary values（例如 `max-w-[min(100%,32rem)]`）、theme token，或 CSS 變數 + class。
+
+## SaaS 儀表板體驗
+
+- **架構**：側欄或頂欄導航＋主內容區；列表／表單與 KPI、說明區塊層級清楚。
+- **視覺**：中性底（background / muted）、卡片區塊、一致圓角與邊框；每屏 **一個**主要行動（primary）。
+- **狀態**：loading、empty、error、權限不足等狀態明確；補強視覺可對齊 `ui-visual-feature-hints.mdc`。
+
+## 可重用性
+
+- 重複出現的區塊抽到 `frontend/src/components/`（或 domain 子目錄），以 **props** 表達變體；避免多頁複製大段 JSX + class。
+- 新需求優先 **組合／擴充** 既有 shadcn 與共用元件，而非每頁從零堆 class。
+
+## 簡例
+
+```jsx
+// ❌ BAD — inline style
+<div style={{ marginTop: 16, color: "#333" }}>...</div>
+
+// ✅ GOOD — Tailwind + shadcn
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+
+<Card className="mt-4">
+  <CardHeader>
+    <CardTitle>...</CardTitle>
+  </CardHeader>
+  <CardContent className="text-muted-foreground">...</CardContent>
+</Card>
+```

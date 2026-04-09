@@ -3,11 +3,11 @@ import { getStoredAccessToken } from "../../services/api/client";
 import { getRoleFromAccessToken } from "../../services/platformRole";
 import { isMerchantAuthRequired } from "../../services/merchant/merchantAuth";
 import { useNavigation } from "../../navigation/NavigationContext";
-import { ROUTE_KEYS } from "../../navigation/routeKeys";
+import { getUnauthorizedRedirect, hasNamespaceCapability } from "../../services/auth/sessionRouting";
 
 export function SystemProtectedLayout() {
   const location = useLocation();
-  const { hasRouteKey, loading } = useNavigation();
+  const { routeKeys, loading } = useNavigation();
 
   if (!isMerchantAuthRequired()) {
     return <Outlet />;
@@ -15,7 +15,7 @@ export function SystemProtectedLayout() {
 
   const token = getStoredAccessToken();
   if (!token) {
-    return <Navigate to="/merchant/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to={getUnauthorizedRedirect({ location, intent: "system" })} replace />;
   }
 
   if (loading) {
@@ -26,14 +26,10 @@ export function SystemProtectedLayout() {
     );
   }
 
-  if (hasRouteKey(ROUTE_KEYS.SYSTEM_DASHBOARD)) {
-    return <Outlet />;
-  }
-
   const role = getRoleFromAccessToken(token);
-  if (role === "SYSTEM_ADMIN") {
+  if (hasNamespaceCapability({ intent: "system", role, routeKeys })) {
     return <Outlet />;
   }
 
-  return <Navigate to="/merchant" replace />;
+  return <Navigate to="/403" replace />;
 }

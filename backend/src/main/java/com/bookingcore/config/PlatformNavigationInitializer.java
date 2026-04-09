@@ -47,6 +47,7 @@ public class PlatformNavigationInitializer implements ApplicationRunner {
     grantAll(PlatformUserRole.SYSTEM_ADMIN, pSystem, pMerchant, pAppointments, pSchedule, pClient, pStore);
     grantAll(PlatformUserRole.MERCHANT, pMerchant, pAppointments, pSchedule, pStore);
     grantAll(PlatformUserRole.SUB_MERCHANT, pMerchant, pAppointments, pSchedule, pStore);
+    grantAll(PlatformUserRole.CLIENT, pClient, pStore);
   }
 
   private static PlatformPage page(String routeKey, String path, String labelKey, int sortOrder) {

@@ -10,6 +10,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +18,29 @@ public final class ApiDtos {
   private ApiDtos() {}
 
   public record CreateMerchantRequest(@NotBlank String name, @NotBlank String slug) {}
+
+  /**
+   * Unified public registration body for {@code POST /api/auth/register}. {@code registerType} is
+   * validated against a server allowlist; unsafe types are rejected without provisioning.
+   */
+  /**
+   * {@link PublicRegisterType#MERCHANT}: {@code name}, {@code slug} required.<br>
+   * {@link PublicRegisterType#CLIENT}: {@code username}, {@code password} required.<br>
+   * Other fields are ignored by the service layer.
+   */
+  public record PublicRegisterRequest(
+      @NotNull PublicRegisterType registerType,
+      String name,
+      String slug,
+      String username,
+      String password) {}
+
+  /**
+   * Merchant signup result including a server-chosen post-registration path (never derived from
+   * client input).
+   */
+  public record PublicRegisterResponse(
+      Long id, String name, String slug, Boolean active, String nextDestination) {}
 
   public record MerchantProfileResponse(String description, String logoUrl) {}
 
@@ -212,7 +236,53 @@ public final class ApiDtos {
 
   public record LoginRequest(@NotBlank String username, @NotBlank String password) {}
 
-  public record TokenResponse(String accessToken, String tokenType, long expiresInSeconds, String role) {}
+  /**
+   * Current principal snapshot for unified login / SPA bootstrap.
+   * {@code availableContexts} lists server-verifiable options (length 1 for most users; SYSTEM_ADMIN may see
+   * an extra MERCHANT-scoped option backed by the first merchant row for demo / support-style switching).
+   */
+  public record AuthMeResponse(
+      String username,
+      String role,
+      List<String> roles,
+      List<String> permissions,
+      Long merchantId,
+      String sessionState,
+      List<AuthContextOption> availableContexts,
+      AuthContextOption activeContext) {
+    public AuthMeResponse {
+      roles = roles == null ? List.of() : Collections.unmodifiableList(List.copyOf(roles));
+      permissions =
+          permissions == null ? List.of() : Collections.unmodifiableList(List.copyOf(permissions));
+      availableContexts =
+          availableContexts == null
+              ? List.of()
+              : Collections.unmodifiableList(List.copyOf(availableContexts));
+    }
+  }
+
+  /**
+   * One selectable auth context. {@code kind} is diagnostic: {@code PLATFORM} matches the stored platform
+   * role; {@code MERCHANT_SCOPED} is a derived MERCHANT view (e.g. admin previewing a tenant).
+   */
+  public record AuthContextOption(String kind, Long merchantId, String role) {}
+
+  /** Body for {@code POST /api/auth/context/select}. Omit or leave {@code role} empty to behave like refresh. */
+  public record ContextSelectRequest(Long merchantId, String role) {}
+
+  public record TokenResponse(
+      String accessToken,
+      String tokenType,
+      long expiresInSeconds,
+      String role,
+      List<String> roles,
+      List<String> permissions) {
+    public TokenResponse {
+      roles = roles == null ? List.of() : Collections.unmodifiableList(List.copyOf(roles));
+      permissions =
+          permissions == null ? List.of() : Collections.unmodifiableList(List.copyOf(permissions));
+    }
+  }
 
   /** Allowed UI routes from {@code platform_pages} / {@code role_page_grants} for the current actor. */
   public record NavigationResponse(List<String> routeKeys, List<NavigationItem> items) {}
