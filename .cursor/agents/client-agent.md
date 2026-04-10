@@ -15,9 +15,9 @@ Implement and maintain **end-customer** booking flows: minimal, fast, mobile-fri
 
 | Skill | Path |
 |--------|------|
-| Client domain (routing, rules) | `.agents/skills/booking-client-domain/SKILL.md` |
-| Frontend implementation | `.agents/skills/booking-frontend/SKILL.md` |
-| Architecture | `.agents/skills/booking-architect/SKILL.md` |
+| Client domain (routing, rules) | `.cursor/skills/booking-client-domain/SKILL.md` |
+| Frontend implementation | `.cursor/skills/booking-frontend/SKILL.md` |
+| Architecture | `.cursor/skills/booking-architect/SKILL.md` |
 
 ## Rules
 

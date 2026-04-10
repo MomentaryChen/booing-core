@@ -1,10 +1,17 @@
 # Responsibility Allocation (RACI) — MySQL switch + dev/prod profiles + local ports
 
 - **Date**: 2026-04-02
+- **Status**: Done (archived in `doc/specs/done/`)
 - **Scope context**: Switch DB to **MySQL**, introduce **dev/prod Spring profiles**, remove reliance on `application-docker.yml`, set **default profile = dev**, add **dev bootstrap users**, adjust **local/container ports**.
 - **Governance rules (repo)**:
-  - **PM+Architect joint planning is mandatory** for planning outputs. (Architect feedback is captured in `doc/specs/2026-04-02_mysql-dev-prod-profiles.md`.)
+  - **PM+Architect joint planning is mandatory** for planning outputs. (Architect feedback is captured in `doc/specs/done/2026-04-02_mysql-dev-prod-profiles.md`.)
   - **Post-commit review gate**: after each commit, **reviewer-agent must perform a full review** before merge/release decisions.
+
+## Closure Handling
+
+- `pm-agent` is the default owner for closure handling after archival.
+- `pm-agent` maintains reference integrity if related active specs change.
+- If reopened, create a new dated spec under `doc/specs/` and link back to this archived spec.
 
 ## Roles and boundaries (what each role owns / must approve / must not do)
 
@@ -119,7 +126,7 @@ Legend: **R** = Responsible (does the work), **A** = Accountable (final owner), 
 
 ### D1. Spec + acceptance criteria
 
-- **Status**: **Done (drafted)** — `doc/specs/2026-04-02_mysql-dev-prod-profiles.md`
+- **Status**: **Done (drafted)** — `doc/specs/done/2026-04-02_mysql-dev-prod-profiles.md`
 - **Remaining**:
   - Ensure spec status moves from “Proposed” to “Accepted” once reviewer/QA complete and risks are addressed.
 - **Risks**:

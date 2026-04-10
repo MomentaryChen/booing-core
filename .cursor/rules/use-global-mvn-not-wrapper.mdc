@@ -1,0 +1,24 @@
+---
+description: Use global Maven command instead of Maven wrapper
+alwaysApply: true
+---
+
+# Maven Command Policy
+
+- Always use the global Maven command: `mvn`.
+- Do not use Maven Wrapper commands such as `./mvnw` (or `mvnw.cmd`).
+- When writing docs, scripts, or run instructions, prefer examples like:
+  - `mvn clean test`
+  - `mvn spring-boot:run`
+
+## Examples
+
+```bash
+# ❌ Avoid
+./mvnw test
+```
+
+```bash
+# ✅ Use
+mvn test
+```

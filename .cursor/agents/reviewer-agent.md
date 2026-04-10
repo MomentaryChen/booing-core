@@ -16,8 +16,8 @@ Act as a strict **quality gate** after each commit: find defects, behavioral reg
 | Skill | Path |
 |--------|------|
 | Spring Boot code review | `C:\Users\VictorChen\.claude\skills\springboot-code-reviewer\SKILL.md` |
-| Architecture boundaries | `.agents/skills/booking-architect/SKILL.md` |
-| Security baseline | `.agents/skills/springboot-security/SKILL.md` |
+| Architecture boundaries | `.cursor/skills/booking-architect/SKILL.md` |
+| Security baseline | `.cursor/skills/springboot-security/SKILL.md` |
 
 ## Rules
 

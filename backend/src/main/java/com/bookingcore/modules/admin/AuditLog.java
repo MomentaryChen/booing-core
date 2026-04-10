@@ -28,9 +28,20 @@ public class AuditLog {
   @Column(nullable = false)
   private Long targetId;
 
+  @Column(nullable = false, length = 80)
+  private String correlationId;
+
   @Lob
   @Column(nullable = false)
   private String detail;
+
+  @Lob
+  @Column(name = "before_state")
+  private String beforeState;
+
+  @Lob
+  @Column(name = "after_state")
+  private String afterState;
 
   @Column(nullable = false)
   private LocalDateTime createdAt = LocalDateTime.now();
@@ -77,6 +88,30 @@ public class AuditLog {
 
   public void setDetail(String detail) {
     this.detail = detail;
+  }
+
+  public String getCorrelationId() {
+    return correlationId;
+  }
+
+  public void setCorrelationId(String correlationId) {
+    this.correlationId = correlationId;
+  }
+
+  public String getBeforeState() {
+    return beforeState;
+  }
+
+  public void setBeforeState(String beforeState) {
+    this.beforeState = beforeState;
+  }
+
+  public String getAfterState() {
+    return afterState;
+  }
+
+  public void setAfterState(String afterState) {
+    this.afterState = afterState;
   }
 
   public LocalDateTime getCreatedAt() {

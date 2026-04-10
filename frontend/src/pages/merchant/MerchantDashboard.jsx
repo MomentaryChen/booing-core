@@ -120,6 +120,20 @@ export function MerchantDashboard() {
               thumbAlt={t("merchantDashboardAltScheduleThumb")}
             />
           </div>
+          <div className="pt-2">
+            <Link
+              to="/merchant/invitations"
+              className={cn(buttonVariants({ variant: "outline" }), "inline-flex")}
+            >
+              {t("merchantDashboardInvitationsCta")}
+            </Link>
+            <Link
+              to="/merchant/settings/visibility"
+              className={cn(buttonVariants({ variant: "outline" }), "ml-3 inline-flex")}
+            >
+              {t("merchantDashboardVisibilityCta")}
+            </Link>
+          </div>
         </section>
       </DashboardPageShell>
     </div>

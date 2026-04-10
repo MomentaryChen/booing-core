@@ -3,7 +3,7 @@
 **日期：** 2026-04-09  
 **狀態：** 已結案並歸檔於 `doc/specs/done/`  
 **適用：** `frontend/`（React + Vite + Tailwind；shadcn/ui 政策見 `.cursor/rules/frontend-shadcn-saas-dashboard.mdc`）  
-**產品區域：** `/client`、`/merchant`、`/system` 視覺語彙應一致；各區 copy 仍依 domain 區分（見 `.agents/skills/booking-uiux/SKILL.md`）。
+**產品區域：** `/client`、`/merchant`、`/system` 視覺語彙應一致；各區 copy 仍依 domain 區分（見 `.cursor/skills/booking-uiux/SKILL.md`）。
 
 ---
 
@@ -30,7 +30,7 @@
 | **`doc/specs/done/YYYY-MM-DD_*.md`（結案後）** | 歷史單一真相；進行中規格留在 `doc/specs/` 根目錄；見 `.cursor/rules/spec-done-archive.mdc`。 |
 | **僅擴充 `SKILL.md`** | 易使 skill 過長、難維護；illustration 授權與 Tailwind 範例對「日常 routing/i18n」agent 負擔偏大。 |
 
-**連結：** `.agents/skills/booking-uiux/SKILL.md` → 視覺資產指引路徑指向本檔。
+**連結：** `.cursor/skills/booking-uiux/SKILL.md` → 視覺資產指引路徑指向本檔。
 
 ---
 

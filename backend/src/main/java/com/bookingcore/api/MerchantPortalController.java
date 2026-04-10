@@ -7,16 +7,19 @@ import com.bookingcore.api.ApiDtos.BusinessHoursRequest;
 import com.bookingcore.api.ApiDtos.CreateMerchantRequest;
 import com.bookingcore.api.ApiDtos.PublicRegisterRequest;
 import com.bookingcore.api.ApiDtos.PublicRegisterResponse;
-import com.bookingcore.api.PublicRegisterType;
 import com.bookingcore.api.ApiDtos.CustomizationRequest;
 import com.bookingcore.api.ApiDtos.DynamicFieldSummary;
 import com.bookingcore.api.ApiDtos.DynamicFieldRequest;
 import com.bookingcore.api.ApiDtos.ManualBookingRequest;
+import com.bookingcore.api.ApiDtos.MerchantInvitationCreateRequest;
+import com.bookingcore.api.ApiDtos.MerchantInvitationSummary;
+import com.bookingcore.api.ApiDtos.MerchantInvitationUpdateRequest;
 import com.bookingcore.api.ApiDtos.MerchantBookingStatusUpdateRequest;
 import com.bookingcore.api.ApiDtos.MerchantBookingSummary;
 import com.bookingcore.api.ApiDtos.MerchantCustomizationResponse;
 import com.bookingcore.api.ApiDtos.MerchantProfileResponse;
 import com.bookingcore.api.ApiDtos.MerchantSummary;
+import com.bookingcore.api.ApiDtos.MerchantVisibilityUpdateRequest;
 import com.bookingcore.api.ApiDtos.ResourceItemSummary;
 import com.bookingcore.api.ApiDtos.ResourceRequest;
 import com.bookingcore.api.ApiDtos.ServiceItemSummary;
@@ -35,8 +38,14 @@ import com.bookingcore.modules.customization.CustomizationConfigRepository;
 import com.bookingcore.modules.merchant.DynamicFieldConfig;
 import com.bookingcore.modules.merchant.DynamicFieldConfigRepository;
 import com.bookingcore.modules.merchant.Merchant;
+import com.bookingcore.modules.merchant.MerchantInvitation;
+import com.bookingcore.modules.merchant.MerchantInvitationRepository;
+import com.bookingcore.modules.merchant.MerchantInvitationStatus;
 import com.bookingcore.modules.merchant.MerchantProfile;
 import com.bookingcore.modules.merchant.MerchantProfileRepository;
+import com.bookingcore.modules.merchant.MerchantRepository;
+import com.bookingcore.modules.platform.PlatformUser;
+import com.bookingcore.modules.platform.PlatformUserRepository;
 import com.bookingcore.modules.merchant.ResourceItem;
 import com.bookingcore.modules.merchant.ResourceItemRepository;
 import com.bookingcore.modules.service.ServiceItem;
@@ -45,6 +54,7 @@ import com.bookingcore.service.BookingCommandService;
 import com.bookingcore.service.MerchantProvisioningService;
 import com.bookingcore.service.PublicRegistrationService;
 import com.bookingcore.service.PlatformAuditService;
+import com.bookingcore.service.MerchantAccessService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
@@ -55,6 +65,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -67,6 +78,7 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.portal.access')")
 public class MerchantPortalController {
   private final MerchantProfileRepository profileRepository;
+  private final MerchantRepository merchantRepository;
   private final ServiceItemRepository serviceItemRepository;
   private final BusinessHoursRepository businessHoursRepository;
   private final BookingRepository bookingRepository;
@@ -78,9 +90,13 @@ public class MerchantPortalController {
   private final PublicRegistrationService publicRegistrationService;
   private final BookingCommandService bookingCommandService;
   private final PlatformAuditService platformAuditService;
+  private final MerchantInvitationRepository merchantInvitationRepository;
+  private final PlatformUserRepository platformUserRepository;
+  private final MerchantAccessService merchantAccessService;
 
   public MerchantPortalController(
       MerchantProfileRepository profileRepository,
+      MerchantRepository merchantRepository,
       ServiceItemRepository serviceItemRepository,
       BusinessHoursRepository businessHoursRepository,
       BookingRepository bookingRepository,
@@ -91,8 +107,12 @@ public class MerchantPortalController {
       MerchantProvisioningService merchantProvisioningService,
       PublicRegistrationService publicRegistrationService,
       BookingCommandService bookingCommandService,
-      PlatformAuditService platformAuditService) {
+      PlatformAuditService platformAuditService,
+      MerchantInvitationRepository merchantInvitationRepository,
+      PlatformUserRepository platformUserRepository,
+      MerchantAccessService merchantAccessService) {
     this.profileRepository = profileRepository;
+    this.merchantRepository = merchantRepository;
     this.serviceItemRepository = serviceItemRepository;
     this.businessHoursRepository = businessHoursRepository;
     this.bookingRepository = bookingRepository;
@@ -104,6 +124,9 @@ public class MerchantPortalController {
     this.publicRegistrationService = publicRegistrationService;
     this.bookingCommandService = bookingCommandService;
     this.platformAuditService = platformAuditService;
+    this.merchantInvitationRepository = merchantInvitationRepository;
+    this.platformUserRepository = platformUserRepository;
+    this.merchantAccessService = merchantAccessService;
   }
 
   private void assertMerchantScope(Long merchantId) {
@@ -168,6 +191,105 @@ public class MerchantPortalController {
           return profileRepository.save(created);
         });
     return new MerchantProfileResponse(profile.getDescription(), profile.getLogoUrl());
+  }
+
+  @PutMapping("/{merchantId}/profile/visibility")
+  public MerchantSummary updateVisibility(
+      @PathVariable Long merchantId, @Valid @RequestBody MerchantVisibilityUpdateRequest request) {
+    assertMerchantScope(merchantId);
+    Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
+    merchant.setVisibility(request.visibility());
+    Merchant saved = merchantRepository.save(merchant);
+    platformAuditService.recordForCurrentUser(
+        "merchant.visibility.updated",
+        "merchant",
+        merchantId,
+        "visibility=" + request.visibility());
+    return new MerchantSummary(saved.getId(), saved.getName(), saved.getSlug(), saved.getActive());
+  }
+
+  @GetMapping("/{merchantId}/invitations")
+  public List<MerchantInvitationSummary> listInvitations(@PathVariable Long merchantId) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    return merchantInvitationRepository.findByMerchantIdOrderByIdDesc(merchantId).stream()
+        .map(
+            i ->
+                new MerchantInvitationSummary(
+                    i.getId(),
+                    i.getMerchant().getId(),
+                    i.getInviteCode(),
+                    i.getInviteeUser().getUsername(),
+                    i.getStatus(),
+                    i.getExpiresAt()))
+        .toList();
+  }
+
+  @PostMapping("/{merchantId}/invitations")
+  public MerchantInvitationSummary createInvitation(
+      @PathVariable Long merchantId, @Valid @RequestBody MerchantInvitationCreateRequest request) {
+    assertMerchantScope(merchantId);
+    Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
+    PlatformUser invitee =
+        platformUserRepository
+            .findByUsername(request.inviteeUsername())
+            .orElseThrow(() -> new ApiException("Invitee user not found", HttpStatus.NOT_FOUND));
+
+    MerchantInvitation invitation = new MerchantInvitation();
+    invitation.setMerchant(merchant);
+    invitation.setInviteeUser(invitee);
+    invitation.setInviteCode(merchantAccessService.generateInviteCode());
+    invitation.setStatus(MerchantInvitationStatus.PENDING);
+    invitation.setExpiresAt(request.expiresAt());
+    invitation.setCreatedBy(merchantAccessService.currentUsername());
+    MerchantInvitation saved = merchantInvitationRepository.save(invitation);
+    platformAuditService.recordForCurrentUser(
+        "merchant.invitation.created",
+        "merchant_invitation",
+        saved.getId(),
+        "merchantId=" + merchantId + " invitee=" + invitee.getUsername());
+    return new MerchantInvitationSummary(
+        saved.getId(),
+        saved.getMerchant().getId(),
+        saved.getInviteCode(),
+        saved.getInviteeUser().getUsername(),
+        saved.getStatus(),
+        saved.getExpiresAt());
+  }
+
+  @PatchMapping("/{merchantId}/invitations/{invitationId}")
+  public MerchantInvitationSummary updateInvitation(
+      @PathVariable Long merchantId,
+      @PathVariable Long invitationId,
+      @Valid @RequestBody MerchantInvitationUpdateRequest request) {
+    assertMerchantScope(merchantId);
+    MerchantInvitation invitation =
+        merchantInvitationRepository
+            .findById(invitationId)
+            .orElseThrow(() -> new ApiException("Invitation not found", HttpStatus.NOT_FOUND));
+    if (!invitation.getMerchant().getId().equals(merchantId)) {
+      throw new ApiException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+    if (invitation.getStatus() != MerchantInvitationStatus.PENDING
+        || request.status() != MerchantInvitationStatus.REVOKED) {
+      throw new ApiException(
+          "Illegal invitation transition: only PENDING -> REVOKED is allowed",
+          HttpStatus.CONFLICT);
+    }
+    invitation.setStatus(request.status());
+    MerchantInvitation saved = merchantInvitationRepository.save(invitation);
+    platformAuditService.recordForCurrentUser(
+        "merchant.invitation.updated",
+        "merchant_invitation",
+        saved.getId(),
+        "status=" + request.status());
+    return new MerchantInvitationSummary(
+        saved.getId(),
+        saved.getMerchant().getId(),
+        saved.getInviteCode(),
+        saved.getInviteeUser().getUsername(),
+        saved.getStatus(),
+        saved.getExpiresAt());
   }
 
   @PutMapping("/{merchantId}/profile")

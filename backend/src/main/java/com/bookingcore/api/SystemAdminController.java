@@ -3,6 +3,12 @@ package com.bookingcore.api;
 import com.bookingcore.api.ApiDtos.DomainTemplateRequest;
 import com.bookingcore.api.ApiDtos.MerchantLimitRequest;
 import com.bookingcore.api.ApiDtos.MerchantStatusRequest;
+import com.bookingcore.api.ApiDtos.SystemRbacRoleResponse;
+import com.bookingcore.api.ApiDtos.SystemBookingTransitionRequest;
+import com.bookingcore.api.ApiDtos.SystemUserBindingsUpdateRequest;
+import com.bookingcore.api.ApiDtos.SystemUserDetailResponse;
+import com.bookingcore.api.ApiDtos.SystemUserStatusUpdateRequest;
+import com.bookingcore.api.ApiDtos.SystemUserSummary;
 import com.bookingcore.api.ApiDtos.SystemSettingsRequest;
 import com.bookingcore.config.BookingPlatformProperties;
 import com.bookingcore.modules.admin.AuditLog;
@@ -14,10 +20,12 @@ import com.bookingcore.modules.admin.SystemSettingsRepository;
 import com.bookingcore.modules.booking.Booking;
 import com.bookingcore.modules.booking.BookingRepository;
 import com.bookingcore.modules.booking.BookingStatus;
+import com.bookingcore.modules.booking.BookingTransitionEvent;
 import com.bookingcore.modules.merchant.Merchant;
 import com.bookingcore.modules.merchant.MerchantRepository;
 import com.bookingcore.service.BookingCommandService;
 import com.bookingcore.service.PlatformAuditService;
+import com.bookingcore.service.SystemUserManagementService;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -40,6 +48,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.bookingcore.common.ApiException;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/system")
@@ -52,6 +62,7 @@ public class SystemAdminController {
   private final BookingPlatformProperties platformProperties;
   private final BookingCommandService bookingCommandService;
   private final PlatformAuditService platformAuditService;
+  private final SystemUserManagementService systemUserManagementService;
 
   public SystemAdminController(
       MerchantRepository merchantRepository,
@@ -61,7 +72,8 @@ public class SystemAdminController {
       AuditLogRepository auditLogRepository,
       BookingPlatformProperties platformProperties,
       BookingCommandService bookingCommandService,
-      PlatformAuditService platformAuditService) {
+      PlatformAuditService platformAuditService,
+      SystemUserManagementService systemUserManagementService) {
     this.merchantRepository = merchantRepository;
     this.bookingRepository = bookingRepository;
     this.domainTemplateRepository = domainTemplateRepository;
@@ -70,6 +82,7 @@ public class SystemAdminController {
     this.platformProperties = platformProperties;
     this.bookingCommandService = bookingCommandService;
     this.platformAuditService = platformAuditService;
+    this.systemUserManagementService = systemUserManagementService;
   }
 
   @GetMapping("/overview")
@@ -87,6 +100,56 @@ public class SystemAdminController {
   @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.dashboard.read')")
   public List<Merchant> adminMerchants() {
     return merchantRepository.findAll();
+  }
+
+  @GetMapping("/tenants/{tenantId}/merchants/{merchantId}/bookings")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.registry.manage')")
+  public List<Booking> adminTenantMerchantBookings(@PathVariable Long tenantId, @PathVariable Long merchantId) {
+    if (!tenantId.equals(merchantId)) {
+      throw new ApiException("Tenant scope mismatch", HttpStatus.BAD_REQUEST);
+    }
+    bookingCommandService.ensureMerchant(merchantId);
+    return bookingRepository.findByMerchantIdOrderByStartAtAsc(merchantId);
+  }
+
+  @PostMapping("/tenants/{tenantId}/bookings/{bookingId}/transitions")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.registry.manage')")
+  public Map<String, Object> adminTransitionBookingForTenant(
+      @PathVariable Long tenantId,
+      @PathVariable Long bookingId,
+      @Valid @RequestBody SystemBookingTransitionRequest request) {
+    if (!tenantId.equals(request.merchantId())) {
+      throw new ApiException("Tenant scope mismatch", HttpStatus.BAD_REQUEST);
+    }
+    bookingCommandService.ensureMerchant(request.merchantId());
+    Booking booking =
+        bookingRepository
+            .findByIdAndMerchantId(bookingId, request.merchantId())
+            .orElseThrow(() -> new ApiException("Booking not found", HttpStatus.NOT_FOUND));
+    BookingTransitionEvent event = request.event();
+    Booking updated = bookingCommandService.transitionBooking(request.merchantId(), bookingId, event);
+    platformAuditService.recordForCurrentUser(
+        "system.booking.transition",
+        "booking",
+        bookingId,
+        "targetTenant="
+            + tenantId
+            + " targetMerchant="
+            + request.merchantId()
+            + " action="
+            + event.name()
+            + " reason="
+            + (request.reason() == null ? "" : request.reason())
+            + " before="
+            + booking.getStatus()
+            + " after="
+            + updated.getStatus());
+    return Map.of(
+        "bookingId", updated.getId(),
+        "tenantId", tenantId,
+        "merchantId", request.merchantId(),
+        "status", updated.getStatus().name(),
+        "event", event.name());
   }
 
   @PutMapping("/merchants/{merchantId}/status")
@@ -283,4 +346,35 @@ public class SystemAdminController {
     }
   }
 
+  @GetMapping("/users")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.users.read')")
+  public List<SystemUserSummary> adminListUsers() {
+    return systemUserManagementService.listUsers();
+  }
+
+  @GetMapping("/users/{userId}")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.users.read')")
+  public SystemUserDetailResponse adminGetUserDetail(@PathVariable Long userId) {
+    return systemUserManagementService.getUserDetail(userId);
+  }
+
+  @PutMapping("/users/{userId}/status")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.users.write')")
+  public SystemUserDetailResponse adminUpdateUserStatus(
+      @PathVariable Long userId, @Valid @RequestBody SystemUserStatusUpdateRequest request) {
+    return systemUserManagementService.updateUserStatus(userId, request);
+  }
+
+  @PutMapping("/users/{userId}/rbac-bindings")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.users.write')")
+  public SystemUserDetailResponse adminReplaceUserBindings(
+      @PathVariable Long userId, @Valid @RequestBody SystemUserBindingsUpdateRequest request) {
+    return systemUserManagementService.replaceBindings(userId, request);
+  }
+
+  @GetMapping("/rbac/roles")
+  @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.users.read')")
+  public List<SystemRbacRoleResponse> adminListRbacRoles() {
+    return systemUserManagementService.listRoleCatalog();
+  }
 }

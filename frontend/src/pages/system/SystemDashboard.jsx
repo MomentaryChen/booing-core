@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { ChevronDown, Inbox, RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
 import { api } from "../../services/api/client";
 import { useI18n } from "../../i18n";
 import { SystemHeaderArt } from "../../components/illustrations/ModuleThumbnails";
@@ -229,6 +230,12 @@ export function SystemDashboard() {
           </div>
         </div>
         <div className="sys-header-actions">
+          <Link to="/system/users" className="sys-btn sys-btn--ghost">
+            {isZh ? "使用者與權限" : "Users & Permissions"}
+          </Link>
+          <Link to="/system/tenant-booking-ops" className="sys-btn sys-btn--ghost">
+            {isZh ? "跨租戶預約操作" : "Tenant booking ops"}
+          </Link>
           <button
             type="button"
             className="sys-btn sys-btn--ghost inline-flex items-center gap-2"

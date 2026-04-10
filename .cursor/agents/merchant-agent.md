@@ -15,9 +15,9 @@ Implement and maintain **merchant-side** scheduling, inventory, and appointment 
 
 | Skill | Path |
 |--------|------|
-| Merchant domain (routing, rules) | `.agents/skills/booking-merchant-domain/SKILL.md` |
-| Backend implementation | `.agents/skills/booking-backend/SKILL.md` |
-| Frontend implementation | `.agents/skills/booking-frontend/SKILL.md` |
+| Merchant domain (routing, rules) | `.cursor/skills/booking-merchant-domain/SKILL.md` |
+| Backend implementation | `.cursor/skills/booking-backend/SKILL.md` |
+| Frontend implementation | `.cursor/skills/booking-frontend/SKILL.md` |
 
 ## Rules
 

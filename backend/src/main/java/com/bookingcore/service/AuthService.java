@@ -11,14 +11,20 @@ import com.bookingcore.config.BookingPlatformProperties.DevUser;
 import com.bookingcore.modules.merchant.MerchantRepository;
 import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.modules.platform.PlatformUserRepository;
+import com.bookingcore.modules.platform.rbac.ActiveAuthContext;
+import com.bookingcore.modules.platform.rbac.PlatformUserRbacBindingRepository;
+import com.bookingcore.modules.platform.rbac.RbacRoleRepository;
 import com.bookingcore.security.JwtService;
 import com.bookingcore.security.EffectivePermissionService;
 import com.bookingcore.security.PlatformPrincipal;
 import com.bookingcore.security.PlatformUserRole;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -41,6 +47,12 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final EffectivePermissionService effectivePermissionService;
   private final Environment environment;
+  private final RbacRoleRepository rbacRoleRepository;
+  private final PlatformUserRbacBindingRepository platformUserRbacBindingRepository;
+
+  private static final Comparator<ActiveAuthContext> ACTIVE_CONTEXT_ORDER =
+      Comparator.comparingInt((ActiveAuthContext c) -> safeRoleOrdinal(c.roleCode()))
+          .thenComparing(c -> c.merchantId() == null ? Long.MIN_VALUE : c.merchantId());
 
   public AuthService(
       BookingPlatformProperties properties,
@@ -49,7 +61,9 @@ public class AuthService {
       PlatformUserRepository platformUserRepository,
       PasswordEncoder passwordEncoder,
       EffectivePermissionService effectivePermissionService,
-      Environment environment) {
+      Environment environment,
+      RbacRoleRepository rbacRoleRepository,
+      PlatformUserRbacBindingRepository platformUserRbacBindingRepository) {
     this.properties = properties;
     this.jwtService = jwtService;
     this.merchantRepository = merchantRepository;
@@ -57,6 +71,8 @@ public class AuthService {
     this.passwordEncoder = passwordEncoder;
     this.effectivePermissionService = effectivePermissionService;
     this.environment = environment;
+    this.rbacRoleRepository = rbacRoleRepository;
+    this.platformUserRbacBindingRepository = platformUserRbacBindingRepository;
   }
 
   public TokenResponse login(LoginRequest request) {
@@ -77,14 +93,16 @@ public class AuthService {
       }
       if (passwordEncoder.matches(request.password(), dbUser.getPasswordHash())) {
         resetLoginFailureState(dbUser);
-        Long merchantId = dbUser.getMerchant() == null ? null : dbUser.getMerchant().getId();
+        ActiveAuthContext initial = resolveInitialContext(dbUser);
+        PlatformUserRole role = parseRoleCode(initial.roleCode()).orElse(dbUser.getRole());
+        Long merchantId = initial.merchantId();
         String token =
             jwtService.createAccessToken(
-                dbUser.getUsername(), dbUser.getRole(), merchantId, dbUser.getCredentialVersion());
+                dbUser.getUsername(), role, merchantId, dbUser.getCredentialVersion());
         dbUser.setLastLoginAt(LocalDateTime.now());
         platformUserRepository.save(dbUser);
         return buildTokenResponse(
-            token, new PlatformPrincipal(dbUser.getUsername(), dbUser.getRole(), merchantId));
+            token, new PlatformPrincipal(dbUser.getUsername(), role, merchantId));
       }
       recordFailedPasswordAttempt(dbUser);
       log.warn("auth_login_failed reason=wrong_password username={}", request.username());
@@ -170,7 +188,7 @@ public class AuthService {
 
   private TokenResponse buildTokenResponse(String token, PlatformPrincipal principal) {
     PlatformUserRole role = principal.role();
-    List<String> roleNames = List.of(role.name());
+    List<String> roleNames = resolveAllRoleCodes(principal.username(), principal.role());
     List<String> permissions = effectivePermissionService.sortedPermissionCodesFor(principal);
     return new TokenResponse(
         token,
@@ -186,6 +204,7 @@ public class AuthService {
     PlatformPrincipal principal = requirePlatformPrincipal(authentication);
     PlatformUserRole role = principal.role();
     List<String> perms = effectivePermissionService.sortedPermissionCodesFor(principal);
+    List<String> allRoles = resolveAllRoleCodes(principal.username(), role);
     List<AuthContextOption> available = buildAvailableContexts(principal);
     AuthContextOption active =
         available.stream()
@@ -199,7 +218,7 @@ public class AuthService {
     return new AuthMeResponse(
         principal.username(),
         role.name(),
-        List.of(role.name()),
+        allRoles,
         perms,
         principal.merchantId(),
         sessionState,
@@ -242,18 +261,152 @@ public class AuthService {
   }
 
   private List<AuthContextOption> buildAvailableContexts(PlatformPrincipal principal) {
-    List<AuthContextOption> out = new ArrayList<>();
-    out.add(new AuthContextOption("PLATFORM", principal.merchantId(), principal.role().name()));
-    if (principal.role() == PlatformUserRole.SYSTEM_ADMIN) {
-      merchantRepository
-          .findFirstByOrderByIdAsc()
-          .ifPresent(
-              m ->
-                  out.add(
-                      new AuthContextOption(
-                          "MERCHANT_SCOPED", m.getId(), PlatformUserRole.MERCHANT.name())));
+    var userOpt = platformUserRepository.findByUsername(principal.username());
+    if (userOpt.isEmpty()) {
+      return buildContextsWithoutDbUser(principal);
     }
-    return List.copyOf(out);
+    PlatformUser user = userOpt.get();
+    if (rbacRoleRepository.count() == 0L) {
+      List<AuthContextOption> single =
+          List.of(authOptionForRoleAndMerchant(principal.role(), principal.merchantId()));
+      return appendAdminMerchantPreview(single, principal);
+    }
+    List<ActiveAuthContext> raw = platformUserRbacBindingRepository.findActiveAuthContexts(user.getId());
+    List<AuthContextOption> fromBindings;
+    if (raw.isEmpty()) {
+      Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+      fromBindings = List.of(authOptionForRoleAndMerchant(user.getRole(), mid));
+    } else {
+      fromBindings =
+          dedupeActiveContexts(raw).stream()
+              .filter(c -> parseRoleCode(c.roleCode()).isPresent())
+              .sorted(ACTIVE_CONTEXT_ORDER)
+              .map(c -> authOptionForRoleAndMerchant(parseRoleCode(c.roleCode()).orElseThrow(), c.merchantId()))
+              .toList();
+      if (fromBindings.isEmpty()) {
+        Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+        fromBindings = List.of(authOptionForRoleAndMerchant(user.getRole(), mid));
+      }
+    }
+    return appendAdminMerchantPreview(fromBindings, principal);
+  }
+
+  private List<AuthContextOption> buildContextsWithoutDbUser(PlatformPrincipal principal) {
+    List<AuthContextOption> single =
+        List.of(authOptionForRoleAndMerchant(principal.role(), principal.merchantId()));
+    return appendAdminMerchantPreview(single, principal);
+  }
+
+  private static AuthContextOption authOptionForRoleAndMerchant(PlatformUserRole role, Long merchantId) {
+    boolean scoped =
+        (role == PlatformUserRole.MERCHANT || role == PlatformUserRole.SUB_MERCHANT)
+            && merchantId != null;
+    String kind = scoped ? "MERCHANT_SCOPED" : "PLATFORM";
+    return new AuthContextOption(kind, merchantId, role.name());
+  }
+
+  private List<AuthContextOption> appendAdminMerchantPreview(
+      List<AuthContextOption> base, PlatformPrincipal principal) {
+    if (principal.role() != PlatformUserRole.SYSTEM_ADMIN) {
+      return List.copyOf(base);
+    }
+    return merchantRepository
+        .findFirstByOrderByIdAsc()
+        .map(
+            m -> {
+              long mId = m.getId();
+              boolean already =
+                  base.stream()
+                      .anyMatch(
+                          o ->
+                              PlatformUserRole.MERCHANT.name().equals(o.role())
+                                  && Objects.equals(o.merchantId(), mId));
+              if (already) {
+                return List.copyOf(base);
+              }
+              List<AuthContextOption> out = new ArrayList<>(base);
+              out.add(
+                  new AuthContextOption(
+                      "MERCHANT_SCOPED", mId, PlatformUserRole.MERCHANT.name()));
+              return List.copyOf(out);
+            })
+        .orElseGet(() -> List.copyOf(base));
+  }
+
+  private static List<ActiveAuthContext> dedupeActiveContexts(List<ActiveAuthContext> raw) {
+    var seen = new LinkedHashSet<String>();
+    List<ActiveAuthContext> out = new ArrayList<>();
+    for (ActiveAuthContext c : raw) {
+      String k = c.roleCode() + ":" + (c.merchantId() == null ? "null" : c.merchantId());
+      if (seen.add(k)) {
+        out.add(c);
+      }
+    }
+    return out;
+  }
+
+  private ActiveAuthContext resolveInitialContext(PlatformUser user) {
+    if (rbacRoleRepository.count() == 0L) {
+      Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+      return new ActiveAuthContext(user.getRole().name(), mid);
+    }
+    List<ActiveAuthContext> raw = platformUserRbacBindingRepository.findActiveAuthContexts(user.getId());
+    if (raw.isEmpty()) {
+      Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+      return new ActiveAuthContext(user.getRole().name(), mid);
+    }
+    List<ActiveAuthContext> deduped = dedupeActiveContexts(raw);
+    List<ActiveAuthContext> supported =
+        deduped.stream().filter(c -> parseRoleCode(c.roleCode()).isPresent()).toList();
+    if (supported.isEmpty()) {
+      Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+      return new ActiveAuthContext(user.getRole().name(), mid);
+    }
+    Long userMid = user.getMerchant() == null ? null : user.getMerchant().getId();
+    String primaryRole = user.getRole().name();
+    for (ActiveAuthContext c : supported) {
+      if (primaryRole.equals(c.roleCode()) && Objects.equals(userMid, c.merchantId())) {
+        return c;
+      }
+    }
+    return supported.stream().min(ACTIVE_CONTEXT_ORDER).orElseThrow();
+  }
+
+  private List<String> resolveAllRoleCodes(String username, PlatformUserRole activeFallback) {
+    if (rbacRoleRepository.count() == 0L) {
+      return List.of(activeFallback.name());
+    }
+    return platformUserRepository
+        .findByUsername(username)
+        .map(
+            u -> {
+              List<ActiveAuthContext> ctxs = platformUserRbacBindingRepository.findActiveAuthContexts(u.getId());
+              if (ctxs.isEmpty()) {
+                return List.of(u.getRole().name());
+              }
+              return dedupeActiveContexts(ctxs).stream()
+                  .filter(c -> parseRoleCode(c.roleCode()).isPresent())
+                  .map(ActiveAuthContext::roleCode)
+                  .distinct()
+                  .sorted()
+                  .toList();
+            })
+        .orElse(List.of(activeFallback.name()));
+  }
+
+  private static Optional<PlatformUserRole> parseRoleCode(String roleCode) {
+    if (!StringUtils.hasText(roleCode)) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(PlatformUserRole.valueOf(roleCode));
+    } catch (IllegalArgumentException ex) {
+      return Optional.empty();
+    }
+  }
+
+  private static int safeRoleOrdinal(String roleCode) {
+    return parseRoleCode(roleCode).map(Enum::ordinal).orElse(Integer.MAX_VALUE);
   }
 
   public TokenResponse refresh(Authentication authentication) {

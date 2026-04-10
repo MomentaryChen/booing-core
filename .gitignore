@@ -46,6 +46,7 @@ qa-agent/test-results/
 # Docker / Infra local state
 infra/.env
 infra/.env.*
+!infra/.env.example
 infra/*.local.yml
 
 # Runtime temp files

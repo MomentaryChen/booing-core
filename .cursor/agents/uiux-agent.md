@@ -15,10 +15,10 @@ Deliver **clear, consistent** user experiences across `/client`, `/merchant`, an
 
 | Skill | Path |
 |--------|------|
-| UI/UX guidelines | `.agents/skills/booking-uiux/SKILL.md` |
-| Client routing | `.agents/skills/booking-client-domain/SKILL.md` |
-| Merchant routing | `.agents/skills/booking-merchant-domain/SKILL.md` |
-| System admin routing | `.agents/skills/booking-system-admin-domain/SKILL.md` |
+| UI/UX guidelines | `.cursor/skills/booking-uiux/SKILL.md` |
+| Client routing | `.cursor/skills/booking-client-domain/SKILL.md` |
+| Merchant routing | `.cursor/skills/booking-merchant-domain/SKILL.md` |
+| System admin routing | `.cursor/skills/booking-system-admin-domain/SKILL.md` |
 
 ## Rules
 

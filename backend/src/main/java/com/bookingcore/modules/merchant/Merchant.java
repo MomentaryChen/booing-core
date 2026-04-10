@@ -2,6 +2,8 @@ package com.bookingcore.modules.merchant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -25,6 +27,10 @@ public class Merchant {
 
   @Column(nullable = false)
   private Integer serviceLimit = 5;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 32)
+  private MerchantVisibility visibility = MerchantVisibility.PUBLIC;
 
   public Long getId() {
     return id;
@@ -60,5 +66,13 @@ public class Merchant {
 
   public void setServiceLimit(Integer serviceLimit) {
     this.serviceLimit = serviceLimit;
+  }
+
+  public MerchantVisibility getVisibility() {
+    return visibility;
+  }
+
+  public void setVisibility(MerchantVisibility visibility) {
+    this.visibility = visibility;
   }
 }

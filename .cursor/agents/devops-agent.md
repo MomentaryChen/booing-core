@@ -15,8 +15,8 @@ Make **reproducible** runs and builds for backend (Maven) and frontend (pnpm), a
 
 | Skill | Path |
 |--------|------|
-| DevOps / runbook | `.agents/skills/booking-devops/SKILL.md` |
-| Security config | `.agents/skills/springboot-security/SKILL.md` |
+| DevOps / runbook | `.cursor/skills/booking-devops/SKILL.md` |
+| Security config | `.cursor/skills/springboot-security/SKILL.md` |
 
 ## Rules
 

@@ -20,6 +20,8 @@ public class RolePermissionCatalog {
         Set.of(
             "system.dashboard.read",
             "system.settings.write",
+            "system.users.read",
+            "system.users.write",
             "merchant.registry.manage",
             "merchant.portal.access",
             "me.navigation.read"));

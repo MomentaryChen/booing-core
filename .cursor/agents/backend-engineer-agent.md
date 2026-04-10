@@ -15,10 +15,10 @@ Implement and maintain **correct, secure** server-side behavior under `backend/`
 
 | Skill | Path |
 |--------|------|
-| Backend conventions | `.agents/skills/booking-backend/SKILL.md` |
-| Spring patterns | `.agents/skills/springboot-patterns/SKILL.md` |
-| Security | `.agents/skills/springboot-security/SKILL.md` |
-| Architecture | `.agents/skills/booking-architect/SKILL.md` |
+| Backend conventions | `.cursor/skills/booking-backend/SKILL.md` |
+| Spring patterns | `.cursor/skills/springboot-patterns/SKILL.md` |
+| Security | `.cursor/skills/springboot-security/SKILL.md` |
+| Architecture | `.cursor/skills/booking-architect/SKILL.md` |
 
 ## Rules
 

@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import {
   AUTH_OVERLAY_LOGIN,
-  AUTH_OVERLAY_REGISTER,
   parseAuthOverlayFromSearch,
   stripAuthOverlayParams,
 } from "../../services/auth/sessionRouting";
@@ -34,8 +33,7 @@ export function AuthOverlay() {
   const focusBeforeOpenRef = useRef(null);
 
   const parsed = parseAuthOverlayFromSearch(location.search);
-  const open =
-    !!parsed && location.pathname !== "/login" && location.pathname !== "/demo/saas-dashboard";
+  const open = !!parsed && location.pathname !== "/login";
 
   const close = useCallback(() => {
     const search = stripAuthOverlayParams(location.search);
@@ -119,58 +117,9 @@ export function AuthOverlay() {
     return null;
   }
 
-  function updateOverlayParams(next) {
-    const params = new URLSearchParams((location.search || "").replace(/^\?/, ""));
-    if (next.mode) {
-      params.set("auth", next.mode);
-    }
-    if (next.intent) {
-      params.set("intent", next.intent);
-    }
-    if (next.returnUrl == null || next.returnUrl === "") {
-      params.delete("returnUrl");
-    } else {
-      params.set("returnUrl", next.returnUrl);
-    }
-    if (next.registered) {
-      params.set("registered", "1");
-    } else {
-      params.delete("registered");
-    }
-    const search = params.toString();
-    navigate({ pathname: location.pathname, search: search ? `?${search}` : "" }, { replace: true });
-  }
-
-  function setMode(mode) {
-    updateOverlayParams({
-      mode,
-      intent: mode === AUTH_OVERLAY_REGISTER ? "merchant" : parsed.intent,
-      returnUrl: parsed.returnUrl,
-      registered: mode === AUTH_OVERLAY_LOGIN ? parsed.registered : false,
-    });
-  }
-
   const labelledBy =
     parsed.mode === AUTH_OVERLAY_LOGIN ? "auth-overlay-login-title" : "auth-overlay-register-title";
   const isLoginMode = parsed.mode === AUTH_OVERLAY_LOGIN;
-
-  function onTabsKeyDown(e) {
-    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
-    e.preventDefault();
-    const order = [AUTH_OVERLAY_LOGIN, AUTH_OVERLAY_REGISTER];
-    const currentIdx = order.indexOf(parsed.mode);
-    if (e.key === "Home") {
-      setMode(order[0]);
-      return;
-    }
-    if (e.key === "End") {
-      setMode(order[order.length - 1]);
-      return;
-    }
-    const delta = e.key === "ArrowRight" ? 1 : -1;
-    const nextIdx = (currentIdx + delta + order.length) % order.length;
-    setMode(order[nextIdx]);
-  }
 
   return (
     <div className="auth-overlay-root" role="presentation" onClick={close}>
@@ -182,72 +131,36 @@ export function AuthOverlay() {
         aria-labelledby={labelledBy}
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          className="auth-overlay-tabs"
-          role="tablist"
-          aria-label={t("authOverlayTabsAria")}
-          onKeyDown={onTabsKeyDown}
-        >
+        <div className="auth-overlay-chrome">
+          <span className="auth-overlay-title" aria-hidden>
+            {isLoginMode ? t("authOverlayTabLogin") : t("authOverlayTabRegister")}
+          </span>
           <button
             type="button"
-            role="tab"
-            id="auth-overlay-tab-login"
-            aria-selected={parsed.mode === AUTH_OVERLAY_LOGIN}
-            aria-controls="auth-overlay-login-panel"
-            tabIndex={parsed.mode === AUTH_OVERLAY_LOGIN ? 0 : -1}
-            className={`auth-overlay-tab${parsed.mode === AUTH_OVERLAY_LOGIN ? " is-active" : ""}`}
-            onClick={() => setMode(AUTH_OVERLAY_LOGIN)}
+            className="auth-overlay-close"
+            onClick={close}
+            aria-label={t("authOverlayCloseAria")}
           >
-            {t("authOverlayTabLogin")}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            id="auth-overlay-tab-register"
-            aria-selected={parsed.mode === AUTH_OVERLAY_REGISTER}
-            aria-controls="auth-overlay-register-panel"
-            tabIndex={parsed.mode === AUTH_OVERLAY_REGISTER ? 0 : -1}
-            className={`auth-overlay-tab${parsed.mode === AUTH_OVERLAY_REGISTER ? " is-active" : ""}`}
-            onClick={() => setMode(AUTH_OVERLAY_REGISTER)}
-          >
-            {t("authOverlayTabRegister")}
+            <X className="auth-overlay-close-icon" aria-hidden size={20} strokeWidth={2} />
           </button>
         </div>
-        <div
-          role="tabpanel"
-          id="auth-overlay-login-panel"
-          aria-labelledby="auth-overlay-tab-login"
-          hidden={!isLoginMode}
-          aria-hidden={!isLoginMode}
-        >
-          {isLoginMode ? (
-            <UnifiedLoginForm
-              intent={parsed.intent}
-              returnUrl={parsed.returnUrl}
-              registered={parsed.registered}
-              variant="overlay"
-            />
-          ) : null}
+        <div className="auth-overlay-body">
+          <div hidden={!isLoginMode} aria-hidden={!isLoginMode}>
+            {isLoginMode ? (
+              <UnifiedLoginForm
+                intent={parsed.intent}
+                returnUrl={parsed.returnUrl}
+                registered={parsed.registered}
+                variant="overlay"
+              />
+            ) : null}
+          </div>
+          <div hidden={isLoginMode} aria-hidden={isLoginMode}>
+            {!isLoginMode ? (
+              <MerchantRegisterForm variant="overlay" />
+            ) : null}
+          </div>
         </div>
-        <div
-          role="tabpanel"
-          id="auth-overlay-register-panel"
-          aria-labelledby="auth-overlay-tab-register"
-          hidden={isLoginMode}
-          aria-hidden={isLoginMode}
-        >
-          {!isLoginMode ? (
-            <MerchantRegisterForm variant="overlay" />
-          ) : null}
-        </div>
-        <button
-          type="button"
-          className="auth-overlay-close"
-          onClick={close}
-          aria-label={t("authOverlayCloseAria")}
-        >
-          <X className="auth-overlay-close-icon" aria-hidden size={20} strokeWidth={2} />
-        </button>
       </div>
     </div>
   );

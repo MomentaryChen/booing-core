@@ -35,6 +35,29 @@ export function UnifiedLoginForm({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function pickAutoContext(options, intent) {
+    if (!Array.isArray(options) || options.length === 0) return null;
+    if (intent === "system") {
+      const systemAdmins = options.filter((opt) => opt?.role === "SYSTEM_ADMIN");
+      if (systemAdmins.length === 0) return null;
+      const platformAdmin = systemAdmins.find((opt) => opt?.merchantId == null);
+      if (platformAdmin) return platformAdmin;
+      return systemAdmins.length === 1 ? systemAdmins[0] : null;
+    }
+    if (intent === "client") {
+      const matches = options.filter((opt) => opt?.role === "CLIENT");
+      return matches.length === 1 ? matches[0] : null;
+    }
+    const merchantCandidates = options.filter(
+      (opt) =>
+        opt?.kind === "MERCHANT_SCOPED" ||
+        opt?.role === "MERCHANT" ||
+        opt?.role === "SUB_MERCHANT" ||
+        opt?.merchantId != null
+    );
+    return merchantCandidates.length === 1 ? merchantCandidates[0] : null;
+  }
+
   useEffect(() => {
     if (!isMerchantAuthRequired()) {
       navigate("/merchant", { replace: true });
@@ -95,6 +118,29 @@ export function UnifiedLoginForm({
         return;
       }
       if (me.availableContexts && me.availableContexts.length > 1) {
+        const autoContext = pickAutoContext(me.availableContexts, intentProp);
+        if (autoContext) {
+          const contextData = await api("/auth/context/select", {
+            method: "POST",
+            body: JSON.stringify({ role: autoContext.role, merchantId: autoContext.merchantId }),
+          });
+          setStoredAccessToken(contextData.accessToken);
+          const selectedMid = getMerchantIdFromAccessToken(contextData.accessToken);
+          if (selectedMid) setStoredMerchantId(selectedMid);
+          else clearStoredMerchantId();
+          await refresh();
+          const next = resolvePostLoginDestination({
+            returnUrlRaw: rawReturn,
+            nextDestination: contextData.nextDestination,
+            role: contextData.role,
+            intent: intentProp,
+            registerUserType: peekPendingRegisterUserType(),
+          });
+          navigate(next, { replace: true });
+          consumePendingRegisterUserType();
+          setLoading(false);
+          return;
+        }
         navigate("/login/context", { replace: true, state: { intent: intentProp, returnUrl: rawReturn } });
         setLoading(false);
         return;

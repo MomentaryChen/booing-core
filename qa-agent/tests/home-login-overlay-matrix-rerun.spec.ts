@@ -2,18 +2,51 @@ import { expect, test } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const FRONTEND_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:25175";
+const FRONTEND_BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:25173";
 
 const creds = {
-  merchant: { username: "merchant", password: "merchant" },
-  system: { username: "admin", password: "admin" },
-  client: { username: "client", password: "client" },
+  merchant: {
+    username: process.env.PW_MERCHANT_USERNAME ?? process.env.BOOTSTRAP_DEFAULT_MERCHANT_USER_USERNAME ?? "merchant",
+    password: process.env.PW_MERCHANT_PASSWORD ?? process.env.BOOTSTRAP_DEFAULT_MERCHANT_USER_PASSWORD ?? "merchant",
+  },
+  system: {
+    username: process.env.PW_SYSTEM_USERNAME ?? process.env.BOOTSTRAP_SYSTEM_ADMIN_USERNAME ?? "admin",
+    password: process.env.PW_SYSTEM_PASSWORD ?? process.env.BOOTSTRAP_SYSTEM_ADMIN_PASSWORD ?? "admin",
+  },
+  client: {
+    username: process.env.PW_CLIENT_USERNAME ?? process.env.BOOTSTRAP_DEFAULT_CLIENT_USERNAME ?? "client",
+    password: process.env.PW_CLIENT_PASSWORD ?? process.env.BOOTSTRAP_DEFAULT_CLIENT_PASSWORD ?? "client",
+  },
 };
+
+function toRouteFolder(rawPathname: string): string {
+  const pathname = (rawPathname || "/").trim().toLowerCase();
+  if (pathname === "/" || pathname === "") return "home";
+  if (pathname === "/merchant") return "merchant";
+  if (pathname === "/system") return "system";
+  if (pathname === "/403") return "forbidden";
+
+  const normalized = pathname
+    .replace(/^\/+|\/+$/g, "")
+    .split("/")
+    .filter(Boolean)
+    .map((segment) =>
+      segment
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+    )
+    .filter(Boolean)
+    .join("-");
+
+  return normalized || "home";
+}
 
 async function checkpoint(page, testInfo, label) {
   const png = await page.screenshot({ fullPage: true });
   await testInfo.attach(`${label}.png`, { body: png, contentType: "image/png" });
-  const dir = path.join(process.cwd(), "artifacts", "screenshots");
+  const pathname = new URL(page.url()).pathname;
+  const routeFolder = toRouteFolder(pathname);
+  const dir = path.join(process.cwd(), "artifacts", "screenshots", routeFolder);
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, `${label}-${testInfo.project.name}.png`), png);
 }

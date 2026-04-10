@@ -46,14 +46,8 @@ export function HomeIntroPage() {
           <p className="home-intro__hero-proof">{t("introHeroProofLine")}</p>
           <div className="home-intro__hero-actions">
             <Link
-              to={hrefAuthOverlay("/", "", { mode: AUTH_OVERLAY_LOGIN, intent: "merchant" })}
-              className={cn(buttonVariants({ variant: "default", size: "default" }))}
-            >
-              {t("introHeroCtaLogin")}
-            </Link>
-            <Link
               to={hrefAuthOverlay("/", "", { mode: AUTH_OVERLAY_REGISTER, intent: "merchant" })}
-              className={cn(buttonVariants({ variant: "outline", size: "default" }))}
+              className={cn(buttonVariants({ variant: "default", size: "default" }))}
             >
               {t("introHeroCtaRegister")}
             </Link>

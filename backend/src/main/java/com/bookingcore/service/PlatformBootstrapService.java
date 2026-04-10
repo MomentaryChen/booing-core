@@ -122,13 +122,8 @@ public class PlatformBootstrapService {
 
   private void validateExistingUserMapping(PlatformUser user, PlatformUserRole expectedRole, Merchant expectedMerchant) {
     if (user.getRole() != expectedRole) {
-      throw new IllegalStateException(
-          "Bootstrap user conflict: username '"
-              + user.getUsername()
-              + "' already exists with role="
-              + user.getRole().name()
-              + ", expected role="
-              + expectedRole.name());
+      validateBindingTarget(expectedRole, expectedMerchant);
+      return;
     }
     Long expectedMerchantId =
         (expectedRole == PlatformUserRole.MERCHANT || expectedRole == PlatformUserRole.SUB_MERCHANT)
@@ -144,6 +139,18 @@ public class PlatformBootstrapService {
               + ", expected="
               + expectedMerchantId
               + ")");
+    }
+  }
+
+  private static void validateBindingTarget(PlatformUserRole expectedRole, Merchant expectedMerchant) {
+    if (expectedRole == PlatformUserRole.MERCHANT || expectedRole == PlatformUserRole.SUB_MERCHANT) {
+      if (expectedMerchant == null) {
+        throw new IllegalStateException(
+            "Bootstrap: role " + expectedRole.name() + " requires a merchant for binding");
+      }
+    } else if (expectedMerchant != null) {
+      throw new IllegalStateException(
+          "Bootstrap: role " + expectedRole.name() + " must not be scoped to a merchant");
     }
   }
 

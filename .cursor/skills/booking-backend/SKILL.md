@@ -16,9 +16,9 @@ description: >-
 
 | Topic | Skill |
 |--------|--------|
-| Layering, DTOs, validation, exceptions, pagination | `.agents/skills/springboot-patterns/SKILL.md` |
-| Security, authz, headers, rate limiting | `.agents/skills/springboot-security/SKILL.md` |
-| Domain rules (resource/slot, tenant, state machine) | `.agents/skills/booking-architect/SKILL.md` |
+| Layering, DTOs, validation, exceptions, pagination | `.cursor/skills/springboot-patterns/SKILL.md` |
+| Security, authz, headers, rate limiting | `.cursor/skills/springboot-security/SKILL.md` |
+| Domain rules (resource/slot, tenant, state machine) | `.cursor/skills/booking-architect/SKILL.md` |
 
 ## Repository habits
 

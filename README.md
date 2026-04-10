@@ -4,6 +4,20 @@ A full-stack **booking / appointment** platform: merchants manage services, sche
 
 **Languages:** [English](README.md) · [繁體中文](README.zh-TW.md)
 
+## About the platform
+
+booking-core is a **multi-tenant booking platform** designed for teams that need one shared foundation across different business types. Instead of hardcoding one vertical workflow, it keeps the booking engine generic and configurable.
+
+It serves three product surfaces:
+
+- **Client**: end users browse availability and create bookings
+- **Merchant**: providers manage resources, schedules, and booking operations
+- **System Admin**: platform operators govern tenants, RBAC, and audit visibility
+
+Core capabilities include **Resource/Slot-based booking**, **role-based access control (RBAC)**, **auditability for operational changes**, and **extensibility** through pluggable strategies and typed metadata.
+
+The stack is intentionally practical: **Java 21 + Spring Boot** on the backend and **React + Vite** on the frontend. This design balances delivery speed with long-term maintainability, so new booking domains can be introduced by adding types and rules, not by rewriting core flows.
+
 ## System overview
 
 booking-core is a booking platform built around **configurable rules + pluggable strategies** so one engine can support multiple industries without hardcoding domain-specific flows. It models anything bookable as a **Resource** and models time/capacity as a **Slot**. Availability is derived from composable rules and exceptions (e.g., open hours, closures), and booking lifecycle transitions are enforced to avoid illegal state changes.
@@ -24,10 +38,12 @@ booking-core is a booking platform built around **configurable rules + pluggable
 
 ## Tech stack
 
-| Layer    | Stack |
-| -------- | ----- |
-| Backend  | Java 21, Spring Boot 3.3, Spring Data JPA, MySQL |
+
+| Layer    | Stack                                                  |
+| -------- | ------------------------------------------------------ |
+| Backend  | Java 21, Spring Boot 3.3, Spring Data JPA, MySQL       |
 | Frontend | React 18, Vite 5, React Router 6, i18n (zh-TW / en-US) |
+
 
 ## Repository layout
 
@@ -50,7 +66,7 @@ mvn spring-boot:run
 ```
 
 - REST API base: `http://localhost:28080/api`
- 
+
 Backend defaults to **dev profile** (`spring.profiles.default=dev`) and uses **MySQL**. Configure via env vars:
 
 - `DB_HOST` / `DB_PORT` / `DB_NAME`
@@ -76,13 +92,15 @@ pnpm preview   # optional local preview of the build
 
 ## App areas (routes)
 
-| Path | Role |
-| ---- | ---- |
-| `/system` | System admin dashboard |
-| `/merchant`, `/merchant/appointments`, `/merchant/settings/schedule` | Merchant tools |
-| `/client` | Client-facing flow (WIP / to-do page) |
-| `/client/booking/:slug` | Public storefront by merchant slug (e.g. `demo-merchant`) |
-| `/store/:slug` | Redirects to `/client/booking/:slug` |
+
+| Path                                                                 | Role                                                      |
+| -------------------------------------------------------------------- | --------------------------------------------------------- |
+| `/system`                                                            | System admin dashboard                                    |
+| `/merchant`, `/merchant/appointments`, `/merchant/settings/schedule` | Merchant tools                                            |
+| `/client`                                                            | Client-facing flow (WIP / to-do page)                     |
+| `/client/booking/:slug`                                              | Public storefront by merchant slug (e.g. `demo-merchant`) |
+| `/store/:slug`                                                       | Redirects to `/client/booking/:slug`                      |
+
 
 ## Screenshots (generated)
 
@@ -101,7 +119,7 @@ Run `qa-agent` Playwright screenshots, then reference these files in docs:
 
 ## API overview
 
-All routes are under `/api`, including merchant CRUD, services, business hours, bookings, customization, dynamic fields, resources, availability exceptions, public storefront booking under **`/api/client/...`**, auth **`/api/auth/login`**, and system endpoints (`/api/system/...`).
+All routes are under `/api`, including merchant CRUD, services, business hours, bookings, customization, dynamic fields, resources, availability exceptions, public storefront booking under `**/api/client/...**`, auth `**/api/auth/login**`, and system endpoints (`/api/system/...`).
 
 When `booking.platform.jwt.secret` is set (256+ bit key recommended), JWT auth is enforced for `/api/merchant/**` (roles `MERCHANT`, `SUB_MERCHANT`, or `SYSTEM_ADMIN`) and `/api/system/**` (`SYSTEM_ADMIN`). The static `booking.platform.system-admin-token` still works for `/api/system/**` in that mode. Dev-only accounts for issuing tokens are listed under `booking.platform.dev-users`. Leave `jwt.secret` empty for open local development (default).
 
@@ -109,11 +127,13 @@ When `booking.platform.jwt.secret` is set (256+ bit key recommended), JWT auth i
 
 The deployment contract is environment-driven. `infra/docker-compose.yml` now assumes `prod` behavior by default.
 
-| Environment | Bootstrap toggles default | SYSTEM_ADMIN password source | Default merchant user password source | Credential logging (`booking.platform.auth.log-dev-bootstrap-credentials`) | Owner |
-| ----------- | ------------------------- | ---------------------------- | ------------------------------------- | --------------------------------------------------------------------------- | ----- |
-| dev/local | Allowed to be enabled for fast setup | Dev env file or local secret (non-production only) | Dev env file or local secret (non-production only) | Allowed only for temporary debugging; must be turned off after verification | Backend on-call engineer (execution) + PM on duty (approval) |
-| staging | Follows production contract (default OFF; enable only per release plan) | Secret manager / CI protected env var only | Secret manager / CI protected env var only | Must remain `false` (no plaintext credential logging) | Release manager (approval) + DevOps on-call (execution) |
-| prod | OFF by default; one-time controlled enablement only | Secret manager / runtime secret injection only | Secret manager / runtime secret injection only | Must remain `false` (no plaintext credential logging) | Platform owner (approval) + DevOps on-call (execution) |
+
+| Environment | Bootstrap toggles default                                               | SYSTEM_ADMIN password source                       | Default merchant user password source              | Credential logging (`booking.platform.auth.log-dev-bootstrap-credentials`)  | Owner                                                        |
+| ----------- | ----------------------------------------------------------------------- | -------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| dev/local   | Allowed to be enabled for fast setup                                    | Dev env file or local secret (non-production only) | Dev env file or local secret (non-production only) | Allowed only for temporary debugging; must be turned off after verification | Backend on-call engineer (execution) + PM on duty (approval) |
+| staging     | Follows production contract (default OFF; enable only per release plan) | Secret manager / CI protected env var only         | Secret manager / CI protected env var only         | Must remain `false` (no plaintext credential logging)                       | Release manager (approval) + DevOps on-call (execution)      |
+| prod        | OFF by default; one-time controlled enablement only                     | Secret manager / runtime secret injection only     | Secret manager / runtime secret injection only     | Must remain `false` (no plaintext credential logging)                       | Platform owner (approval) + DevOps on-call (execution)       |
+
 
 ### Staging minimum executable contract
 
@@ -126,37 +146,33 @@ The deployment contract is environment-driven. `infra/docker-compose.yml` now as
 Use this flow only when initializing a brand-new environment or after a destructive reset. Keep bootstrap toggles OFF during normal deploys.
 
 1. **Pre-flight (T-30m)**
-   - Confirm owner pair from the matrix above (approval + execution) and open a change ticket.
-   - Confirm secret keys are present in secret manager / CI:
-     - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_SYSTEM_ADMIN_PASSWORD`
-     - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_DEFAULT_MERCHANT_USER_PASSWORD`
-   - Confirm credential logging guardrail: `BOOKING_PLATFORM_AUTH_LOG_DEV_BOOTSTRAP_CREDENTIALS=false`.
-
+  - Confirm owner pair from the matrix above (approval + execution) and open a change ticket.
+  - Confirm secret keys are present in secret manager / CI:
+    - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_SYSTEM_ADMIN_PASSWORD`
+    - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_DEFAULT_MERCHANT_USER_PASSWORD`
+  - Confirm credential logging guardrail: `BOOKING_PLATFORM_AUTH_LOG_DEV_BOOTSTRAP_CREDENTIALS=false`.
 2. **Open bootstrap window (T-5m)**
-   - Set one-time toggles to `true` for this deployment only:
-     - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_SYSTEM_ADMIN_ENABLED=true`
-     - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_DEFAULT_MERCHANT_ENABLED=true`
-     - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_DEFAULT_MERCHANT_USER_ENABLED=true`
-   - Deploy backend once with the same image you plan to keep running.
-
+  - Set one-time toggles to `true` for this deployment only:
+    - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_SYSTEM_ADMIN_ENABLED=true`
+    - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_DEFAULT_MERCHANT_ENABLED=true`
+    - `BOOKING_PLATFORM_AUTH_BOOTSTRAP_DEFAULT_MERCHANT_USER_ENABLED=true`
+  - Deploy backend once with the same image you plan to keep running.
 3. **Verify seed result (T+0m to T+10m)**
-   - Verify health endpoint is up.
-   - Verify one successful SYSTEM_ADMIN login and one successful default MERCHANT login.
-   - Verify no plaintext credentials in logs (search for username/password markers in the deploy log stream).
-   - Verify idempotency guard by checking there is no duplicate default merchant slug/user in DB.
-
+  - Verify health endpoint is up.
+  - Verify one successful SYSTEM_ADMIN login and one successful default MERCHANT login.
+  - Verify no plaintext credentials in logs (search for username/password markers in the deploy log stream).
+  - Verify idempotency guard by checking there is no duplicate default merchant slug/user in DB.
 4. **Close bootstrap window (immediately after verification)**
-   - Set all three bootstrap toggles back to `false`.
-   - Redeploy backend (or restart with updated env) so runtime returns to steady-state contract.
-   - Attach verification evidence to the change ticket (login proof, log redaction proof, toggle-off proof).
-
+  - Set all three bootstrap toggles back to `false`.
+  - Redeploy backend (or restart with updated env) so runtime returns to steady-state contract.
+  - Attach verification evidence to the change ticket (login proof, log redaction proof, toggle-off proof).
 5. **Rollback window (first 60 minutes after close)**
-   - Owner pair remains online for 60 minutes.
-   - If bootstrap output is wrong or security checks fail:
-     - Keep toggles `false`.
-     - Roll back to last known-good release artifact.
-     - Restore database from pre-bootstrap snapshot / PITR if data integrity is impacted.
-     - Rotate both bootstrap passwords in secret manager before any retry.
+  - Owner pair remains online for 60 minutes.
+  - If bootstrap output is wrong or security checks fail:
+    - Keep toggles `false`.
+    - Roll back to last known-good release artifact.
+    - Restore database from pre-bootstrap snapshot / PITR if data integrity is impacted.
+    - Rotate both bootstrap passwords in secret manager before any retry.
 
 ### Staging executable contract (prod-equivalent)
 

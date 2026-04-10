@@ -25,7 +25,7 @@ Execution Mode: auto-run-until-done
       - If reviewer has `high` (but no `critical`) findings:
         - send task back to responsible implementation agent in same loop round
         - rerun reviewer before entering QA
-     - Run QA validation (happy path + edge cases + regressions + tenant/scope boundaries).
+    - Run QA validation with **minimal scope by default** (changed flow + direct smoke + critical tenant/scope boundaries). Expand to wider regression only if PM explicitly requests.
        - If QA fails: send failing cases to responsible implementation agent and continue loop.
      - PM completion check:
        - If acceptance criteria all pass and no unresolved high/critical findings and QA pass: set `status = "done"`.

@@ -21,15 +21,47 @@ export function LoginContextPage() {
   const location = useLocation();
   const { refresh } = useNavigation();
 
+  const rawReturn = location.state?.returnUrl != null ? String(location.state.returnUrl) : null;
+  const searchIntent = new URLSearchParams(location.search || "").get("intent");
+  const intentFromReturn =
+    typeof rawReturn === "string" && rawReturn.startsWith("/system")
+      ? "system"
+      : typeof rawReturn === "string" && rawReturn.startsWith("/client")
+        ? "client"
+        : "merchant";
   const intent =
     location.state?.intent === "system" || location.state?.intent === "client"
       ? location.state.intent
-      : "merchant";
-  const rawReturn = location.state?.returnUrl != null ? String(location.state.returnUrl) : null;
+      : searchIntent === "system" || searchIntent === "client"
+        ? searchIntent
+        : intentFromReturn;
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [options, setOptions] = useState([]);
+
+  function pickPreferredOption(list, nextIntent) {
+    if (!Array.isArray(list) || list.length === 0) return null;
+    if (nextIntent === "system") {
+      const matches = list.filter((opt) => opt?.role === "SYSTEM_ADMIN");
+      if (matches.length === 0) return null;
+      const platform = matches.find((opt) => opt?.merchantId == null);
+      if (platform) return platform;
+      return matches.length === 1 ? matches[0] : null;
+    }
+    if (nextIntent === "client") {
+      const matches = list.filter((opt) => opt?.role === "CLIENT");
+      return matches.length === 1 ? matches[0] : null;
+    }
+    const matches = list.filter(
+      (opt) =>
+        opt?.kind === "MERCHANT_SCOPED" ||
+        opt?.role === "MERCHANT" ||
+        opt?.role === "SUB_MERCHANT" ||
+        opt?.merchantId != null
+    );
+    return matches.length === 1 ? matches[0] : null;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -94,6 +126,14 @@ export function LoginContextPage() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (loading || options.length === 0) return;
+    const preferred = pickPreferredOption(options, intent);
+    if (preferred) {
+      selectOption(preferred);
+    }
+  }, [loading, options, intent]);
 
   return (
     <div className="merchant-login-page">

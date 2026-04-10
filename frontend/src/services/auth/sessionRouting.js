@@ -181,7 +181,7 @@ export function resolvePostLoginDestination({
 
 export function hasNamespaceCapability({ intent, role, routeKeys }) {
   if (intent === "system") {
-    return role === "SYSTEM_ADMIN" || (Array.isArray(routeKeys) && routeKeys.includes(ROUTE_KEYS.SYSTEM_DASHBOARD));
+    return role === "SYSTEM_ADMIN";
   }
   if (intent === "merchant") {
     return (

@@ -2,8 +2,12 @@ package com.bookingcore.api;
 
 import com.bookingcore.modules.booking.BookingStatus;
 import com.bookingcore.modules.booking.BookingTransitionEvent;
+import com.bookingcore.modules.merchant.MerchantInvitationStatus;
+import com.bookingcore.modules.merchant.MerchantMembershipStatus;
+import com.bookingcore.modules.merchant.MerchantVisibility;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -113,11 +117,42 @@ public final class ApiDtos {
 
   public record MerchantLimitRequest(@NotNull @Min(1) Integer serviceLimit) {}
 
+  public record MerchantVisibilityUpdateRequest(@NotNull MerchantVisibility visibility) {}
+
+  public record MerchantInvitationCreateRequest(
+      @NotBlank String inviteeUsername,
+      LocalDateTime expiresAt) {}
+
+  public record MerchantInvitationUpdateRequest(@NotNull MerchantInvitationStatus status) {}
+
+  public record ClientJoinMerchantByCodeRequest(@NotBlank String inviteCode) {}
+
   public record DomainTemplateRequest(@NotBlank String domainName, @NotBlank String fieldsJson) {}
 
   public record SystemSettingsRequest(String emailTemplate, String smsTemplate, String maintenanceAnnouncement) {}
 
   public record MerchantSummary(Long id, String name, String slug, Boolean active) {}
+
+  public record ClientMerchantCardSummary(
+      Long merchantId,
+      String merchantName,
+      String merchantSlug,
+      MerchantVisibility visibility,
+      String joinState) {}
+
+  public record MerchantInvitationSummary(
+      Long invitationId,
+      Long merchantId,
+      String inviteCode,
+      String inviteeUsername,
+      MerchantInvitationStatus status,
+      LocalDateTime expiresAt) {}
+
+  public record ClientJoinedMerchantSummary(
+      Long merchantId,
+      String merchantName,
+      String merchantSlug,
+      MerchantMembershipStatus membershipStatus) {}
 
   public record MerchantProfileSummary(String description, String logoUrl) {}
 
@@ -223,7 +258,7 @@ public final class ApiDtos {
       Long resourceId,
       @NotBlank String lockId,
       @NotNull LocalDateTime startAt,
-      @NotBlank String inviteCode,
+      String inviteCode,
       @NotBlank String customerName,
       @NotBlank String customerContact,
       @NotNull Boolean agreeTerms,
@@ -288,4 +323,46 @@ public final class ApiDtos {
   public record NavigationResponse(List<String> routeKeys, List<NavigationItem> items) {}
 
   public record NavigationItem(String routeKey, String path, String labelKey, int sortOrder) {}
+
+  public record SystemUserSummary(
+      Long id,
+      String username,
+      Boolean enabled,
+      String primaryRole,
+      Long primaryMerchantId,
+      Long activeBindingsCount,
+      List<String> roleCodes,
+      LocalDateTime lastLoginAt,
+      LocalDateTime updatedAt) {}
+
+  public record SystemUserBindingSummary(
+      Long bindingId, String roleCode, Long merchantId, String status, List<String> permissions) {}
+
+  public record SystemUserDetailResponse(
+      Long id,
+      String username,
+      Boolean enabled,
+      String primaryRole,
+      Long primaryMerchantId,
+      List<SystemUserBindingSummary> bindings,
+      List<String> effectivePermissions,
+      LocalDateTime lastLoginAt,
+      LocalDateTime updatedAt) {}
+
+  public record SystemUserStatusUpdateRequest(@NotNull Boolean enabled) {}
+
+  public record SystemUserBindingUpsertRequest(
+      @NotBlank String roleCode,
+      Long merchantId,
+      @NotNull Boolean active) {}
+
+  public record SystemUserBindingsUpdateRequest(
+      @NotEmpty List<@jakarta.validation.Valid SystemUserBindingUpsertRequest> bindings) {}
+
+  public record SystemRbacRoleResponse(String roleCode, List<String> permissions) {}
+
+  public record SystemBookingTransitionRequest(
+      @NotNull Long merchantId,
+      @NotNull BookingTransitionEvent event,
+      String reason) {}
 }

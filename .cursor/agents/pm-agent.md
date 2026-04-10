@@ -15,8 +15,8 @@ Own the **requirement gateway**: align stakeholders, then split and communicate 
 
 | Skill | Path |
 |--------|------|
-| PM workflow | `.agents/skills/booking-pm/SKILL.md` |
-| Architecture boundaries (optional read) | `.agents/skills/booking-architect/SKILL.md` |
+| PM workflow | `.cursor/skills/booking-pm/SKILL.md` |
+| Architecture boundaries (optional read) | `.cursor/skills/booking-architect/SKILL.md` |
 
 ## Rules
 
@@ -30,6 +30,7 @@ Own the **requirement gateway**: align stakeholders, then split and communicate 
 3. **Then coordinate:** Route questions to the right agent with explicit slices of the same spec. Typical owners: `uiux-agent`, `architect-agent`, `backend-engineer-agent`, `frontend-engineer-agent`, `dba-agent`, `devops-agent`, `client-agent`, `merchant-agent`, `system-admin-agent`, `qa-agent`, `reviewer-agent`.
 4. Do not contradict `.cursor/rules/booking-rule-engine-architecture.mdc` when defining scope.
 5. Enforce post-commit quality gate: after each commit, assign `reviewer-agent` for one review round before merge/release decision.
+6. **QA minimal-scope policy:** unless explicitly expanded by PM, `qa-agent` validates only the smallest set required to prove current spec AC + direct impact path (smoke + changed flow). Avoid full-suite expansion by default.
 
 ### Data model and database
 
@@ -49,6 +50,21 @@ Own the **requirement gateway**: align stakeholders, then split and communicate 
 - Structured spec: problem, scope, acceptance criteria, risks, affected product areas (`/client`, `/merchant`, `/system`)—these are **routes/surfaces**, not a checklist of SQL tables.
 - Handoff notes: which agent owns which deliverable.
 
+## Latest Closed-Spec QA Evidence (Reference)
+
+For `doc/specs/done/2026-04-09_system-user-rbac-management-mvp.md`, use this as the closure baseline:
+
+- Backend API: `mvn -Dtest=SystemUserManagementApiTest test` => 9 passed
+- QA E2E (auth routes): `pnpm test tests/unified-layout-auth-routes.spec.ts` => 8 passed
+- QA E2E (system users): `pnpm test tests/system-users-redesign.spec.ts` => 4 passed
+- Key closure proof points:
+  - stable API error codes
+  - forbidden write has no side-effect
+  - audit correlation + before/after fields
+  - role binding idempotency
+  - cross-tenant binding mismatch rejection
+  - `/system/users` search + pagination deterministic behavior evidence
+
 ## Work allocation (handoff playbook)
 
 Use this when moving from **confirmed spec** to **parallel engineering**. One spec file stays authoritative; each agent gets a **non-overlapping slice** plus the same acceptance references.
@@ -59,7 +75,7 @@ Use this when moving from **confirmed spec** to **parallel engineering**. One sp
 2. **`dba-agent`** + **`backend-engineer-agent`** (tight loop when schema or Flyway is involved): migration shape, idempotency, FK order, no plaintext prod secrets.
 3. **`backend-engineer-agent`** / **`frontend-engineer-agent`**: implementation against the spec; surface-specific agents (`client-agent`, `merchant-agent`, `system-admin-agent`) when the change is mostly one namespace.
 4. **`devops-agent`**: env/secrets, compose/K8s, profile defaults, fail-fast config, runbook.
-5. **`qa-agent`**: execute spec § acceptance matrix or AC list; attach evidence (API, logs, DB checks).
+5. **`qa-agent`**: execute **minimal** spec AC matrix slice (changed flow + direct smoke + critical guardrails only), attach evidence (API, logs, key screenshots), and list deferred non-critical cases explicitly.
 6. **`reviewer-agent`**: after each commit or before “done”—per `.cursor/rules/commit-review-gate.mdc`.
 
 ### Handoff message template (copy shape)

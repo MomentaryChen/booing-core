@@ -1,5 +1,15 @@
 ## User table review (backend schema)
 
+- **Date**: 2026-04-02
+- **Owner**: PM (booking-core)
+- **Status**: Done (archived in `doc/specs/done/`)
+
+## Closure Handling
+
+- `pm-agent` is the default owner for closure handling after archival.
+- `pm-agent` maintains reference integrity if related active specs change.
+- If reopened, create a new dated spec under `doc/specs/` and link back to this archived spec.
+
 ### Conclusion
 
 The current backend schema **does not include a `user` / `users` table** that stores all users.

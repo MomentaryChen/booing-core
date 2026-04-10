@@ -5,10 +5,12 @@ import { isMerchantAuthRequired } from "../../services/merchant/merchantAuth";
 import { clearStoredMerchantId, getStoredMerchantId, setStoredMerchantId } from "../../services/merchant/merchantStorage";
 import { useNavigation } from "../../navigation/NavigationContext";
 import { getUnauthorizedRedirect, hasNamespaceCapability } from "../../services/auth/sessionRouting";
+import { useI18n } from "../../i18n";
 
 export function MerchantProtectedLayout() {
   const location = useLocation();
-  const { routeKeys, loading } = useNavigation();
+  const { t } = useI18n();
+  const { routeKeys, loading, error, refresh } = useNavigation();
 
   if (!isMerchantAuthRequired()) {
     return <Outlet />;
@@ -39,7 +41,18 @@ export function MerchantProtectedLayout() {
   if (loading) {
     return (
       <div className="nav-loading" role="status">
-        <span>Loading…</span>
+        <span>{t("navSidebarLoading")}</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="nav-loading nav-loading--error" role="alert">
+        <p>{t("navSidebarError")}</p>
+        <button type="button" className="workspace-sidebar__retry" onClick={() => refresh()}>
+          {t("navSidebarRetry")}
+        </button>
       </div>
     );
   }

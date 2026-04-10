@@ -201,23 +201,14 @@ export function MerchantRegisterForm({ variant = "page" }) {
     </>
   );
 
-  if (variant === "overlay") {
-    return (
-      <div className={cardClass}>
-        <p className="merchant-login-eyebrow">{t("loginEyebrowBrand")}</p>
-        <h1 id="auth-overlay-register-title">{t("registerOverlayTitle")}</h1>
-        <p className="merchant-login-lede">{t("registerOverlayLead")}</p>
-        {formBody}
-      </div>
-    );
-  }
-
   return (
-    <section className="card" style={{ maxWidth: "32rem" }}>
-      <div className="card-header">
-        <h2>{t("registerCardTitle")}</h2>
-      </div>
-      <div style={{ padding: "1rem" }}>{formBody}</div>
-    </section>
+    <div className={cardClass}>
+      <p className="merchant-login-eyebrow">{t("loginEyebrowBrand")}</p>
+      <h1 id={variant === "overlay" ? "auth-overlay-register-title" : undefined}>
+        {variant === "overlay" ? t("registerOverlayTitle") : t("registerPageTitle")}
+      </h1>
+      <p className="merchant-login-lede">{variant === "overlay" ? t("registerOverlayLead") : t("registerPageLead")}</p>
+      {formBody}
+    </div>
   );
 }

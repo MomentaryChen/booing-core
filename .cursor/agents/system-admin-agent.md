@@ -15,10 +15,10 @@ Build and maintain **platform administration** with consistent routing (`/system
 
 | Skill | Path |
 |--------|------|
-| System admin domain (routing, constraints) | `.agents/skills/booking-system-admin-domain/SKILL.md` |
-| Backend implementation | `.agents/skills/booking-backend/SKILL.md` |
-| Frontend implementation | `.agents/skills/booking-frontend/SKILL.md` |
-| Architecture | `.agents/skills/booking-architect/SKILL.md` |
+| System admin domain (routing, constraints) | `.cursor/skills/booking-system-admin-domain/SKILL.md` |
+| Backend implementation | `.cursor/skills/booking-backend/SKILL.md` |
+| Frontend implementation | `.cursor/skills/booking-frontend/SKILL.md` |
+| Architecture | `.cursor/skills/booking-architect/SKILL.md` |
 
 ## Rules
 

@@ -31,6 +31,7 @@ public class PlatformNavigationInitializer implements ApplicationRunner {
     }
 
     PlatformPage pSystem = page("nav.system.dashboard", "/system", "navAdmin", 10);
+    PlatformPage pSystemUsers = page("nav.system.users", "/system/users", "navSystemUsers", 15);
     PlatformPage pMerchant = page("nav.merchant.dashboard", "/merchant", "navMerchant", 20);
     PlatformPage pAppointments = page("nav.merchant.appointments", "/merchant/appointments", "navMerchantAppointments", 30);
     PlatformPage pSchedule = page("nav.merchant.schedule", "/merchant/settings/schedule", "navMerchantSchedule", 40);
@@ -38,13 +39,15 @@ public class PlatformNavigationInitializer implements ApplicationRunner {
     PlatformPage pStore = page("nav.store.public", "/client/booking/demo-merchant", "navStore", 60);
 
     platformPageRepository.save(pSystem);
+    platformPageRepository.save(pSystemUsers);
     platformPageRepository.save(pMerchant);
     platformPageRepository.save(pAppointments);
     platformPageRepository.save(pSchedule);
     platformPageRepository.save(pClient);
     platformPageRepository.save(pStore);
 
-    grantAll(PlatformUserRole.SYSTEM_ADMIN, pSystem, pMerchant, pAppointments, pSchedule, pClient, pStore);
+    grantAll(
+        PlatformUserRole.SYSTEM_ADMIN, pSystem, pSystemUsers, pMerchant, pAppointments, pSchedule, pClient, pStore);
     grantAll(PlatformUserRole.MERCHANT, pMerchant, pAppointments, pSchedule, pStore);
     grantAll(PlatformUserRole.SUB_MERCHANT, pMerchant, pAppointments, pSchedule, pStore);
     grantAll(PlatformUserRole.CLIENT, pClient, pStore);

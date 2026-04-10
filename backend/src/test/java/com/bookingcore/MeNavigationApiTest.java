@@ -56,6 +56,7 @@ class MeNavigationApiTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.routeKeys").isArray())
         .andExpect(jsonPath("$.routeKeys", hasItem("nav.system.dashboard")))
+        .andExpect(jsonPath("$.routeKeys", hasItem("nav.system.users")))
         .andExpect(jsonPath("$.routeKeys", hasItem("nav.client.todo")));
   }
 
@@ -66,6 +67,7 @@ class MeNavigationApiTest {
         .perform(get("/api/me/navigation").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.routeKeys", not(hasItem("nav.system.dashboard"))))
+        .andExpect(jsonPath("$.routeKeys", not(hasItem("nav.system.users"))))
         .andExpect(jsonPath("$.routeKeys", hasItem("nav.merchant.dashboard")));
   }
 
@@ -78,7 +80,8 @@ class MeNavigationApiTest {
         .andExpect(jsonPath("$.routeKeys", hasItem("nav.client.todo")))
         .andExpect(jsonPath("$.routeKeys", hasItem("nav.store.public")))
         .andExpect(jsonPath("$.routeKeys", not(hasItem("nav.merchant.dashboard"))))
-        .andExpect(jsonPath("$.routeKeys", not(hasItem("nav.system.dashboard"))));
+        .andExpect(jsonPath("$.routeKeys", not(hasItem("nav.system.dashboard"))))
+        .andExpect(jsonPath("$.routeKeys", not(hasItem("nav.system.users"))));
   }
 
   @Test

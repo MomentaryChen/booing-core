@@ -108,16 +108,19 @@ class PlatformBootstrapServiceBindingIdempotencyTest {
   }
 
   @Test
-  void bootstrapFailsFastWhenExistingUsernameRoleOrMerchantContextMismatches() {
+  void bootstrapAllowsExistingUsernameWithDifferentPrimaryRoleByAddingBinding() {
     seedCoreRoles();
     PlatformUser admin = platformUserRepository.findByUsername("admin").orElseThrow();
     admin.setRole(PlatformUserRole.MERCHANT);
     admin.setMerchant(merchantRepository.findBySlug("demo-merchant").orElseThrow());
     platformUserRepository.save(admin);
 
-    assertThatThrownBy(() -> platformBootstrapService.run())
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Bootstrap user conflict");
+    platformBootstrapService.run();
+
+    long activeSystemAdminBindings =
+        platformUserRbacBindingRepository.countActiveBindingsForContext(
+            admin.getId(), "SYSTEM_ADMIN", null);
+    assertThat(activeSystemAdminBindings).isEqualTo(1L);
   }
 
   @Test

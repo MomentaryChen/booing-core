@@ -1,0 +1,11 @@
+---
+description: Skills path policy for this repository
+alwaysApply: true
+---
+
+# Skills location policy
+
+- New skills must be created under `.cursor/skills/<skill-name>/SKILL.md`.
+- Do not add new references to `.agents/skills/...`.
+- When updating existing docs, rules, or agent prompts, use `.cursor/skills/...` paths only.
+- If an old `.agents/skills/...` reference is found, migrate it to `.cursor/skills/...` in the same change.

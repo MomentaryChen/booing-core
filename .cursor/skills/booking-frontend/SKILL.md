@@ -16,9 +16,9 @@ description: >-
 
 | Topic | Skill |
 |--------|--------|
-| Lint/format when the repo wires them up | `.agents/skills/fix/SKILL.md` (adapt commands to **pnpm** if instructions say yarn) |
-| Client / merchant / system routes | `.agents/skills/booking-client-domain/SKILL.md` (and sibling domain skills) |
-| UI copy, surfaces, a11y, i18n tone | `.agents/skills/booking-uiux/SKILL.md` — **read before building or changing user-facing pages** |
+| Lint/format when the repo wires them up | `.cursor/skills/fix/SKILL.md` (adapt commands to **pnpm** if instructions say yarn) |
+| Client / merchant / system routes | `.cursor/skills/booking-client-domain/SKILL.md` (and sibling domain skills) |
+| UI copy, surfaces, a11y, i18n tone | `.cursor/skills/booking-uiux/SKILL.md` — **read before building or changing user-facing pages** |
 
 ## UI/UX alignment (required before implementation)
 
@@ -32,5 +32,5 @@ Do **not** implement new pages, major layout changes, or flow-level copy/structu
 
 ## Notes
 
-- This project does **not** currently use Flow in `package.json`. If Flow is added later, also use `.agents/skills/flow/SKILL.md`.
+- This project does **not** currently use Flow in `package.json`. If Flow is added later, also use `.cursor/skills/flow/SKILL.md`.
 - Dev server default: `http://localhost:25173`; API `http://localhost:28080/api` with CORS for dev.
