@@ -12,10 +12,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(
     properties = {
       "spring.profiles.active=test",
-      "booking.platform.auth.bootstrap-default-merchant.enabled=false",
-      "booking.platform.auth.bootstrap-default-merchant-user.enabled=false",
-      "booking.platform.auth.bootstrap-system-admin.enabled=false",
-      "booking.platform.auth.bootstrap-default-client.enabled=false",
+      "booking.platform.auth.internal-system-admin.auto-provision=false",
       "spring.flyway.enabled=true",
       "spring.flyway.locations=classpath:db/migration",
       "spring.jpa.hibernate.ddl-auto=validate",

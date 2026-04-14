@@ -89,11 +89,7 @@ public class PermissionAuthorizer {
     for (GrantedAuthority authority : authentication.getAuthorities()) {
       String value = authority.getAuthority();
       if (value != null && value.startsWith("ROLE_")) {
-        try {
-          roles.add(PlatformUserRole.valueOf(value.substring("ROLE_".length())));
-        } catch (IllegalArgumentException ignored) {
-          // Unknown role values are denied by default.
-        }
+        PlatformUserRole.parse(value.substring("ROLE_".length())).ifPresent(roles::add);
       }
     }
     return roles;

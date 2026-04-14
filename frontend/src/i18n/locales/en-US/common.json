@@ -1,0 +1,85 @@
+{
+  "appName": "Booking Core",
+  "language": {
+    "switch": "Switch language",
+    "en-US": "English",
+    "zh-TW": "繁體中文"
+  },
+  "labels": {
+    "admin": "System"
+  },
+  "nav": {
+    "home": "Home",
+    "search": "Search",
+    "bookings": "My Bookings",
+    "profile": "Profile",
+    "dashboard": "Dashboard",
+    "resources": "Resources",
+    "schedule": "Schedule",
+    "teams": "Teams",
+    "settings": "Settings",
+    "tenants": "Tenants",
+    "users": "Users",
+    "roles": "Roles",
+    "auditLogs": "Audit Logs"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "view": "View",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "logout": "Logout"
+  },
+  "status": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "pending": "Pending",
+    "confirmed": "Confirmed",
+    "cancelled": "Cancelled",
+    "completed": "Completed"
+  },
+  "errors": {
+    "generic": "Something went wrong. Please try again."
+  },
+  "messages": {
+    "formSaveNotPersisted": "This screen is not connected to the API yet; your changes were not saved."
+  },
+  "validation": {
+    "required": "This field is required",
+    "email": "Please enter a valid email",
+    "minLength": "Minimum {{min}} characters required",
+    "maxLength": "Maximum {{max}} characters allowed"
+  },
+  "time": {
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "yesterday": "Yesterday"
+  },
+  "context": {
+    "label": "Context",
+    "placeholder": "Select context",
+    "switching": "Switching...",
+    "mobileTrigger": "Switch account context",
+    "mobileTitle": "Switch context",
+    "mobileDescription": "Choose a role and tenant before continuing.",
+    "platformScope": "Platform",
+    "forbidden": "Forbidden",
+    "error": "Failed to load"
+  },
+  "roles": {
+    "CLIENT_USER": "Client",
+    "MERCHANT_OWNER": "Merchant Owner",
+    "MERCHANT_STAFF": "Merchant Staff",
+    "SYSTEM_ADMIN": "System Admin"
+  }
+}

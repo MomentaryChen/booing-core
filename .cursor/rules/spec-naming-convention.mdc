@@ -6,14 +6,15 @@ alwaysApply: true
 
 # Spec Naming Convention
 
-`doc/specs/` 與 `doc/specs/done/` 下的規格文件，檔名一律使用：
+`doc/specs/open/`、`doc/specs/progress/` 與 `doc/specs/closed/` 下的規格文件，檔名一律使用：
 
 - `YYYY-MM-DD_<kebab-case-topic>.md`
 
-## 活躍 vs 已結案
+## 狀態資料夾
 
-- **進行中／待結案**：放在 `doc/specs/` **根目錄**。
-- **已結案**：移至 `doc/specs/done/`（檔名不變）。流程見 `spec-done-archive.mdc`。
+- **擬新增（預設起點）**：一律先建立在 `doc/specs/open/`。
+- **進行中（已開工）**：使用 `doc/specs/progress/`。
+- **已結案**：移至 `doc/specs/closed/`（檔名不變）。流程見 `spec-done-archive.mdc`。
 
 ## Rules
 
@@ -24,8 +25,9 @@ alwaysApply: true
 
 ## Examples
 
-- `doc/specs/2026-MM-DD_feature-in-progress.md`（進行中 — 根目錄）
-- `doc/specs/done/2026-04-09_home-intro-page-redesign.md`（已結案）
-- `doc/specs/done/2026-04-09_visual-assets-dashboard-guidelines.md`（已結案）
-- `doc/specs/done/2026-04-02_booking-flow-pm-spec.md`
+- `doc/specs/open/2026-04-10_frontend-driven-backend-api-requirements.md`（新提案）
+- `doc/specs/progress/2026-04-10_user-can-be-merchant-mvp.md`（進行中）
+- `doc/specs/closed/2026-04-09_home-intro-page-redesign.md`（已結案）
+- `doc/specs/closed/2026-04-09_visual-assets-dashboard-guidelines.md`（已結案）
+- `doc/specs/closed/2026-04-02_booking-flow-pm-spec.md`
 

@@ -55,6 +55,14 @@ booking-core/
 └── frontend/   # Vite + React 單頁應用（開發：埠 25173）
 ```
 
+## 規格生命週期（open -> progress -> closed）
+
+- 新規格一律先放在 `doc/specs/open/`，檔名格式為 `YYYY-MM-DD_<kebab-case-topic>.md`。
+- 一旦開始實作，必須立即移動到 `doc/specs/progress/`。
+  - 觸發條件任一成立即需移動：切工單並指派 owner、建立實作任務、開始 coding、開 PR、或產生第一個實作 commit。
+- 規格結案後，使用相同檔名移動到 `doc/specs/closed/`。
+- 同一份 spec 只能有一個進行中的主檔，不可同時存在於 `open/` 與 `progress/`。
+
 ## 環境需求
 
 - **JDK 21** 與 **Maven 3.6+**（後端）
@@ -100,7 +108,7 @@ pnpm preview   # 可選：本機預覽建置結果
 | `/system`                                                          | 系統管理後台                            |
 | `/merchant`、`/merchant/appointments`、`/merchant/settings/schedule` | 商家端                               |
 | `/client`                                                          | 客戶端流程（待實作頁）                       |
-| `/client/booking/:slug`                                            | 公開店面（依商家 slug，例如 `demo-merchant`） |
+| `/client/booking/:slug`                                            | 公開店面（依商家 slug） |
 | `/store/:slug`                                                     | 重新導向至 `/client/booking/:slug`     |
 
 
@@ -108,7 +116,20 @@ pnpm preview   # 可選：本機預覽建置結果
 
 所有路徑皆在 `/api` 之下，涵蓋商家 CRUD、服務、營業時間、預約、自訂樣式、動態欄位、資源、可用性例外、公開店面預約（`**/api/client/...**`）、登入發放 JWT（`**/api/auth/login**`）與系統端（`/api/system/...`）等。
 
-當設定 `booking.platform.jwt.secret`（建議至少 256 位元強度的金鑰）時，會對 `/api/merchant/**` 強制 JWT（角色 `MERCHANT`、`SUB_MERCHANT` 或 `SYSTEM_ADMIN`），以及對 `/api/system/**` 要求 `SYSTEM_ADMIN`。此模式下仍可用 `booking.platform.system-admin-token` 存取 `/api/system/**`。開發用帳號可列於 `booking.platform.dev-users`。預設將 `jwt.secret` 留空則本機開放不需 JWT。
+當設定 `booking.platform.jwt.secret`（建議至少 256 位元強度的金鑰）時，會對 `/api/merchant/**` 強制 JWT（角色 `MERCHANT`、`SUB_MERCHANT` 或 `SYSTEM_ADMIN`），以及對 `/api/system/**` 要求 `SYSTEM_ADMIN`。此模式下仍可用 `booking.platform.system-admin-token` 存取 `/api/system/**`。
+
+## 內部 admin 與手動 demo seed
+
+- **內部 `SYSTEM_ADMIN`（營運／內部人員）：** 啟動時若尚無任何 `SYSTEM_ADMIN` 平台使用者，後端可依 `INTERNAL_SYSTEM_ADMIN_*` 自動建立第一位管理員（見 `application-dev.yml` / `application-prod.yml`）。若改由 SQL 或外部 IAM 管理，請設 `INTERNAL_SYSTEM_ADMIN_AUTO_PROVISION=false`。
+- **Demo 商家／客戶：** 已移除應用程式 bootstrap，請一律在 Flyway 之後手動執行 SQL：
+
+1. 先確認 Flyway migration 已完成；若依賴應用程式建立內部 admin，請至少讓後端成功啟動過一次。
+2. 開啟 `backend/src/main/resources/db/manual/seed_manual_baseline.sql`。
+3. 將 `__REPLACE_WITH_BCRYPT_HASH__` 置換成實際 bcrypt 密碼雜湊。
+4. 在 MySQL 手動執行腳本。
+5. 執行腳本末段的驗證查詢確認結果。
+
+此腳本具 idempotent 設計，可重複執行；**不會**再插入 `SYSTEM_ADMIN`（避免與內部 admin 自動建立重複）。
 
 ## 授權
 

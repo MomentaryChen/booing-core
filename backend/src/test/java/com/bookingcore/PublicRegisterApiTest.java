@@ -73,7 +73,7 @@ class PublicRegisterApiTest {
 
   @Test
   void authRegisterAllowsClientAndReturnsSafeNextDestination() throws Exception {
-    String u = "pr-client-" + System.nanoTime();
+    String u = "pr-client-" + System.nanoTime() + "@example.com";
     mockMvc
         .perform(
             post("/api/auth/register")
@@ -89,7 +89,7 @@ class PublicRegisterApiTest {
 
   @Test
   void authRegisterClientRejectsDuplicateUsername() throws Exception {
-    String u = "pr-client-dup-" + System.nanoTime();
+    String u = "pr-client-dup-" + System.nanoTime() + "@example.com";
     String body =
         "{\"registerType\":\"CLIENT\",\"username\":\""
             + u
@@ -100,6 +100,17 @@ class PublicRegisterApiTest {
     mockMvc
         .perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(body))
         .andExpect(status().isConflict());
+  }
+
+  @Test
+  void authRegisterClientRejectsNonEmailIdentifier() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"registerType\":\"CLIENT\",\"username\":\"not-email\",\"password\":\"secret12\",\"name\":\"\",\"slug\":\"\"}"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test

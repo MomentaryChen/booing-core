@@ -67,15 +67,10 @@ public class BookingPlatformProperties {
   public static class Auth {
     private Login login = new Login();
     /**
-     * Dev safety valve: when true (and only with spring profile {@code dev}), startup logs bootstrap
-     * usernames/passwords from {@code booking.platform.auth.bootstrap-*}. Keep false in normal use.
+     * When auto-provision is enabled and no {@code SYSTEM_ADMIN} platform user exists yet, startup
+     * creates one internal operator account (credentials from env).
      */
-    private boolean logDevBootstrapCredentials = false;
-
-    private BootstrapDefaultMerchant bootstrapDefaultMerchant = new BootstrapDefaultMerchant();
-    private BootstrapDefaultMerchantUser bootstrapDefaultMerchantUser = new BootstrapDefaultMerchantUser();
-    private BootstrapSystemAdmin bootstrapSystemAdmin = new BootstrapSystemAdmin();
-    private BootstrapDefaultClient bootstrapDefaultClient = new BootstrapDefaultClient();
+    private InternalSystemAdmin internalSystemAdmin = new InternalSystemAdmin();
 
     public Login getLogin() {
       return login;
@@ -85,157 +80,25 @@ public class BookingPlatformProperties {
       this.login = login;
     }
 
-    public boolean isLogDevBootstrapCredentials() {
-      return logDevBootstrapCredentials;
+    public InternalSystemAdmin getInternalSystemAdmin() {
+      return internalSystemAdmin;
     }
 
-    public void setLogDevBootstrapCredentials(boolean logDevBootstrapCredentials) {
-      this.logDevBootstrapCredentials = logDevBootstrapCredentials;
+    public void setInternalSystemAdmin(InternalSystemAdmin internalSystemAdmin) {
+      this.internalSystemAdmin = internalSystemAdmin;
     }
 
-    public BootstrapDefaultMerchant getBootstrapDefaultMerchant() {
-      return bootstrapDefaultMerchant;
-    }
-
-    public void setBootstrapDefaultMerchant(BootstrapDefaultMerchant bootstrapDefaultMerchant) {
-      this.bootstrapDefaultMerchant = bootstrapDefaultMerchant;
-    }
-
-    public BootstrapDefaultMerchantUser getBootstrapDefaultMerchantUser() {
-      return bootstrapDefaultMerchantUser;
-    }
-
-    public void setBootstrapDefaultMerchantUser(BootstrapDefaultMerchantUser bootstrapDefaultMerchantUser) {
-      this.bootstrapDefaultMerchantUser = bootstrapDefaultMerchantUser;
-    }
-
-    public BootstrapSystemAdmin getBootstrapSystemAdmin() {
-      return bootstrapSystemAdmin;
-    }
-
-    public void setBootstrapSystemAdmin(BootstrapSystemAdmin bootstrapSystemAdmin) {
-      this.bootstrapSystemAdmin = bootstrapSystemAdmin;
-    }
-
-    public BootstrapDefaultClient getBootstrapDefaultClient() {
-      return bootstrapDefaultClient;
-    }
-
-    public void setBootstrapDefaultClient(BootstrapDefaultClient bootstrapDefaultClient) {
-      this.bootstrapDefaultClient = bootstrapDefaultClient;
-    }
-
-    public static class BootstrapDefaultMerchant {
-      private boolean enabled = false;
-      private String name = "";
-      private String slug = "";
-
-      public boolean isEnabled() {
-        return enabled;
-      }
-
-      public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-      }
-
-      public String getName() {
-        return name;
-      }
-
-      public void setName(String name) {
-        this.name = name;
-      }
-
-      public String getSlug() {
-        return slug;
-      }
-
-      public void setSlug(String slug) {
-        this.slug = slug;
-      }
-    }
-
-    public static class BootstrapDefaultMerchantUser {
-      private boolean enabled = false;
-      private String username = "";
-      private String password = "";
-      /** When blank and default-merchant bootstrap is on, uses that merchant's slug. */
-      private String merchantSlug = "";
-
-      public boolean isEnabled() {
-        return enabled;
-      }
-
-      public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-      }
-
-      public String getUsername() {
-        return username;
-      }
-
-      public void setUsername(String username) {
-        this.username = username;
-      }
-
-      public String getPassword() {
-        return password;
-      }
-
-      public void setPassword(String password) {
-        this.password = password;
-      }
-
-      public String getMerchantSlug() {
-        return merchantSlug;
-      }
-
-      public void setMerchantSlug(String merchantSlug) {
-        this.merchantSlug = merchantSlug;
-      }
-    }
-
-    public static class BootstrapSystemAdmin {
-      private boolean enabled = false;
-      private String username = "";
+    public static class InternalSystemAdmin {
+      private boolean autoProvision = true;
+      private String username = "admin";
       private String password = "";
 
-      public boolean isEnabled() {
-        return enabled;
+      public boolean isAutoProvision() {
+        return autoProvision;
       }
 
-      public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
-      }
-
-      public String getUsername() {
-        return username;
-      }
-
-      public void setUsername(String username) {
-        this.username = username;
-      }
-
-      public String getPassword() {
-        return password;
-      }
-
-      public void setPassword(String password) {
-        this.password = password;
-      }
-    }
-
-    public static class BootstrapDefaultClient {
-      private boolean enabled = false;
-      private String username = "";
-      private String password = "";
-
-      public boolean isEnabled() {
-        return enabled;
-      }
-
-      public void setEnabled(boolean enabled) {
-        this.enabled = enabled;
+      public void setAutoProvision(boolean autoProvision) {
+        this.autoProvision = autoProvision;
       }
 
       public String getUsername() {

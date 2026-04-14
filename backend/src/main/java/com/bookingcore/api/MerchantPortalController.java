@@ -20,10 +20,16 @@ import com.bookingcore.api.ApiDtos.MerchantCustomizationResponse;
 import com.bookingcore.api.ApiDtos.MerchantProfileResponse;
 import com.bookingcore.api.ApiDtos.MerchantSummary;
 import com.bookingcore.api.ApiDtos.MerchantVisibilityUpdateRequest;
+import com.bookingcore.api.ApiDtos.TeamCreateRequest;
+import com.bookingcore.api.ApiDtos.TeamMemberAssignRequest;
+import com.bookingcore.api.ApiDtos.TeamMemberSummary;
+import com.bookingcore.api.ApiDtos.TeamSummary;
+import com.bookingcore.api.ApiDtos.TeamUpdateRequest;
 import com.bookingcore.api.ApiDtos.ResourceItemSummary;
 import com.bookingcore.api.ApiDtos.ResourceRequest;
 import com.bookingcore.api.ApiDtos.ServiceItemSummary;
 import com.bookingcore.api.ApiDtos.ServiceItemRequest;
+import com.bookingcore.api.support.ResourceItemMediaResolver;
 import com.bookingcore.common.ApiException;
 import com.bookingcore.modules.booking.AvailabilityException;
 import com.bookingcore.modules.booking.AvailabilityExceptionRepository;
@@ -44,6 +50,12 @@ import com.bookingcore.modules.merchant.MerchantInvitationStatus;
 import com.bookingcore.modules.merchant.MerchantProfile;
 import com.bookingcore.modules.merchant.MerchantProfileRepository;
 import com.bookingcore.modules.merchant.MerchantRepository;
+import com.bookingcore.modules.merchant.ServiceTeam;
+import com.bookingcore.modules.merchant.ServiceTeamRepository;
+import com.bookingcore.modules.merchant.ServiceTeamStatus;
+import com.bookingcore.modules.merchant.TeamMember;
+import com.bookingcore.modules.merchant.TeamMemberRepository;
+import com.bookingcore.modules.merchant.TeamMemberStatus;
 import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.modules.platform.PlatformUserRepository;
 import com.bookingcore.modules.merchant.ResourceItem;
@@ -72,9 +84,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/merchant")
+@Tag(name = "Merchant")
 @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.portal.access')")
 public class MerchantPortalController {
   private final MerchantProfileRepository profileRepository;
@@ -93,6 +107,9 @@ public class MerchantPortalController {
   private final MerchantInvitationRepository merchantInvitationRepository;
   private final PlatformUserRepository platformUserRepository;
   private final MerchantAccessService merchantAccessService;
+  private final ServiceTeamRepository serviceTeamRepository;
+  private final TeamMemberRepository teamMemberRepository;
+  private final ResourceItemMediaResolver resourceItemMediaResolver;
 
   public MerchantPortalController(
       MerchantProfileRepository profileRepository,
@@ -110,7 +127,10 @@ public class MerchantPortalController {
       PlatformAuditService platformAuditService,
       MerchantInvitationRepository merchantInvitationRepository,
       PlatformUserRepository platformUserRepository,
-      MerchantAccessService merchantAccessService) {
+      MerchantAccessService merchantAccessService,
+      ServiceTeamRepository serviceTeamRepository,
+      TeamMemberRepository teamMemberRepository,
+      ResourceItemMediaResolver resourceItemMediaResolver) {
     this.profileRepository = profileRepository;
     this.merchantRepository = merchantRepository;
     this.serviceItemRepository = serviceItemRepository;
@@ -127,6 +147,9 @@ public class MerchantPortalController {
     this.merchantInvitationRepository = merchantInvitationRepository;
     this.platformUserRepository = platformUserRepository;
     this.merchantAccessService = merchantAccessService;
+    this.serviceTeamRepository = serviceTeamRepository;
+    this.teamMemberRepository = teamMemberRepository;
+    this.resourceItemMediaResolver = resourceItemMediaResolver;
   }
 
   private void assertMerchantScope(Long merchantId) {
@@ -144,9 +167,22 @@ public class MerchantPortalController {
       if (p.merchantId() == null) {
         throw new ApiException("Unauthorized", HttpStatus.UNAUTHORIZED);
       }
-      if (p.merchantId().equals(merchantId)) {
+      if (!p.merchantId().equals(merchantId)) {
+        platformAuditService.recordForCurrentUser(
+            "merchant.scope.denied",
+            "merchant",
+            merchantId,
+            "tokenMerchantId=" + p.merchantId() + " requestedMerchantId=" + merchantId);
+        throw new ApiException("Forbidden", HttpStatus.FORBIDDEN);
+      }
+      if (merchantAccessService.hasActiveMembershipForCurrentUser(merchantId)) {
         return;
       }
+      platformAuditService.recordForCurrentUser(
+          "merchant.scope.denied",
+          "merchant",
+          merchantId,
+          "membershipMissingOrInactive=true");
       throw new ApiException("Forbidden", HttpStatus.FORBIDDEN);
     }
     throw new ApiException("Forbidden", HttpStatus.FORBIDDEN);
@@ -190,7 +226,13 @@ public class MerchantPortalController {
           created.setMerchant(bookingCommandService.ensureMerchant(merchantId));
           return profileRepository.save(created);
         });
-    return new MerchantProfileResponse(profile.getDescription(), profile.getLogoUrl());
+    return new MerchantProfileResponse(
+        profile.getDescription(),
+        profile.getLogoUrl(),
+        profile.getAddress(),
+        profile.getPhone(),
+        profile.getEmail(),
+        profile.getWebsite());
   }
 
   @PutMapping("/{merchantId}/profile/visibility")
@@ -302,9 +344,37 @@ public class MerchantPortalController {
       return created;
     });
     profile.setDescription(request.description());
-    profile.setLogoUrl(request.logoUrl());
+    profile.setLogoUrl(normalizeLogoImageData(request.logoUrl()));
+    profile.setAddress(request.address());
+    profile.setPhone(request.phone());
+    profile.setEmail(request.email());
+    profile.setWebsite(request.website());
     MerchantProfile saved = profileRepository.save(profile);
-    return new MerchantProfileResponse(saved.getDescription(), saved.getLogoUrl());
+    return new MerchantProfileResponse(
+        saved.getDescription(),
+        saved.getLogoUrl(),
+        saved.getAddress(),
+        saved.getPhone(),
+        saved.getEmail(),
+        saved.getWebsite());
+  }
+
+  private String normalizeLogoImageData(String rawLogo) {
+    return normalizeImageDataUrl(rawLogo, "logoUrl");
+  }
+
+  private String normalizeImageDataUrl(String rawImage, String fieldName) {
+    if (rawImage == null) {
+      return null;
+    }
+    String normalized = rawImage.trim();
+    if (normalized.isEmpty()) {
+      return null;
+    }
+    if (!normalized.startsWith("data:image/") || !normalized.contains(";base64,")) {
+      throw new ApiException(fieldName + " must be a base64 data image URL", HttpStatus.BAD_REQUEST);
+    }
+    return normalized;
   }
 
   @GetMapping("/{merchantId}/services")
@@ -312,7 +382,15 @@ public class MerchantPortalController {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     return serviceItemRepository.findByMerchantId(merchantId).stream()
-        .map(s -> new ServiceItemSummary(s.getId(), s.getName(), s.getDurationMinutes(), s.getPrice(), s.getCategory()))
+        .map(
+            s ->
+                new ServiceItemSummary(
+                    s.getId(),
+                    s.getName(),
+                    s.getDurationMinutes(),
+                    s.getPrice(),
+                    s.getCategory(),
+                    s.getImageUrl()))
         .toList();
   }
 
@@ -329,8 +407,15 @@ public class MerchantPortalController {
     item.setCategory(request.category());
     item.setPrice(request.price());
     item.setDurationMinutes(request.durationMinutes());
+    item.setImageUrl(normalizeImageDataUrl(request.imageUrl(), "imageUrl"));
     ServiceItem saved = serviceItemRepository.save(item);
-    return new ServiceItemSummary(saved.getId(), saved.getName(), saved.getDurationMinutes(), saved.getPrice(), saved.getCategory());
+    return new ServiceItemSummary(
+        saved.getId(),
+        saved.getName(),
+        saved.getDurationMinutes(),
+        saved.getPrice(),
+        saved.getCategory(),
+        saved.getImageUrl());
   }
 
   @PutMapping("/{merchantId}/services/{serviceId}")
@@ -344,8 +429,15 @@ public class MerchantPortalController {
     item.setCategory(request.category());
     item.setPrice(request.price());
     item.setDurationMinutes(request.durationMinutes());
+    item.setImageUrl(normalizeImageDataUrl(request.imageUrl(), "imageUrl"));
     ServiceItem saved = serviceItemRepository.save(item);
-    return new ServiceItemSummary(saved.getId(), saved.getName(), saved.getDurationMinutes(), saved.getPrice(), saved.getCategory());
+    return new ServiceItemSummary(
+        saved.getId(),
+        saved.getName(),
+        saved.getDurationMinutes(),
+        saved.getPrice(),
+        saved.getCategory(),
+        saved.getImageUrl());
   }
 
   @DeleteMapping("/{merchantId}/services/{serviceId}")
@@ -491,8 +583,9 @@ public class MerchantPortalController {
   public List<ResourceItemSummary> getResources(@PathVariable Long merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
+    var serviceById = resourceItemMediaResolver.indexById(serviceItemRepository.findByMerchantId(merchantId));
     return resourceItemRepository.findByMerchantId(merchantId).stream()
-        .map(r -> new ResourceItemSummary(r.getId(), r.getName(), r.getType(), r.getCategory(), r.getCapacity(), r.getActive(), r.getPrice()))
+        .map(r -> resourceItemMediaResolver.toSummary(r, merchantId, serviceById))
         .toList();
   }
 
@@ -510,7 +603,8 @@ public class MerchantPortalController {
     item.setServiceItemsJson(request.serviceItemsJson());
     item.setPrice(request.price());
     ResourceItem saved = resourceItemRepository.save(item);
-    return new ResourceItemSummary(saved.getId(), saved.getName(), saved.getType(), saved.getCategory(), saved.getCapacity(), saved.getActive(), saved.getPrice());
+    var serviceById = resourceItemMediaResolver.indexById(serviceItemRepository.findByMerchantId(merchantId));
+    return resourceItemMediaResolver.toSummary(saved, merchantId, serviceById);
   }
 
   @DeleteMapping("/{merchantId}/resources/{resourceId}")
@@ -592,6 +686,133 @@ public class MerchantPortalController {
         booking.getCustomerName(),
         booking.getCustomerContact(),
         booking.getStatus());
+  }
+
+  @GetMapping("/{merchantId}/teams")
+  public List<TeamSummary> listTeams(@PathVariable Long merchantId) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    return serviceTeamRepository.findByMerchantIdOrderByIdDesc(merchantId).stream()
+        .map(this::toTeamSummary)
+        .toList();
+  }
+
+  @PostMapping("/{merchantId}/teams")
+  public TeamSummary createTeam(
+      @PathVariable Long merchantId, @Valid @RequestBody TeamCreateRequest request) {
+    assertMerchantScope(merchantId);
+    Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
+    serviceTeamRepository
+        .findByMerchantIdAndCode(merchantId, request.code().trim())
+        .ifPresent(
+            existing -> {
+              throw new ApiException("Team code already exists", HttpStatus.CONFLICT);
+            });
+    ServiceTeam team = new ServiceTeam();
+    team.setMerchant(merchant);
+    team.setName(request.name().trim());
+    team.setCode(request.code().trim());
+    team.setStatus(request.status() == null ? ServiceTeamStatus.ACTIVE : request.status());
+    ServiceTeam saved = serviceTeamRepository.save(team);
+    return toTeamSummary(saved);
+  }
+
+  @PutMapping("/{merchantId}/teams/{teamId}")
+  public TeamSummary updateTeam(
+      @PathVariable Long merchantId,
+      @PathVariable Long teamId,
+      @Valid @RequestBody TeamUpdateRequest request) {
+    assertMerchantScope(merchantId);
+    ServiceTeam team = requireTeamInMerchant(merchantId, teamId);
+    team.setName(request.name().trim());
+    if (request.status() != null) {
+      team.setStatus(request.status());
+    }
+    return toTeamSummary(serviceTeamRepository.save(team));
+  }
+
+  @GetMapping("/{merchantId}/teams/{teamId}/members")
+  public List<TeamMemberSummary> listTeamMembers(
+      @PathVariable Long merchantId, @PathVariable Long teamId) {
+    assertMerchantScope(merchantId);
+    requireTeamInMerchant(merchantId, teamId);
+    return teamMemberRepository.findByMerchantIdAndTeamIdOrderByIdAsc(merchantId, teamId).stream()
+        .map(this::toTeamMemberSummary)
+        .toList();
+  }
+
+  @PostMapping("/{merchantId}/teams/{teamId}/members")
+  public TeamMemberSummary assignTeamMember(
+      @PathVariable Long merchantId,
+      @PathVariable Long teamId,
+      @Valid @RequestBody TeamMemberAssignRequest request) {
+    assertMerchantScope(merchantId);
+    ServiceTeam team = requireTeamInMerchant(merchantId, teamId);
+    PlatformUser user =
+        platformUserRepository
+            .findById(request.userId())
+            .orElseThrow(() -> new ApiException("User not found", HttpStatus.NOT_FOUND));
+    if (!merchantAccessService.hasStrictActiveMembership(merchantId, user.getId())) {
+      throw new ApiException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+
+    TeamMember member =
+        teamMemberRepository
+            .findByMerchantIdAndTeamIdAndPlatformUserId(merchantId, teamId, request.userId())
+            .orElseGet(TeamMember::new);
+    member.setMerchant(team.getMerchant());
+    member.setTeam(team);
+    member.setPlatformUser(user);
+    member.setRole(request.role().trim());
+    member.setStatus(request.status() == null ? TeamMemberStatus.ACTIVE : request.status());
+    return toTeamMemberSummary(teamMemberRepository.save(member));
+  }
+
+  @DeleteMapping("/{merchantId}/teams/{teamId}/members/{memberId}")
+  public void removeTeamMember(
+      @PathVariable Long merchantId, @PathVariable Long teamId, @PathVariable Long memberId) {
+    assertMerchantScope(merchantId);
+    ServiceTeam team = requireTeamInMerchant(merchantId, teamId);
+    TeamMember member =
+        teamMemberRepository
+            .findById(memberId)
+            .orElseThrow(() -> new ApiException("Team member not found", HttpStatus.NOT_FOUND));
+    if (!member.getMerchant().getId().equals(merchantId) || !member.getTeam().getId().equals(team.getId())) {
+      throw new ApiException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+    teamMemberRepository.delete(member);
+  }
+
+  private ServiceTeam requireTeamInMerchant(Long merchantId, Long teamId) {
+    ServiceTeam team =
+        serviceTeamRepository
+            .findById(teamId)
+            .orElseThrow(() -> new ApiException("Team not found", HttpStatus.NOT_FOUND));
+    if (!team.getMerchant().getId().equals(merchantId)) {
+      throw new ApiException("Forbidden", HttpStatus.FORBIDDEN);
+    }
+    return team;
+  }
+
+  private TeamSummary toTeamSummary(ServiceTeam team) {
+    return new TeamSummary(
+        team.getId(),
+        team.getMerchant().getId(),
+        team.getName(),
+        team.getCode(),
+        team.getStatus(),
+        team.getCreatedAt());
+  }
+
+  private TeamMemberSummary toTeamMemberSummary(TeamMember member) {
+    return new TeamMemberSummary(
+        member.getId(),
+        member.getMerchant().getId(),
+        member.getTeam().getId(),
+        member.getPlatformUser().getId(),
+        member.getPlatformUser().getUsername(),
+        member.getRole(),
+        member.getStatus());
   }
 
   private MerchantCustomizationResponse toCustomizationResponse(CustomizationConfig config) {

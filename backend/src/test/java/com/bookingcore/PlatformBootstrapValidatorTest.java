@@ -13,61 +13,44 @@ import org.springframework.core.env.Profiles;
 class PlatformBootstrapValidatorTest {
 
   @Test
-  void rejectsCredentialLoggingOutsideDev() {
+  void internalSystemAdminAutoProvisionRequiresUsername() {
     BookingPlatformProperties props = new BookingPlatformProperties();
-    props.getAuth().setLogDevBootstrapCredentials(true);
-    Environment env = mock(Environment.class);
-    when(env.acceptsProfiles(Profiles.of("dev"))).thenReturn(false);
-
-    assertThatThrownBy(() -> PlatformBootstrapValidator.validate(props, env))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("log-dev-bootstrap-credentials");
-  }
-
-  @Test
-  void prodRejectsDevOnlyBootstrapPasswords() {
-    BookingPlatformProperties props = new BookingPlatformProperties();
-    props.getAuth().getBootstrapSystemAdmin().setEnabled(true);
-    props.getAuth().getBootstrapSystemAdmin().setUsername("admin");
-    props.getAuth().getBootstrapSystemAdmin().setPassword("admin");
-    Environment env = mock(Environment.class);
-    when(env.acceptsProfiles(Profiles.of("dev"))).thenReturn(false);
-    when(env.acceptsProfiles(Profiles.of("prod"))).thenReturn(true);
-
-    assertThatThrownBy(() -> PlatformBootstrapValidator.validate(props, env))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("dev-only literals");
-  }
-
-  @Test
-  void merchantUserRequiresMerchantSlugWhenMerchantBootstrapOff() {
-    BookingPlatformProperties props = new BookingPlatformProperties();
-    props.getAuth().getBootstrapDefaultMerchantUser().setEnabled(true);
-    props.getAuth().getBootstrapDefaultMerchantUser().setUsername("m");
-    props.getAuth().getBootstrapDefaultMerchantUser().setPassword("p");
-    props.getAuth().getBootstrapDefaultMerchantUser().setMerchantSlug("");
-    props.getAuth().getBootstrapDefaultMerchant().setEnabled(false);
+    props.getAuth().getInternalSystemAdmin().setAutoProvision(true);
+    props.getAuth().getInternalSystemAdmin().setUsername(" ");
+    props.getAuth().getInternalSystemAdmin().setPassword("x");
     Environment env = mock(Environment.class);
     when(env.acceptsProfiles(Profiles.of("prod"))).thenReturn(false);
 
     assertThatThrownBy(() -> PlatformBootstrapValidator.validate(props, env))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("merchant-slug is required");
+        .hasMessageContaining("internal-system-admin.username");
   }
 
   @Test
-  void prodBootstrapEnabledButPasswordMissingFailsFast() {
+  void internalSystemAdminAutoProvisionRequiresPassword() {
     BookingPlatformProperties props = new BookingPlatformProperties();
-    props.getAuth().getBootstrapSystemAdmin().setEnabled(true);
-    props.getAuth().getBootstrapSystemAdmin().setUsername("admin-prod");
-    props.getAuth().getBootstrapSystemAdmin().setPassword("   ");
+    props.getAuth().getInternalSystemAdmin().setAutoProvision(true);
+    props.getAuth().getInternalSystemAdmin().setUsername("admin");
+    props.getAuth().getInternalSystemAdmin().setPassword(" ");
     Environment env = mock(Environment.class);
-    when(env.acceptsProfiles(Profiles.of("dev"))).thenReturn(false);
+    when(env.acceptsProfiles(Profiles.of("prod"))).thenReturn(false);
+
+    assertThatThrownBy(() -> PlatformBootstrapValidator.validate(props, env))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("internal-system-admin.password");
+  }
+
+  @Test
+  void prodRejectsDevOnlyInternalSystemAdminPassword() {
+    BookingPlatformProperties props = new BookingPlatformProperties();
+    props.getAuth().getInternalSystemAdmin().setAutoProvision(true);
+    props.getAuth().getInternalSystemAdmin().setUsername("admin");
+    props.getAuth().getInternalSystemAdmin().setPassword("admin");
+    Environment env = mock(Environment.class);
     when(env.acceptsProfiles(Profiles.of("prod"))).thenReturn(true);
 
     assertThatThrownBy(() -> PlatformBootstrapValidator.validate(props, env))
         .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("Missing required configuration")
-        .hasMessageContaining("bootstrap-system-admin.password");
+        .hasMessageContaining("dev-only literals");
   }
 }

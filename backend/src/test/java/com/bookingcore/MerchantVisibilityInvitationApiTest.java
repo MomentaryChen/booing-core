@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.bookingcore.modules.merchant.Merchant;
 import com.bookingcore.modules.merchant.MerchantInvitation;
 import com.bookingcore.modules.merchant.MerchantInvitationStatus;
+import com.bookingcore.modules.merchant.MerchantMembership;
+import com.bookingcore.modules.merchant.MerchantMembershipStatus;
 import com.bookingcore.modules.merchant.MerchantVisibility;
 import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.security.PlatformUserRole;
@@ -169,6 +171,12 @@ class MerchantVisibilityInvitationApiTest {
     merchantUser.setMerchant(merchant);
     merchantUser.setEnabled(true);
     entityManager.persist(merchantUser);
+
+    MerchantMembership ownerMembership = new MerchantMembership();
+    ownerMembership.setMerchant(merchant);
+    ownerMembership.setPlatformUser(merchantUser);
+    ownerMembership.setMembershipStatus(MerchantMembershipStatus.ACTIVE);
+    entityManager.persist(ownerMembership);
 
     PlatformUser invitee = new PlatformUser();
     invitee.setUsername("invitee-" + System.nanoTime());

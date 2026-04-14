@@ -1,19 +1,13 @@
 package com.bookingcore.service;
 
-import com.bookingcore.api.ApiDtos.CreateMerchantRequest;
 import com.bookingcore.config.BookingPlatformProperties;
-import com.bookingcore.modules.merchant.Merchant;
-import com.bookingcore.modules.merchant.MerchantRepository;
 import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.modules.platform.PlatformUserRepository;
-import com.bookingcore.modules.platform.rbac.PlatformRbacBindingStatus;
-import com.bookingcore.modules.platform.rbac.PlatformUserRbacBinding;
-import com.bookingcore.modules.platform.rbac.PlatformUserRbacBindingRepository;
-import com.bookingcore.modules.platform.rbac.RbacRoleRepository;
 import com.bookingcore.security.PlatformUserRole;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Objects;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,90 +17,58 @@ import org.springframework.util.StringUtils;
 public class PlatformBootstrapService {
 
   private final BookingPlatformProperties properties;
-  private final MerchantRepository merchantRepository;
-  private final MerchantProvisioningService merchantProvisioningService;
+  private final Environment environment;
   private final PlatformUserRepository platformUserRepository;
   private final PasswordEncoder passwordEncoder;
-  private final RbacRoleRepository rbacRoleRepository;
-  private final PlatformUserRbacBindingRepository platformUserRbacBindingRepository;
 
   public PlatformBootstrapService(
       BookingPlatformProperties properties,
-      MerchantRepository merchantRepository,
-      MerchantProvisioningService merchantProvisioningService,
+      Environment environment,
       PlatformUserRepository platformUserRepository,
-      PasswordEncoder passwordEncoder,
-      RbacRoleRepository rbacRoleRepository,
-      PlatformUserRbacBindingRepository platformUserRbacBindingRepository) {
+      PasswordEncoder passwordEncoder) {
     this.properties = properties;
-    this.merchantRepository = merchantRepository;
-    this.merchantProvisioningService = merchantProvisioningService;
+    this.environment = environment;
     this.platformUserRepository = platformUserRepository;
     this.passwordEncoder = passwordEncoder;
-    this.rbacRoleRepository = rbacRoleRepository;
-    this.platformUserRbacBindingRepository = platformUserRbacBindingRepository;
   }
 
+  /**
+   * Ensures at least one {@link PlatformUserRole#SYSTEM_ADMIN} exists when configured. Runs before
+   * optional demo bootstrap; skipped when any SYSTEM_ADMIN row already exists (including from manual
+   * SQL).
+   */
   @Transactional
-  public void run() {
-    var auth = properties.getAuth();
-    if (auth.getBootstrapDefaultMerchant().isEnabled()) {
-      ensureDefaultMerchant(auth.getBootstrapDefaultMerchant());
+  public void provisionInternalSystemAdminIfAbsent() {
+    var cfg = properties.getAuth().getInternalSystemAdmin();
+    if (!cfg.isAutoProvision()) {
+      return;
     }
-    if (auth.getBootstrapDefaultMerchantUser().isEnabled()) {
-      String slug = resolveMerchantSlugForMerchantUser(auth);
-      Merchant merchant =
-          merchantRepository
-              .findBySlug(slug)
-              .orElseThrow(
-                  () ->
-                      new IllegalStateException(
-                          "Bootstrap: merchant with slug '" + slug + "' not found; enable default-merchant bootstrap or create the merchant first."));
-      ensurePlatformUser(
-          PlatformUserRole.MERCHANT,
-          auth.getBootstrapDefaultMerchantUser().getUsername(),
-          auth.getBootstrapDefaultMerchantUser().getPassword(),
-          merchant);
+    if (platformUserRepository.existsByRole(PlatformUserRole.SYSTEM_ADMIN)) {
+      return;
     }
-    if (auth.getBootstrapSystemAdmin().isEnabled()) {
-      ensurePlatformUser(
-          PlatformUserRole.SYSTEM_ADMIN,
-          auth.getBootstrapSystemAdmin().getUsername(),
-          auth.getBootstrapSystemAdmin().getPassword(),
-          null);
+    String username = cfg.getUsername() == null ? "" : cfg.getUsername().trim();
+    String password = cfg.getPassword() == null ? "" : cfg.getPassword();
+    if (!StringUtils.hasText(username)) {
+      throw new IllegalStateException(
+          "internal-system-admin.auto-provision is true but internal-system-admin.username is blank");
     }
-    if (auth.getBootstrapDefaultClient().isEnabled()) {
-      ensurePlatformUser(
-          PlatformUserRole.CLIENT,
-          auth.getBootstrapDefaultClient().getUsername(),
-          auth.getBootstrapDefaultClient().getPassword(),
-          null);
+    if (!StringUtils.hasText(password)) {
+      throw new IllegalStateException(
+          "internal-system-admin.auto-provision is true and no SYSTEM_ADMIN platform user exists yet, "
+              + "but internal-system-admin.password is blank; set a password or insert an admin manually");
     }
+    if (environment.acceptsProfiles(Profiles.of("prod")) && looksLikeDevOnlyPassword(password)) {
+      throw new IllegalStateException(
+          "internal-system-admin.password must not use dev-only literals when spring profile 'prod' is active");
+    }
+    ensurePlatformUser(PlatformUserRole.SYSTEM_ADMIN, username, password);
   }
 
-  private String resolveMerchantSlugForMerchantUser(BookingPlatformProperties.Auth auth) {
-    var u = auth.getBootstrapDefaultMerchantUser();
-    if (StringUtils.hasText(u.getMerchantSlug())) {
-      return u.getMerchantSlug().trim().toLowerCase(Locale.ROOT);
-    }
-    return auth.getBootstrapDefaultMerchant().getSlug().trim().toLowerCase(Locale.ROOT);
-  }
-
-  private Merchant ensureDefaultMerchant(BookingPlatformProperties.Auth.BootstrapDefaultMerchant cfg) {
-    String slug = cfg.getSlug().trim().toLowerCase(Locale.ROOT);
-    Optional<Merchant> existing = merchantRepository.findBySlug(slug);
-    if (existing.isPresent()) {
-      return existing.get();
-    }
-    return merchantProvisioningService.createMerchant(new CreateMerchantRequest(cfg.getName().trim(), slug));
-  }
-
-  private void ensurePlatformUser(PlatformUserRole role, String username, String password, Merchant merchant) {
+  private void ensurePlatformUser(PlatformUserRole role, String username, String password) {
     Optional<PlatformUser> existing = platformUserRepository.findByUsername(username);
     if (existing.isPresent()) {
       PlatformUser user = existing.get();
-      validateExistingUserMapping(user, role, merchant);
-      ensureRbacBinding(user, role, merchant);
+      validateExistingUserRole(user, role);
       return;
     }
     PlatformUser user = new PlatformUser();
@@ -114,89 +76,25 @@ public class PlatformBootstrapService {
     user.setPasswordHash(passwordEncoder.encode(password));
     user.setRole(role);
     user.setEnabled(true);
-    user.setMerchant(
-        role == PlatformUserRole.MERCHANT || role == PlatformUserRole.SUB_MERCHANT ? merchant : null);
+    user.setMerchant(null);
     platformUserRepository.save(user);
-    ensureRbacBinding(user, role, merchant);
   }
 
-  private void validateExistingUserMapping(PlatformUser user, PlatformUserRole expectedRole, Merchant expectedMerchant) {
+  private void validateExistingUserRole(PlatformUser user, PlatformUserRole expectedRole) {
     if (user.getRole() != expectedRole) {
-      validateBindingTarget(expectedRole, expectedMerchant);
-      return;
-    }
-    Long expectedMerchantId =
-        (expectedRole == PlatformUserRole.MERCHANT || expectedRole == PlatformUserRole.SUB_MERCHANT)
-            ? (expectedMerchant == null ? null : expectedMerchant.getId())
-            : null;
-    Long actualMerchantId = user.getMerchant() == null ? null : user.getMerchant().getId();
-    if (!Objects.equals(actualMerchantId, expectedMerchantId)) {
       throw new IllegalStateException(
           "Bootstrap user conflict: username '"
               + user.getUsername()
-              + "' merchant mismatch (actual="
-              + actualMerchantId
+              + "' role mismatch (actual="
+              + user.getRole()
               + ", expected="
-              + expectedMerchantId
+              + expectedRole
               + ")");
     }
   }
 
-  private static void validateBindingTarget(PlatformUserRole expectedRole, Merchant expectedMerchant) {
-    if (expectedRole == PlatformUserRole.MERCHANT || expectedRole == PlatformUserRole.SUB_MERCHANT) {
-      if (expectedMerchant == null) {
-        throw new IllegalStateException(
-            "Bootstrap: role " + expectedRole.name() + " requires a merchant for binding");
-      }
-    } else if (expectedMerchant != null) {
-      throw new IllegalStateException(
-          "Bootstrap: role " + expectedRole.name() + " must not be scoped to a merchant");
-    }
-  }
-
-  private void ensureRbacBinding(PlatformUser user, PlatformUserRole role, Merchant merchant) {
-    if (rbacRoleRepository.count() == 0L) {
-      // Legacy/test compatibility: RBAC catalog not initialized yet, so skip binding creation.
-      return;
-    }
-    var rbacRole =
-        rbacRoleRepository
-            .findByCode(role.name())
-            .orElseThrow(
-                () ->
-                    new IllegalStateException(
-                        "Bootstrap RBAC role missing for code '" + role.name() + "'"));
-    Long merchantId = merchant == null ? null : merchant.getId();
-    var existing =
-        platformUserRbacBindingRepository.findBindingsForUserContext(
-            user.getId(), role.name(), merchantId);
-    if (existing.stream()
-        .anyMatch(b -> b.getStatus() == PlatformRbacBindingStatus.ACTIVE)) {
-      return;
-    }
-    Optional<PlatformUserRbacBinding> reusable =
-        existing.stream()
-            .filter(b -> b.getStatus() != PlatformRbacBindingStatus.ACTIVE)
-            .findFirst();
-    if (reusable.isPresent()) {
-      PlatformUserRbacBinding binding = reusable.get();
-      binding.setStatus(PlatformRbacBindingStatus.ACTIVE);
-      if (!Objects.equals(binding.getRbacRole().getId(), rbacRole.getId())) {
-        binding.setRbacRole(rbacRole);
-      }
-      if (!Objects.equals(
-          binding.getMerchant() == null ? null : binding.getMerchant().getId(),
-          merchantId)) {
-        binding.setMerchant(merchant);
-      }
-      platformUserRbacBindingRepository.save(binding);
-      return;
-    }
-    PlatformUserRbacBinding binding = new PlatformUserRbacBinding();
-    binding.setPlatformUser(user);
-    binding.setRbacRole(rbacRole);
-    binding.setMerchant(merchant);
-    binding.setStatus(PlatformRbacBindingStatus.ACTIVE);
-    platformUserRbacBindingRepository.save(binding);
+  private static boolean looksLikeDevOnlyPassword(String password) {
+    String p = password.trim().toLowerCase(Locale.ROOT);
+    return p.equals("admin") || p.equals("merchant") || p.equals("client");
   }
 }

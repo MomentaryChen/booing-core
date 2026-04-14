@@ -1,0 +1,170 @@
+{
+  "dashboard": {
+    "title": "管理儀表板",
+    "stats": {
+      "totalUsers": "總使用者數",
+      "totalTenants": "總租戶數",
+      "totalBookings": "總預約數",
+      "systemHealth": "系統狀態"
+    },
+    "systemHealth": {
+      "healthy": "健康"
+    },
+    "charts": {
+      "userGrowth": "使用者成長",
+      "bookingTrends": "預約趨勢",
+      "userGrowthPlaceholder": "使用者成長圖表（預留）",
+      "bookingTrendsPlaceholder": "預約趨勢圖（預留）"
+    },
+    "vsLastMonth": "較上月",
+    "recentActivity": {
+      "title": "近期活動",
+      "byUser": "由 {{user}} 執行",
+      "minutesAgo": "{{count}} 分鐘前",
+      "hoursAgo": "{{count}} 小時前",
+      "actions": {
+        "tenantRegistered": "新增租戶註冊",
+        "userRoleUpdated": "使用者角色已更新",
+        "tenantSuspended": "租戶已停用",
+        "userRegistered": "新增使用者註冊",
+        "bookingCompleted": "預約已完成"
+      }
+    }
+  },
+  "tenants": {
+    "title": "租戶管理",
+    "description": "管理租戶帳號與訂閱狀態",
+    "addTenant": "新增租戶",
+    "allTenants": "所有租戶",
+    "totalTenants": "共 {{count}} 個租戶",
+    "searchPlaceholder": "搜尋租戶...",
+    "table": {
+      "name": "名稱",
+      "plan": "方案",
+      "users": "使用者",
+      "bookings": "預約數",
+      "status": "狀態",
+      "created": "建立時間"
+    },
+    "plans": {
+      "starter": "入門",
+      "professional": "專業",
+      "enterprise": "企業"
+    },
+    "status": {
+      "active": "啟用",
+      "suspended": "停用"
+    },
+    "actions": {
+      "suspend": "停用",
+      "activate": "啟用"
+    }
+  },
+  "users": {
+    "title": "使用者管理",
+    "description": "管理平台使用者與存取權限",
+    "addUser": "新增使用者",
+    "allUsers": "所有使用者",
+    "totalUsers": "共 {{count}} 位使用者",
+    "searchPlaceholder": "依姓名或電子郵件搜尋...",
+    "table": {
+      "user": "使用者",
+      "role": "角色",
+      "tenant": "租戶",
+      "lastLogin": "上次登入",
+      "status": "狀態"
+    },
+    "roles": {
+      "admin": "管理員",
+      "merchant": "商家",
+      "client": "客戶"
+    },
+    "status": {
+      "active": "啟用",
+      "suspended": "停用"
+    },
+    "actions": {
+      "resetPassword": "重設密碼",
+      "suspend": "停用",
+      "activate": "啟用"
+    }
+  },
+  "roles": {
+    "title": "角色與權限",
+    "description": "定義各角色可存取的功能範圍",
+    "addRole": "新增角色",
+    "allRoles": "所有角色",
+    "totalRoles": "共 {{count}} 個角色",
+    "table": {
+      "role": "角色",
+      "users": "使用者數"
+    },
+    "permissionsMatrix": "權限矩陣",
+    "permissionsMatrixDescription": "依功能領域檢視角色權限覆蓋",
+    "roleNames": {
+      "admin": "系統管理員",
+      "merchant": "商家擁有者",
+      "client": "客戶使用者"
+    },
+    "permissions": {
+      "manageUsers": "管理使用者",
+      "manageTenants": "管理租戶",
+      "manageRoles": "管理角色",
+      "viewAuditLogs": "檢視稽核日誌",
+      "manageSettings": "管理系統設定"
+    },
+    "permissionDescriptions": {
+      "manageUsers": "建立、更新、停用與啟用使用者帳號。",
+      "manageTenants": "建立租戶並管理租戶生命週期狀態。",
+      "manageRoles": "維護角色定義與權限指派。",
+      "viewAuditLogs": "檢視安全與操作稽核軌跡。",
+      "manageSettings": "修改平台層級系統設定。"
+    }
+  },
+  "auditLogs": {
+    "title": "稽核日誌",
+    "description": "追蹤平台中的關鍵操作紀錄",
+    "export": "匯出",
+    "recentActivity": "近期紀錄",
+    "totalLogs": "共 {{count}} 筆紀錄",
+    "searchPlaceholder": "依使用者、動作或內容搜尋...",
+    "filterByLevel": "依等級篩選",
+    "allLevels": "全部等級",
+    "levels": {
+      "info": "資訊",
+      "warning": "警告",
+      "error": "錯誤"
+    },
+    "table": {
+      "timestamp": "時間",
+      "user": "使用者",
+      "action": "動作",
+      "resource": "資源",
+      "details": "內容",
+      "level": "等級"
+    },
+    "actions": {
+      "USER_LOGIN": "使用者登入",
+      "TENANT_CREATED": "建立租戶",
+      "BOOKING_CANCELLED": "預約取消",
+      "USER_SUSPENDED": "使用者停用",
+      "PROFILE_UPDATED": "更新個人資料",
+      "BACKUP_COMPLETED": "備份完成"
+    },
+    "resources": {
+      "AUTH": "認證",
+      "TENANTS": "租戶",
+      "BOOKINGS": "預約",
+      "USERS": "使用者",
+      "SYSTEM": "系統"
+    },
+    "details": {
+      "successfulLogin": "從 192.168.1.100 成功登入",
+      "tenantCreated": "已建立租戶：Elite Tennis Club",
+      "bookingCancelled": "已取消預約 #1234",
+      "userSuspended": "因政策違規而停用使用者",
+      "profileUpdated": "已更新個人資料",
+      "backupCompleted": "每日備份已完成"
+    }
+  }
+}

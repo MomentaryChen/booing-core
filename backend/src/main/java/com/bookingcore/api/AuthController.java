@@ -3,6 +3,8 @@ package com.bookingcore.api;
 import com.bookingcore.api.ApiDtos.AuthMeResponse;
 import com.bookingcore.api.ApiDtos.ContextSelectRequest;
 import com.bookingcore.api.ApiDtos.LoginRequest;
+import com.bookingcore.api.ApiDtos.MerchantEnableRequest;
+import com.bookingcore.api.ApiDtos.MerchantEnableResponse;
 import com.bookingcore.api.ApiDtos.PublicRegisterRequest;
 import com.bookingcore.api.ApiDtos.PublicRegisterResponse;
 import com.bookingcore.api.ApiDtos.TokenResponse;
@@ -19,9 +21,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Auth")
 public class AuthController {
 
   private final AuthService authService;
@@ -68,5 +72,15 @@ public class AuthController {
   @PostMapping("/context/select")
   public TokenResponse contextSelect(@RequestBody(required = false) ContextSelectRequest request) {
     return authService.selectContext(SecurityContextHolder.getContext().getAuthentication(), request);
+  }
+
+  @PostMapping("/context/switch")
+  public TokenResponse contextSwitch(@RequestBody ContextSelectRequest request) {
+    return authService.selectContext(SecurityContextHolder.getContext().getAuthentication(), request);
+  }
+
+  @PostMapping("/merchant/enable")
+  public MerchantEnableResponse enableMerchant(@Valid @RequestBody MerchantEnableRequest request) {
+    return authService.enableMerchant(SecurityContextHolder.getContext().getAuthentication(), request);
   }
 }

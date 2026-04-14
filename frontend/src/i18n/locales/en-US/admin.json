@@ -1,0 +1,170 @@
+{
+  "dashboard": {
+    "title": "System Dashboard",
+    "stats": {
+      "totalUsers": "Total Users",
+      "totalTenants": "Total Tenants",
+      "totalBookings": "Total Bookings",
+      "systemHealth": "System Health"
+    },
+    "systemHealth": {
+      "healthy": "Healthy"
+    },
+    "charts": {
+      "userGrowth": "User Growth",
+      "bookingTrends": "Booking Trends",
+      "userGrowthPlaceholder": "User Growth Chart Placeholder",
+      "bookingTrendsPlaceholder": "Booking Trends Chart"
+    },
+    "vsLastMonth": "vs last month",
+    "recentActivity": {
+      "title": "Recent Activity",
+      "byUser": "by {{user}}",
+      "minutesAgo": "{{count}} minutes ago",
+      "hoursAgo": "{{count}} hours ago",
+      "actions": {
+        "tenantRegistered": "New tenant registered",
+        "userRoleUpdated": "User role updated",
+        "tenantSuspended": "Tenant suspended",
+        "userRegistered": "New user registered",
+        "bookingCompleted": "Booking completed"
+      }
+    }
+  },
+  "tenants": {
+    "title": "Tenants",
+    "description": "Manage tenant accounts and subscriptions",
+    "addTenant": "Add Tenant",
+    "allTenants": "All Tenants",
+    "totalTenants": "{{count}} total tenants",
+    "searchPlaceholder": "Search tenants...",
+    "table": {
+      "name": "Name",
+      "plan": "Plan",
+      "users": "Users",
+      "bookings": "Bookings",
+      "status": "Status",
+      "created": "Created"
+    },
+    "plans": {
+      "starter": "Starter",
+      "professional": "Professional",
+      "enterprise": "Enterprise"
+    },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended"
+    },
+    "actions": {
+      "suspend": "Suspend",
+      "activate": "Activate"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "description": "Manage platform users and their access levels",
+    "addUser": "Add User",
+    "allUsers": "All Users",
+    "totalUsers": "{{count}} total users",
+    "searchPlaceholder": "Search users by name or email...",
+    "table": {
+      "user": "User",
+      "role": "Role",
+      "tenant": "Tenant",
+      "lastLogin": "Last Login",
+      "status": "Status"
+    },
+    "roles": {
+      "admin": "Admin",
+      "merchant": "Merchant",
+      "client": "Client"
+    },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended"
+    },
+    "actions": {
+      "resetPassword": "Reset Password",
+      "suspend": "Suspend",
+      "activate": "Activate"
+    }
+  },
+  "roles": {
+    "title": "Roles & Permissions",
+    "description": "Define what each role can access",
+    "addRole": "Add Role",
+    "allRoles": "All Roles",
+    "totalRoles": "{{count}} total roles",
+    "table": {
+      "role": "Role",
+      "users": "Users"
+    },
+    "permissionsMatrix": "Permissions Matrix",
+    "permissionsMatrixDescription": "Role permission coverage by domain capabilities",
+    "roleNames": {
+      "admin": "System Administrator",
+      "merchant": "Merchant Owner",
+      "client": "Client User"
+    },
+    "permissions": {
+      "manageUsers": "Manage Users",
+      "manageTenants": "Manage Tenants",
+      "manageRoles": "Manage Roles",
+      "viewAuditLogs": "View Audit Logs",
+      "manageSettings": "Manage Settings"
+    },
+    "permissionDescriptions": {
+      "manageUsers": "Create, update, suspend, and reactivate user accounts.",
+      "manageTenants": "Provision tenants and manage tenant lifecycle states.",
+      "manageRoles": "Define role definitions and permission assignments.",
+      "viewAuditLogs": "Access security and operation audit trails.",
+      "manageSettings": "Modify platform-level configuration settings."
+    }
+  },
+  "auditLogs": {
+    "title": "Audit Logs",
+    "description": "Track important actions across the platform",
+    "export": "Export",
+    "recentActivity": "Recent Activity",
+    "totalLogs": "{{count}} logs",
+    "searchPlaceholder": "Search by user, action, or details...",
+    "filterByLevel": "Filter by level",
+    "allLevels": "All levels",
+    "levels": {
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error"
+    },
+    "table": {
+      "timestamp": "Timestamp",
+      "user": "User",
+      "action": "Action",
+      "resource": "Resource",
+      "details": "Details",
+      "level": "Level"
+    },
+    "actions": {
+      "USER_LOGIN": "User Login",
+      "TENANT_CREATED": "Tenant Created",
+      "BOOKING_CANCELLED": "Booking Cancelled",
+      "USER_SUSPENDED": "User Suspended",
+      "PROFILE_UPDATED": "Profile Updated",
+      "BACKUP_COMPLETED": "Backup Completed"
+    },
+    "resources": {
+      "AUTH": "Auth",
+      "TENANTS": "Tenants",
+      "BOOKINGS": "Bookings",
+      "USERS": "Users",
+      "SYSTEM": "System"
+    },
+    "details": {
+      "successfulLogin": "Successful login from 192.168.1.100",
+      "tenantCreated": "Created tenant: Elite Tennis Club",
+      "bookingCancelled": "Cancelled booking #1234",
+      "userSuspended": "User suspended due to policy violation",
+      "profileUpdated": "Updated profile information",
+      "backupCompleted": "Daily backup completed successfully"
+    }
+  }
+}

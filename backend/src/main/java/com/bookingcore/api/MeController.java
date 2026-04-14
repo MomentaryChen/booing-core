@@ -43,7 +43,8 @@ public class MeController {
     return auth.getAuthorities().stream()
         .map(GrantedAuthority::getAuthority)
         .filter(a -> a.startsWith("ROLE_"))
-        .map(a -> PlatformUserRole.valueOf(a.substring(5)))
+        .map(a -> PlatformUserRole.parse(a.substring(5)))
+        .flatMap(java.util.Optional::stream)
         .findFirst()
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN));
   }

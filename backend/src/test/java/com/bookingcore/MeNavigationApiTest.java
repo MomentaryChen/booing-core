@@ -62,7 +62,7 @@ class MeNavigationApiTest {
 
   @Test
   void merchantNavigationExcludesSystemDashboard() throws Exception {
-    String token = TestJwtHelper.login(mockMvc, objectMapper, "merchant", "merchant");
+    String token = TestJwtHelper.login(mockMvc, objectMapper, "merchant@example.com", "merchant");
     mockMvc
         .perform(get("/api/me/navigation").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -73,7 +73,7 @@ class MeNavigationApiTest {
 
   @Test
   void clientNavigationIncludesClientTodoExcludesMerchantDashboard() throws Exception {
-    String token = TestJwtHelper.login(mockMvc, objectMapper, "client", "client");
+    String token = TestJwtHelper.login(mockMvc, objectMapper, "client@example.com", "client");
     mockMvc
         .perform(get("/api/me/navigation").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())

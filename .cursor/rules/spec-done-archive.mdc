@@ -1,26 +1,33 @@
 ---
-description: 已結案規格歸檔至 doc/specs/done/ 與連結更新（PM／agent 流程）
+description: 已結案規格歸檔至 doc/specs/closed/ 與連結更新（PM／agent 流程）
 globs: doc/specs/**/*.md
 alwaysApply: false
 ---
 
-# 規格結案歸檔（`doc/specs/done/`）
+# 規格狀態流轉與結案歸檔（`open` / `progress` / `closed`）
 
-`pm-agent` 與撰寫規格之 agent：**正式結案**後應歸檔，與進行中規格分離。
+`pm-agent` 與撰寫規格之 agent：規格需依狀態流轉管理，並在 **正式結案** 後歸檔。
 
 ## 規則
 
-- **結案後**：將 `doc/specs/` **根目錄**下該檔以**相同檔名**移至 `doc/specs/done/`（維持 `YYYY-MM-DD_<kebab-case>.md`，不重命名、不在兩處各留一份）。
-- **進行中／待審／未結案**：僅放在 `doc/specs/` 根目錄；`doc/specs/done/` 只放已結案、不再作為「現行迭代主檔」的規格。
+- **擬新增（預設）**：新 spec 先建立在 `doc/specs/open/`。
+- **開始執行後**：移動到 `doc/specs/progress/`，作為唯一進行中主檔。
+  - **觸發條件（任一成立即移動）**：
+    - 已切工單並指派任一實作 owner（如 frontend/backend/devops）。
+    - 已建立實作任務並進入 coding（含 agent 開始改碼）。
+    - 已開 PR 或已產生第一個與該 spec 對應的實作 commit。
+  - **禁止延後**：不得以「先做一點再移」或「PR 開了再移」為由留在 `open/`。
+- **結案後**：將 `doc/specs/progress/`（或仍在 `open/` 但決議結案）下該檔以**相同檔名**移至 `doc/specs/closed/`（維持 `YYYY-MM-DD_<kebab-case>.md`，不重命名、不在兩處各留一份）。
+- **closed 限制**：`doc/specs/closed/` 只放已結案、不再作為現行迭代主檔的規格。
 - **移動後**：全域檢索並更新引用 — `.cursor/skills/`、`README.md` / `README.zh-TW.md`、其他 `doc/`、`.cursor/`、程式註解 — 避免仍指向舊路徑。
-- **文件內相對連結**：若連到其他規格，歸檔時一併修正，確保從 `done/` 開啟仍可導向正確檔案（同屬 `done/` 用 `./`；活躍規格用 `../文件名`）。
-- **結案註記**：PR／issue 或規格開頭標註「已移至 `doc/specs/done/`」，便於審查與追溯。
-- **禁止**在 `done/` 內持續當現行規格大改；若要重開議題，在 `doc/specs/` **新建**日期前綴檔或更新根目錄活躍規格，並於內文說明與舊案關係。
-- **合併前自查**：根目錄僅活躍規格、`done/` 內檔名符合命名規範、主要連結無失效路徑。
+- **文件內相對連結**：若連到其他規格，移動狀態時一併修正，確保在 `open/`、`progress/`、`closed/` 開啟都可導向正確檔案。
+- **結案註記**：PR／issue 或規格開頭標註「已移至 `doc/specs/closed/`」，便於審查與追溯。
+- **禁止**在 `closed/` 內持續當現行規格大改；若要重開議題，在 `doc/specs/open/` 新建日期前綴檔，並於內文說明與舊案關係。
+- **合併前自查**：新增規格是否在 `open/`、進行中是否在 `progress/`、`closed/` 內檔名是否符合命名規範、主要連結是否無失效路徑。
 
 ## 與命名規範的關係
 
-- 檔名規則不變，見 `spec-naming-convention.mdc`；`done/` 子資料夾**不改**檔名格式。
+- 檔名規則不變，見 `spec-naming-convention.mdc`；`closed/` 子資料夾**不改**檔名格式。
 
 ## 參考
 

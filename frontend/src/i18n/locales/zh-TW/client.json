@@ -1,0 +1,190 @@
+{
+  "home": {
+    "hero": {
+      "title": "預約您的完美體驗",
+      "subtitle": "探索並預約來自可信賴商家的服務",
+      "cta": "探索服務"
+    },
+    "featured": {
+      "title": "精選服務",
+      "viewAll": "查看全部"
+    },
+    "categories": {
+      "title": "依類別瀏覽"
+    },
+    "dynamic": {
+      "merchantsCount": "{{count}} 個商家",
+      "categories": {
+        "public": "公開",
+        "private": "私人",
+        "unlisted": "不公開列表"
+      },
+      "joinState": {
+        "none": "需要加入",
+        "public": "所有客戶皆可瀏覽",
+        "joined": "已加入",
+        "invite_required": "需要邀請"
+      }
+    },
+    "mock": {
+      "image": "圖片",
+      "servicesCount": "{{count}} 項服務",
+      "durationMin": "{{minutes}} 分鐘",
+      "categories": {
+        "wellness": "身心舒壓",
+        "beauty": "美容美髮",
+        "fitness": "健身運動",
+        "health": "健康照護",
+        "education": "教育課程",
+        "consulting": "顧問諮詢"
+      },
+      "featured": {
+        "1": { "name": "高級 SPA 療程" },
+        "2": { "name": "造型美髮服務" },
+        "3": { "name": "私人健身訓練" },
+        "4": { "name": "牙科基本檢查" }
+      }
+    },
+    "becomeMerchant": {
+      "title": "成為商家",
+      "loading": "載入商家狀態中...",
+      "cta": "啟用商家身分",
+      "submitting": "啟用中...",
+      "success": "此帳號已可使用商家模式。",
+      "goToMerchant": "前往商家後台",
+      "namePlaceholder": "商家顯示名稱",
+      "slugPlaceholder": "商家代稱（例如 my-store）",
+      "error": "目前無法啟用商家。",
+      "forbidden": "您沒有啟用商家的權限。"
+    }
+  },
+  "search": {
+    "title": "尋找服務",
+    "placeholder": "搜尋服務...",
+    "filters": {
+      "category": "類別",
+      "priceRange": "價格範圍",
+      "rating": "評分",
+      "location": "地點",
+      "availability": "可用時段"
+    },
+    "results": "找到 {{count}} 個結果",
+    "noResults": "找不到服務",
+    "sortBy": {
+      "label": "排序方式",
+      "relevance": "相關性",
+      "priceAsc": "價格：低到高",
+      "priceDesc": "價格：高到低",
+      "rating": "評分"
+    },
+    "showResources": "顯示可預約資源",
+    "hideResources": "隱藏資源",
+    "noResources": "此商家目前沒有可預約的資源。",
+    "categories": {
+      "all": "全部"
+    },
+    "visibility": {
+      "public": "公開",
+      "private": "私人",
+      "unlisted": "不公開列表"
+    }
+  },
+  "booking": {
+    "title": "預約服務",
+    "invalidResource": "資源連結無效。",
+    "resourceNotFound": "找不到可預約的資源。",
+    "unknownMerchant": "商家",
+    "selectDate": "選擇日期",
+    "selectTime": "選擇時間",
+    "duration": "時長",
+    "price": "價格",
+    "total": "總計",
+    "notes": "備註",
+    "notesPlaceholder": "任何特殊需求或備註...",
+    "confirm": "確認預約",
+    "success": "預約成功！",
+    "noSlots": "此日期沒有可用時段",
+    "resourceFallbackName": "資源 #{{id}}",
+    "serviceImage": "服務圖片",
+    "durationMinutes": "{{count}} 分鐘"
+  },
+  "myBookings": {
+    "title": "我的預約",
+    "tabs": {
+      "upcoming": "即將到來",
+      "past": "過去的",
+      "cancelled": "已取消"
+    },
+    "empty": {
+      "title": "尚無預約",
+      "subtitle": "開始探索並預約您的第一個服務",
+      "cta": "尋找服務"
+    },
+    "actions": {
+      "view": "查看詳情",
+      "cancel": "取消預約",
+      "reschedule": "重新排程",
+      "review": "留下評價"
+    },
+    "errors": {
+      "signInRequired": "請先登入以查看您的預約。",
+      "forbidden": "您沒有權限存取此頁面。",
+      "loadFailed": "無法載入預約資料。"
+    }
+  },
+  "profile": {
+    "title": "我的資料",
+    "tabs": {
+      "personal": "個人資訊",
+      "preferences": "偏好設定",
+      "notifications": "通知設定",
+      "security": "安全性"
+    },
+    "personal": {
+      "name": "姓名",
+      "email": "電子郵件",
+      "phone": "電話號碼",
+      "avatar": "頭像",
+      "description": "管理您的個人資訊",
+      "changeAvatar": "更換頭像",
+      "phonePlaceholder": "+886 912 345 678"
+    },
+    "preferences": {
+      "language": "語言",
+      "timezone": "時區",
+      "currency": "貨幣",
+      "description": "自訂您的使用偏好",
+      "timezones": {
+        "pacific": "太平洋時間 (UTC-8)",
+        "eastern": "美東時間 (UTC-5)",
+        "taipei": "台北時間 (UTC+8)"
+      },
+      "currencies": {
+        "usd": "美元 (USD)",
+        "twd": "新台幣 (TWD)",
+        "eur": "歐元 (EUR)"
+      }
+    },
+    "notifications": {
+      "description": "管理通知接收方式",
+      "email": {
+        "title": "電子郵件通知",
+        "description": "透過電子郵件接收預約確認與提醒"
+      },
+      "sms": {
+        "title": "簡訊通知",
+        "description": "透過簡訊接收預約提醒"
+      }
+    },
+    "security": {
+      "description": "管理帳號安全設定",
+      "currentPassword": "目前密碼",
+      "currentPasswordPlaceholder": "輸入目前密碼",
+      "newPassword": "新密碼",
+      "newPasswordPlaceholder": "輸入新密碼",
+      "confirmPassword": "確認新密碼",
+      "confirmPasswordPlaceholder": "再次輸入新密碼",
+      "updatePassword": "更新密碼"
+    }
+  }
+}

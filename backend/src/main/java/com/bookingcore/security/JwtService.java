@@ -8,6 +8,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
 import javax.crypto.SecretKey;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -91,7 +92,9 @@ public class JwtService {
                 throw new JwtException("Token revoked");
               }
             });
-    PlatformUserRole role = PlatformUserRole.valueOf(roleName);
+    PlatformUserRole role =
+        PlatformUserRole.parse(roleName)
+            .orElseThrow(() -> new IllegalArgumentException("Unknown role"));
     Long merchantId = null;
     Object rawMerchantId = claims.get(MERCHANT_ID_CLAIM);
     if (rawMerchantId instanceof Number n) {
@@ -103,10 +106,12 @@ public class JwtService {
         merchantId = null;
       }
     }
+    LinkedHashSet<SimpleGrantedAuthority> authorities = new LinkedHashSet<>();
+    for (String authority : role.authorityAliases()) {
+      authorities.add(new SimpleGrantedAuthority(authority));
+    }
     return new UsernamePasswordAuthenticationToken(
-        new PlatformPrincipal(subject, role, merchantId),
-        null,
-        List.of(new SimpleGrantedAuthority(role.authority())));
+        new PlatformPrincipal(subject, role, merchantId), null, List.copyOf(authorities));
   }
 
   private SecretKey signingKey() {

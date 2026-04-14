@@ -5,21 +5,35 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.bookingcore.modules.merchant.Merchant;
+import com.bookingcore.modules.merchant.MerchantMembership;
+import com.bookingcore.modules.merchant.MerchantMembershipStatus;
+import com.bookingcore.modules.platform.PlatformUser;
+import com.bookingcore.modules.platform.rbac.PlatformRbacBindingStatus;
+import com.bookingcore.modules.platform.rbac.PlatformUserRbacBinding;
+import com.bookingcore.modules.platform.rbac.RbacRole;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class AuthMeApiTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
+  @Autowired private PasswordEncoder passwordEncoder;
+  @PersistenceContext private EntityManager entityManager;
 
   @Test
   void authMeWithoutTokenReturnsUnauthorized() throws Exception {
@@ -34,6 +48,9 @@ class AuthMeApiTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.username").value("admin"))
         .andExpect(jsonPath("$.role").value("SYSTEM_ADMIN"))
+        .andExpect(jsonPath("$.canonicalRole").value("SYSTEM_ADMIN"))
+        .andExpect(jsonPath("$.roleAliases").isArray())
+        .andExpect(jsonPath("$.roleAliases[0]").exists())
         .andExpect(jsonPath("$.sessionState").value("CONTEXT_SET"))
         .andExpect(jsonPath("$.availableContexts").isArray())
         .andExpect(jsonPath("$.availableContexts[0]").exists())
@@ -117,5 +134,67 @@ class AuthMeApiTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.role").value("MERCHANT"))
         .andExpect(jsonPath("$.accessToken").isString());
+  }
+
+  @Test
+  void contextSwitchRequiresActiveMerchantMembership() throws Exception {
+    Merchant merchant = new Merchant();
+    merchant.setName("Ctx Merchant " + System.nanoTime());
+    merchant.setSlug("ctx-merchant-" + System.nanoTime());
+    merchant.setActive(true);
+    entityManager.persist(merchant);
+
+    PlatformUser user = new PlatformUser();
+    user.setUsername("ctx-user-" + System.nanoTime());
+    user.setPasswordHash(passwordEncoder.encode("secret-pass"));
+    user.setRole(com.bookingcore.security.PlatformUserRole.CLIENT);
+    user.setEnabled(true);
+    entityManager.persist(user);
+
+    RbacRole merchantRole =
+        entityManager
+            .createQuery("select r from RbacRole r where r.code = :code", RbacRole.class)
+            .setParameter("code", "MERCHANT")
+            .getResultStream()
+            .findFirst()
+            .orElseGet(
+                () -> {
+                  RbacRole role = new RbacRole();
+                  role.setCode("MERCHANT");
+                  entityManager.persist(role);
+                  return role;
+                });
+    PlatformUserRbacBinding binding = new PlatformUserRbacBinding();
+    binding.setPlatformUser(user);
+    binding.setRbacRole(merchantRole);
+    binding.setMerchant(merchant);
+    binding.setStatus(PlatformRbacBindingStatus.ACTIVE);
+    entityManager.persist(binding);
+    entityManager.flush();
+
+    String token = TestJwtHelper.login(mockMvc, objectMapper, user.getUsername(), "secret-pass");
+    mockMvc
+        .perform(
+            post("/api/auth/context/switch")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"MERCHANT\",\"merchantId\":" + merchant.getId() + "}"))
+        .andExpect(status().isForbidden());
+
+    MerchantMembership membership = new MerchantMembership();
+    membership.setMerchant(merchant);
+    membership.setPlatformUser(user);
+    membership.setMembershipStatus(MerchantMembershipStatus.ACTIVE);
+    entityManager.persist(membership);
+    entityManager.flush();
+
+    mockMvc
+        .perform(
+            post("/api/auth/context/switch")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"MERCHANT\",\"merchantId\":" + merchant.getId() + "}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.role").value("MERCHANT"));
   }
 }

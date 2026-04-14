@@ -1,6 +1,7 @@
 package com.bookingcore.modules.booking;
 
 import com.bookingcore.modules.merchant.Merchant;
+import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.modules.service.ServiceItem;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
@@ -31,6 +32,11 @@ public class Booking {
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
   @JoinColumn(name = "service_item_id", nullable = false)
   private ServiceItem serviceItem;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "platform_user_id")
+  @JsonIgnore
+  private PlatformUser platformUser;
 
   @Column(nullable = false)
   private LocalDateTime startAt;
@@ -66,6 +72,14 @@ public class Booking {
 
   public void setServiceItem(ServiceItem serviceItem) {
     this.serviceItem = serviceItem;
+  }
+
+  public PlatformUser getPlatformUser() {
+    return platformUser;
+  }
+
+  public void setPlatformUser(PlatformUser platformUser) {
+    this.platformUser = platformUser;
   }
 
   public LocalDateTime getStartAt() {

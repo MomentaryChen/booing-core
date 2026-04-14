@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -26,8 +27,21 @@ public class MerchantProfile {
   @Column(length = 500)
   private String description;
 
-  @Column(name = "logo_url", length = 255)
+  @Lob
+  @Column(name = "logo_data", columnDefinition = "LONGTEXT")
   private String logoUrl;
+
+  @Column(length = 500)
+  private String address;
+
+  @Column(length = 120)
+  private String phone;
+
+  @Column(length = 120)
+  private String email;
+
+  @Column(length = 500)
+  private String website;
 
   public Long getId() {
     return id;
@@ -55,5 +69,37 @@ public class MerchantProfile {
 
   public void setLogoUrl(String logoUrl) {
     this.logoUrl = logoUrl;
+  }
+
+  public String getAddress() {
+    return address;
+  }
+
+  public void setAddress(String address) {
+    this.address = address;
+  }
+
+  public String getPhone() {
+    return phone;
+  }
+
+  public void setPhone(String phone) {
+    this.phone = phone;
+  }
+
+  public String getEmail() {
+    return email;
+  }
+
+  public void setEmail(String email) {
+    this.email = email;
+  }
+
+  public String getWebsite() {
+    return website;
+  }
+
+  public void setWebsite(String website) {
+    this.website = website;
   }
 }

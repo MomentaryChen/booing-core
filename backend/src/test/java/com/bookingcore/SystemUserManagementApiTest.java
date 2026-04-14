@@ -142,7 +142,7 @@ class SystemUserManagementApiTest {
     entityManager.persist(target);
     entityManager.flush();
 
-    String clientToken = TestJwtHelper.login(mockMvc, objectMapper, "client", "client");
+    String clientToken = TestJwtHelper.login(mockMvc, objectMapper, "client@example.com", "client");
 
     mockMvc
         .perform(get("/api/system/users").header("Authorization", "Bearer " + clientToken))

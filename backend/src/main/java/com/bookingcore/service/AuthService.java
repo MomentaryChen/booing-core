@@ -1,18 +1,27 @@
 package com.bookingcore.service;
 
 import com.bookingcore.api.ApiDtos.AuthContextOption;
+import com.bookingcore.api.ApiDtos.CreateMerchantRequest;
 import com.bookingcore.api.ApiDtos.AuthMeResponse;
 import com.bookingcore.api.ApiDtos.ContextSelectRequest;
 import com.bookingcore.api.ApiDtos.LoginRequest;
+import com.bookingcore.api.ApiDtos.MerchantEnableRequest;
+import com.bookingcore.api.ApiDtos.MerchantEnableResponse;
 import com.bookingcore.api.ApiDtos.TokenResponse;
 import com.bookingcore.common.ApiException;
+import com.bookingcore.modules.merchant.Merchant;
+import com.bookingcore.modules.merchant.MerchantMembership;
+import com.bookingcore.modules.merchant.MerchantMembershipRepository;
+import com.bookingcore.modules.merchant.MerchantMembershipStatus;
 import com.bookingcore.config.BookingPlatformProperties;
-import com.bookingcore.config.BookingPlatformProperties.DevUser;
 import com.bookingcore.modules.merchant.MerchantRepository;
 import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.modules.platform.PlatformUserRepository;
 import com.bookingcore.modules.platform.rbac.ActiveAuthContext;
+import com.bookingcore.modules.platform.rbac.PlatformRbacBindingStatus;
+import com.bookingcore.modules.platform.rbac.PlatformUserRbacBinding;
 import com.bookingcore.modules.platform.rbac.PlatformUserRbacBindingRepository;
+import com.bookingcore.modules.platform.rbac.RbacRole;
 import com.bookingcore.modules.platform.rbac.RbacRoleRepository;
 import com.bookingcore.security.JwtService;
 import com.bookingcore.security.EffectivePermissionService;
@@ -23,22 +32,25 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
 
   private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+  private static final Pattern SIMPLE_EMAIL_PATTERN =
+      Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
 
   private final BookingPlatformProperties properties;
   private final JwtService jwtService;
@@ -46,9 +58,11 @@ public class AuthService {
   private final PlatformUserRepository platformUserRepository;
   private final PasswordEncoder passwordEncoder;
   private final EffectivePermissionService effectivePermissionService;
-  private final Environment environment;
   private final RbacRoleRepository rbacRoleRepository;
   private final PlatformUserRbacBindingRepository platformUserRbacBindingRepository;
+  private final MerchantMembershipRepository merchantMembershipRepository;
+  private final MerchantProvisioningService merchantProvisioningService;
+  private final PlatformAuditService platformAuditService;
 
   private static final Comparator<ActiveAuthContext> ACTIVE_CONTEXT_ORDER =
       Comparator.comparingInt((ActiveAuthContext c) -> safeRoleOrdinal(c.roleCode()))
@@ -61,18 +75,22 @@ public class AuthService {
       PlatformUserRepository platformUserRepository,
       PasswordEncoder passwordEncoder,
       EffectivePermissionService effectivePermissionService,
-      Environment environment,
       RbacRoleRepository rbacRoleRepository,
-      PlatformUserRbacBindingRepository platformUserRbacBindingRepository) {
+      PlatformUserRbacBindingRepository platformUserRbacBindingRepository,
+      MerchantMembershipRepository merchantMembershipRepository,
+      MerchantProvisioningService merchantProvisioningService,
+      PlatformAuditService platformAuditService) {
     this.properties = properties;
     this.jwtService = jwtService;
     this.merchantRepository = merchantRepository;
     this.platformUserRepository = platformUserRepository;
     this.passwordEncoder = passwordEncoder;
     this.effectivePermissionService = effectivePermissionService;
-    this.environment = environment;
     this.rbacRoleRepository = rbacRoleRepository;
     this.platformUserRbacBindingRepository = platformUserRbacBindingRepository;
+    this.merchantMembershipRepository = merchantMembershipRepository;
+    this.merchantProvisioningService = merchantProvisioningService;
+    this.platformAuditService = platformAuditService;
   }
 
   public TokenResponse login(LoginRequest request) {
@@ -80,15 +98,20 @@ public class AuthService {
       throw new ApiException("JWT auth is not enabled (set booking.platform.jwt.secret)", HttpStatus.BAD_REQUEST);
     }
 
-    PlatformUser dbUser = platformUserRepository.findByUsername(request.username()).orElse(null);
+    String loginId = request.username() == null ? "" : request.username().trim();
+    PlatformUser dbUser = resolveUserByLoginId(loginId);
     if (dbUser != null) {
+      if (!isLoginIdentifierAllowedForRole(loginId, dbUser.getRole())) {
+        log.warn("auth_login_failed reason=identifier_policy loginId={}", loginId);
+        throw new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED);
+      }
       clearExpiredLockout(dbUser);
       if (isLockedOut(dbUser)) {
-        log.warn("auth_login_failed reason=locked_out username={}", request.username());
+        log.warn("auth_login_failed reason=locked_out username={}", loginId);
         throw new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED);
       }
       if (!Boolean.TRUE.equals(dbUser.getEnabled())) {
-        log.warn("auth_login_failed reason=disabled_user username={}", request.username());
+        log.warn("auth_login_failed reason=disabled_user username={}", loginId);
         throw new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED);
       }
       if (passwordEncoder.matches(request.password(), dbUser.getPasswordHash())) {
@@ -105,22 +128,37 @@ public class AuthService {
             token, new PlatformPrincipal(dbUser.getUsername(), role, merchantId));
       }
       recordFailedPasswordAttempt(dbUser);
-      log.warn("auth_login_failed reason=wrong_password username={}", request.username());
+      log.warn("auth_login_failed reason=wrong_password username={}", loginId);
       throw new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED);
     }
 
-    // Backward-compatible fallback for config-driven dev accounts.
-    if (environment.acceptsProfiles(Profiles.of("dev"))) {
-      for (DevUser u : properties.getDevUsers()) {
-        if (request.username().equals(u.getUsername()) && request.password().equals(u.getPassword())) {
-          Long merchantId = resolveMerchantId(u);
-          String token = jwtService.createAccessToken(u.getUsername(), u.getRole(), merchantId);
-          return buildTokenResponse(token, new PlatformPrincipal(u.getUsername(), u.getRole(), merchantId));
-        }
-      }
-    }
-    log.warn("auth_login_failed reason=user_not_found username={}", request.username());
+    log.warn("auth_login_failed reason=user_not_found username={}", loginId);
     throw new ApiException("Invalid credentials", HttpStatus.UNAUTHORIZED);
+  }
+
+  private PlatformUser resolveUserByLoginId(String loginId) {
+    if (!StringUtils.hasText(loginId)) {
+      return null;
+    }
+    if (looksLikeEmail(loginId)) {
+      String normalized = loginId.toLowerCase(Locale.ROOT);
+      return platformUserRepository.findByUsernameIgnoreCase(normalized).orElse(null);
+    }
+    return platformUserRepository.findByUsername(loginId).orElse(null);
+  }
+
+  private boolean isLoginIdentifierAllowedForRole(String loginId, PlatformUserRole role) {
+    if (role == PlatformUserRole.SYSTEM_ADMIN) {
+      return StringUtils.hasText(loginId);
+    }
+    return looksLikeEmail(loginId);
+  }
+
+  private static boolean looksLikeEmail(String value) {
+    if (!StringUtils.hasText(value)) {
+      return false;
+    }
+    return SIMPLE_EMAIL_PATTERN.matcher(value.trim()).matches();
   }
 
   private void clearExpiredLockout(PlatformUser user) {
@@ -172,23 +210,11 @@ public class AuthService {
     platformUserRepository.save(user);
   }
 
-  private Long resolveMerchantId(DevUser user) {
-    if (user.getRole() != PlatformUserRole.MERCHANT && user.getRole() != PlatformUserRole.SUB_MERCHANT) {
-      return null;
-    }
-    if (user.getMerchantId() != null) {
-      return user.getMerchantId();
-    }
-    return merchantRepository.findFirstByOrderByIdAsc()
-        .map(m -> m.getId())
-        .orElseThrow(() -> new ApiException(
-            "No merchant is configured yet. Please register a merchant first (/merchant/register).",
-            HttpStatus.BAD_REQUEST));
-  }
-
   private TokenResponse buildTokenResponse(String token, PlatformPrincipal principal) {
     PlatformUserRole role = principal.role();
     List<String> roleNames = resolveAllRoleCodes(principal.username(), principal.role());
+    List<String> canonicalRoleNames = roleNames.stream().map(this::toCanonicalRoleCode).distinct().toList();
+    List<String> roleAliases = resolveRoleAliases(roleNames);
     List<String> permissions = effectivePermissionService.sortedPermissionCodesFor(principal);
     return new TokenResponse(
         token,
@@ -196,6 +222,9 @@ public class AuthService {
         properties.getJwt().getExpirationSeconds(),
         role.name(),
         roleNames,
+        role.canonicalCode(),
+        canonicalRoleNames,
+        roleAliases,
         permissions);
   }
 
@@ -205,6 +234,8 @@ public class AuthService {
     PlatformUserRole role = principal.role();
     List<String> perms = effectivePermissionService.sortedPermissionCodesFor(principal);
     List<String> allRoles = resolveAllRoleCodes(principal.username(), role);
+    List<String> canonicalRoles = allRoles.stream().map(this::toCanonicalRoleCode).distinct().toList();
+    List<String> roleAliases = resolveRoleAliases(allRoles);
     List<AuthContextOption> available = buildAvailableContexts(principal);
     AuthContextOption active =
         available.stream()
@@ -219,6 +250,9 @@ public class AuthService {
         principal.username(),
         role.name(),
         allRoles,
+        role.canonicalCode(),
+        canonicalRoles,
+        roleAliases,
         perms,
         principal.merchantId(),
         sessionState,
@@ -234,7 +268,9 @@ public class AuthService {
     }
     PlatformUserRole requestedRole;
     try {
-      requestedRole = PlatformUserRole.valueOf(request.role().trim());
+      requestedRole =
+          PlatformUserRole.parse(request.role().trim())
+              .orElseThrow(IllegalArgumentException::new);
     } catch (IllegalArgumentException ex) {
       throw new ApiException("Invalid role", HttpStatus.BAD_REQUEST);
     }
@@ -250,6 +286,7 @@ public class AuthService {
     if (match == null) {
       throw new ApiException("Context not allowed for this principal", HttpStatus.FORBIDDEN);
     }
+    assertContextMembershipAllowed(principal.username(), requestedRole, request.merchantId());
     String token =
         jwtService.createAccessToken(
             principal.username(),
@@ -280,6 +317,10 @@ public class AuthService {
       fromBindings =
           dedupeActiveContexts(raw).stream()
               .filter(c -> parseRoleCode(c.roleCode()).isPresent())
+              .filter(
+                  c ->
+                      isContextAllowedByMembership(
+                          user, parseRoleCode(c.roleCode()).orElseThrow(), c.merchantId()))
               .sorted(ACTIVE_CONTEXT_ORDER)
               .map(c -> authOptionForRoleAndMerchant(parseRoleCode(c.roleCode()).orElseThrow(), c.merchantId()))
               .toList();
@@ -289,6 +330,62 @@ public class AuthService {
       }
     }
     return appendAdminMerchantPreview(fromBindings, principal);
+  }
+
+  @Transactional
+  public MerchantEnableResponse enableMerchant(
+      Authentication authentication, MerchantEnableRequest request) {
+    requireJwtEnabled();
+    PlatformPrincipal principal = requirePlatformPrincipal(authentication);
+    PlatformUser user =
+        platformUserRepository
+            .findByUsername(principal.username())
+            .orElseThrow(() -> new ApiException("User not found", HttpStatus.NOT_FOUND));
+    Merchant merchant =
+        merchantProvisioningService.createMerchant(new CreateMerchantRequest(request.name(), request.slug()));
+
+    MerchantMembership membership = new MerchantMembership();
+    membership.setMerchant(merchant);
+    membership.setPlatformUser(user);
+    membership.setMembershipStatus(MerchantMembershipStatus.ACTIVE);
+    merchantMembershipRepository.save(membership);
+
+    RbacRole merchantRole =
+        rbacRoleRepository
+            .findByCode(PlatformUserRole.MERCHANT.name())
+            .orElseThrow(
+                () ->
+                    new ApiException(
+                        "RBAC role missing: MERCHANT", HttpStatus.INTERNAL_SERVER_ERROR));
+    List<PlatformUserRbacBinding> bindings =
+        platformUserRbacBindingRepository.findBindingsForUserContext(
+            user.getId(), PlatformUserRole.MERCHANT.name(), merchant.getId());
+    PlatformUserRbacBinding binding;
+    if (bindings.isEmpty()) {
+      binding = new PlatformUserRbacBinding();
+      binding.setPlatformUser(user);
+      binding.setRbacRole(merchantRole);
+      binding.setMerchant(merchant);
+    } else {
+      binding = bindings.get(0);
+    }
+    binding.setStatus(PlatformRbacBindingStatus.ACTIVE);
+    platformUserRbacBindingRepository.save(binding);
+    user.setCredentialVersion(user.getCredentialVersion() + 1);
+    platformUserRepository.save(user);
+    platformAuditService.recordForCurrentUser(
+        "auth.merchant.enable",
+        "merchant",
+        merchant.getId(),
+        null,
+        "{\"membership\":\"ACTIVE\",\"role\":\"MERCHANT\"}",
+        "createdBy=" + principal.username());
+    return new MerchantEnableResponse(
+        merchant.getId(),
+        merchant.getName(),
+        merchant.getSlug(),
+        PlatformUserRole.MERCHANT.canonicalCode(),
+        MerchantMembershipStatus.ACTIVE.name());
   }
 
   private List<AuthContextOption> buildContextsWithoutDbUser(PlatformPrincipal principal) {
@@ -395,18 +492,31 @@ public class AuthService {
   }
 
   private static Optional<PlatformUserRole> parseRoleCode(String roleCode) {
-    if (!StringUtils.hasText(roleCode)) {
-      return Optional.empty();
-    }
-    try {
-      return Optional.of(PlatformUserRole.valueOf(roleCode));
-    } catch (IllegalArgumentException ex) {
-      return Optional.empty();
-    }
+    return PlatformUserRole.parse(roleCode);
   }
 
   private static int safeRoleOrdinal(String roleCode) {
     return parseRoleCode(roleCode).map(Enum::ordinal).orElse(Integer.MAX_VALUE);
+  }
+
+  private String toCanonicalRoleCode(String roleCode) {
+    return parseRoleCode(roleCode).map(PlatformUserRole::canonicalCode).orElse(roleCode);
+  }
+
+  private List<String> resolveRoleAliases(List<String> roleCodes) {
+    if (roleCodes == null || roleCodes.isEmpty()) {
+      return List.of();
+    }
+    LinkedHashSet<String> aliases = new LinkedHashSet<>();
+    for (String roleCode : roleCodes) {
+      Optional<PlatformUserRole> parsed = parseRoleCode(roleCode);
+      if (parsed.isPresent()) {
+        aliases.addAll(parsed.get().aliases());
+      } else if (StringUtils.hasText(roleCode)) {
+        aliases.add(roleCode);
+      }
+    }
+    return List.copyOf(aliases);
   }
 
   public TokenResponse refresh(Authentication authentication) {
@@ -466,5 +576,39 @@ public class AuthService {
       throw new ApiException("Unsupported principal type", HttpStatus.FORBIDDEN);
     }
     return principal;
+  }
+
+  private void assertContextMembershipAllowed(
+      String username, PlatformUserRole requestedRole, Long merchantId) {
+    PlatformUser user = platformUserRepository.findByUsername(username).orElse(null);
+    if (user == null) {
+      return;
+    }
+    if (!isContextAllowedByMembership(user, requestedRole, merchantId)) {
+      throw new ApiException("Context not allowed for this principal", HttpStatus.FORBIDDEN);
+    }
+  }
+
+  private boolean isContextAllowedByMembership(
+      PlatformUser user, PlatformUserRole requestedRole, Long merchantId) {
+    if (user.getRole() == PlatformUserRole.SYSTEM_ADMIN) {
+      return true;
+    }
+    if (requestedRole != PlatformUserRole.MERCHANT && requestedRole != PlatformUserRole.SUB_MERCHANT) {
+      return true;
+    }
+    if (merchantId == null) {
+      return false;
+    }
+    var membership =
+        merchantMembershipRepository.findByMerchantIdAndPlatformUserId(merchantId, user.getId());
+    if (membership.isPresent()) {
+      return membership.get().getMembershipStatus() == MerchantMembershipStatus.ACTIVE;
+    }
+    // Backward-compatibility for pre-membership users seeded with primary merchant.
+    if (user.getMerchant() != null && merchantId.equals(user.getMerchant().getId())) {
+      return true;
+    }
+    return false;
   }
 }

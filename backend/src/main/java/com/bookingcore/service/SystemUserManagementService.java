@@ -367,11 +367,7 @@ public class SystemUserManagementService {
   }
 
   private static PlatformUserRole parsePlatformRole(String roleCode) {
-    try {
-      return PlatformUserRole.valueOf(roleCode);
-    } catch (IllegalArgumentException ex) {
-      return null;
-    }
+    return PlatformUserRole.parse(roleCode).orElse(null);
   }
 
   private static String key(String roleCode, Long merchantId) {

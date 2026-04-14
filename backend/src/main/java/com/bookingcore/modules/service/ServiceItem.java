@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
@@ -36,6 +37,10 @@ public class ServiceItem {
 
   @Column(nullable = false, length = 80)
   private String category;
+
+  @Lob
+  @Column(name = "image_data", columnDefinition = "LONGTEXT")
+  private String imageUrl;
 
   public Long getId() {
     return id;
@@ -79,5 +84,13 @@ public class ServiceItem {
 
   public void setCategory(String category) {
     this.category = category;
+  }
+
+  public String getImageUrl() {
+    return imageUrl;
+  }
+
+  public void setImageUrl(String imageUrl) {
+    this.imageUrl = imageUrl;
   }
 }

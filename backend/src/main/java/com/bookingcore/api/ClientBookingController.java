@@ -3,14 +3,17 @@ package com.bookingcore.api;
 import com.bookingcore.api.ApiDtos.AvailabilityResponse;
 import com.bookingcore.api.ApiDtos.BookingLockRequest;
 import com.bookingcore.api.ApiDtos.BookingLockResponse;
+import com.bookingcore.api.ApiDtos.ClientBookingCreateRequest;
+import com.bookingcore.api.ApiDtos.ClientBookingCreateResponse;
+import com.bookingcore.api.ApiDtos.ClientBookingListResponse;
 import com.bookingcore.api.ApiDtos.ClientJoinMerchantByCodeRequest;
 import com.bookingcore.api.ApiDtos.ClientJoinedMerchantSummary;
 import com.bookingcore.api.ApiDtos.CustomizationSummary;
-import com.bookingcore.api.ApiDtos.BookingSubmitResponse;
 import com.bookingcore.api.ApiDtos.ClientMerchantCardSummary;
-import com.bookingcore.api.ApiDtos.ClientBookingRequest;
 import com.bookingcore.api.ApiDtos.ClientMerchantResponse;
 import com.bookingcore.api.ApiDtos.ClientProfileResponse;
+import com.bookingcore.api.ApiDtos.ClientProfileUpdateRequest;
+import com.bookingcore.api.ApiDtos.ClientResourceAvailabilityResponse;
 import com.bookingcore.api.ApiDtos.DynamicFieldSummary;
 import com.bookingcore.api.ApiDtos.MerchantProfileSummary;
 import com.bookingcore.api.ApiDtos.MerchantSummary;
@@ -19,10 +22,13 @@ import com.bookingcore.api.ApiDtos.PublicBookingResponse;
 import com.bookingcore.api.ApiDtos.ResourceItemSummary;
 import com.bookingcore.api.ApiDtos.ServiceItemSummary;
 import com.bookingcore.api.ApiDtos.StorefrontResponse;
+import com.bookingcore.api.support.ResourceItemMediaResolver;
 import com.bookingcore.common.ApiException;
 import com.bookingcore.modules.booking.Booking;
 import com.bookingcore.modules.customization.CustomizationConfig;
 import com.bookingcore.modules.customization.CustomizationConfigRepository;
+import com.bookingcore.modules.client.ClientProfile;
+import com.bookingcore.modules.client.ClientProfileRepository;
 import com.bookingcore.modules.merchant.DynamicFieldConfigRepository;
 import com.bookingcore.modules.merchant.MerchantMembershipRepository;
 import com.bookingcore.modules.merchant.MerchantMembershipStatus;
@@ -30,19 +36,25 @@ import com.bookingcore.modules.merchant.Merchant;
 import com.bookingcore.modules.merchant.MerchantProfile;
 import com.bookingcore.modules.merchant.MerchantProfileRepository;
 import com.bookingcore.modules.merchant.MerchantRepository;
+import com.bookingcore.modules.merchant.ResourceItem;
 import com.bookingcore.modules.merchant.MerchantVisibility;
 import com.bookingcore.modules.merchant.ResourceItemRepository;
 import com.bookingcore.modules.service.ServiceItem;
 import com.bookingcore.modules.service.ServiceItemRepository;
 import com.bookingcore.service.BookingCommandService;
+import com.bookingcore.service.ClientBookingService;
 import com.bookingcore.service.ClientAvailabilityService;
 import com.bookingcore.service.MerchantAccessService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,9 +62,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/client")
+@Tag(name = "Client")
 public class ClientBookingController {
   private final MerchantRepository merchantRepository;
   private final MerchantProfileRepository profileRepository;
@@ -61,9 +79,12 @@ public class ClientBookingController {
   private final ResourceItemRepository resourceItemRepository;
   private final DynamicFieldConfigRepository dynamicFieldConfigRepository;
   private final MerchantMembershipRepository merchantMembershipRepository;
+  private final ClientProfileRepository clientProfileRepository;
   private final BookingCommandService bookingCommandService;
   private final ClientAvailabilityService clientAvailabilityService;
   private final MerchantAccessService merchantAccessService;
+  private final ClientBookingService clientBookingService;
+  private final ResourceItemMediaResolver resourceItemMediaResolver;
 
   public ClientBookingController(
       MerchantRepository merchantRepository,
@@ -73,9 +94,12 @@ public class ClientBookingController {
       ResourceItemRepository resourceItemRepository,
       DynamicFieldConfigRepository dynamicFieldConfigRepository,
       MerchantMembershipRepository merchantMembershipRepository,
+      ClientProfileRepository clientProfileRepository,
       BookingCommandService bookingCommandService,
       ClientAvailabilityService clientAvailabilityService,
-      MerchantAccessService merchantAccessService) {
+      MerchantAccessService merchantAccessService,
+      ClientBookingService clientBookingService,
+      ResourceItemMediaResolver resourceItemMediaResolver) {
     this.merchantRepository = merchantRepository;
     this.profileRepository = profileRepository;
     this.serviceItemRepository = serviceItemRepository;
@@ -83,9 +107,12 @@ public class ClientBookingController {
     this.resourceItemRepository = resourceItemRepository;
     this.dynamicFieldConfigRepository = dynamicFieldConfigRepository;
     this.merchantMembershipRepository = merchantMembershipRepository;
+    this.clientProfileRepository = clientProfileRepository;
     this.bookingCommandService = bookingCommandService;
     this.clientAvailabilityService = clientAvailabilityService;
     this.merchantAccessService = merchantAccessService;
+    this.clientBookingService = clientBookingService;
+    this.resourceItemMediaResolver = resourceItemMediaResolver;
   }
 
   @GetMapping("/merchants")
@@ -157,6 +184,8 @@ public class ClientBookingController {
           created.setMerchant(merchant);
           return customizationConfigRepository.save(created);
         });
+    var services = serviceItemRepository.findByMerchantId(merchant.getId());
+    var serviceById = resourceItemMediaResolver.indexById(services);
     return new ClientMerchantResponse(
         new MerchantSummary(merchant.getId(), merchant.getName(), merchant.getSlug(), merchant.getActive()),
         new MerchantProfileSummary(profile == null ? null : profile.getDescription(), profile == null ? null : profile.getLogoUrl()),
@@ -168,11 +197,19 @@ public class ClientBookingController {
             config.getTermsText(),
             config.getAnnouncementText(),
             config.getBufferMinutes()),
-        serviceItemRepository.findByMerchantId(merchant.getId()).stream()
-            .map(s -> new ServiceItemSummary(s.getId(), s.getName(), s.getDurationMinutes(), s.getPrice(), s.getCategory()))
+        services.stream()
+            .map(
+                s ->
+                    new ServiceItemSummary(
+                        s.getId(),
+                        s.getName(),
+                        s.getDurationMinutes(),
+                        s.getPrice(),
+                        s.getCategory(),
+                        s.getImageUrl()))
             .toList(),
         resourceItemRepository.findByMerchantId(merchant.getId()).stream()
-            .map(r -> new ResourceItemSummary(r.getId(), r.getName(), r.getType(), r.getCategory(), r.getCapacity(), r.getActive(), r.getPrice()))
+            .map(r -> resourceItemMediaResolver.toSummary(r, merchant.getId(), serviceById))
             .toList(),
         dynamicFieldConfigRepository.findByMerchantId(merchant.getId()).stream()
             .map(f -> new DynamicFieldSummary(f.getId(), f.getLabel(), f.getType(), f.getRequiredField(), f.getOptionsJson()))
@@ -190,6 +227,34 @@ public class ClientBookingController {
     return clientAvailabilityService.getAvailability(merchantId, serviceItemId, resourceId, date);
   }
 
+  @GetMapping("/resources/{resourceId}/availability")
+  public ClientResourceAvailabilityResponse getResourceAvailability(
+      @PathVariable Long resourceId, @RequestParam String date) {
+    if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+      throw new ApiException("Invalid date format, expected YYYY-MM-DD", HttpStatus.BAD_REQUEST);
+    }
+    LocalDate parsedDate;
+    try {
+      parsedDate = LocalDate.parse(date);
+    } catch (DateTimeParseException ex) {
+      throw new ApiException("Invalid date format, expected YYYY-MM-DD", HttpStatus.BAD_REQUEST);
+    }
+
+    ResourceItem resource =
+        resourceItemRepository
+            .findById(resourceId)
+            .orElseThrow(() -> new ApiException("Resource not found", HttpStatus.NOT_FOUND));
+    try {
+      merchantAccessService.assertClientCanAccessMerchant(resource.getMerchant());
+    } catch (ApiException ex) {
+      if (ex.getStatus() == HttpStatus.FORBIDDEN) {
+        throw new ApiException("Resource not found", HttpStatus.NOT_FOUND);
+      }
+      throw ex;
+    }
+    return clientAvailabilityService.getResourceAvailability(resourceId, parsedDate);
+  }
+
   @PostMapping("/booking/lock")
   public BookingLockResponse lockBookingSlot(@Valid @RequestBody BookingLockRequest request) {
     Merchant merchant = bookingCommandService.ensureMerchant(request.merchantId());
@@ -197,28 +262,30 @@ public class ClientBookingController {
     return bookingCommandService.lockBookingSlot(request);
   }
 
-  @PostMapping({"/booking", "/bookings"})
-  public BookingSubmitResponse createClientBooking(@Valid @RequestBody ClientBookingRequest request) {
-    Merchant merchant = bookingCommandService.ensureMerchant(request.merchantId());
-    merchantAccessService.assertClientCanAccessMerchant(merchant);
-    customizationConfigRepository.findByMerchantId(merchant.getId())
-        .orElseThrow(() -> new ApiException("Merchant booking settings not found"));
-    ServiceItem service = serviceItemRepository.findByIdAndMerchantId(request.serviceItemId(), merchant.getId())
-        .orElseThrow(() -> new ApiException("Service not found"));
-    if (!request.agreeTerms()) {
-      throw new ApiException("Please agree to booking terms");
-    }
+  @PostMapping("/bookings")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  @Operation(summary = "Create booking (CLIENT / CLIENT_USER)")
+  @ApiResponses({
+      @ApiResponse(responseCode = "201", description = "Booking created"),
+      @ApiResponse(responseCode = "400", description = "Validation failed"),
+      @ApiResponse(responseCode = "401", description = "Not authenticated"),
+      @ApiResponse(responseCode = "403", description = "Forbidden"),
+      @ApiResponse(responseCode = "404", description = "Resource not found"),
+      @ApiResponse(responseCode = "409", description = "Slot conflict"),
+      @ApiResponse(responseCode = "422", description = "Business rule rejected")
+  })
+  public ResponseEntity<ClientBookingCreateResponse> createClientBooking(
+      @Valid @RequestBody ClientBookingCreateRequest request) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(clientBookingService.createBooking(request));
+  }
 
-    bookingCommandService.assertValidLockAndConsume(request);
-
-    Booking booking = bookingCommandService.createBookingWithValidation(
-        merchant, service, request.startAt(), request.customerName(), request.customerContact());
-    return new BookingSubmitResponse(
-        booking.getId(),
-        "BK-" + booking.getId(),
-        booking.getStartAt(),
-        booking.getEndAt(),
-        "/client/booking/" + merchant.getSlug() + "?bookingCode=BK-" + booking.getId());
+  @GetMapping("/bookings")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  public ClientBookingListResponse listMyBookings(
+      @RequestParam(defaultValue = "upcoming") String tab,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return clientBookingService.listMyBookings(tab, page, size);
   }
 
   @GetMapping("/profile")
@@ -235,8 +302,51 @@ public class ClientBookingController {
         .map(a -> a.substring(5))
         .findFirst()
         .orElse(null);
-    String suggestedName = String.valueOf(auth.getPrincipal());
-    return new ClientProfileResponse(true, role, suggestedName, null);
+    var platformUser = merchantAccessService.currentPlatformUserOrNull();
+    if (platformUser == null) {
+      return new ClientProfileResponse(true, role, String.valueOf(auth.getPrincipal()), null);
+    }
+    var profile = clientProfileRepository.findByPlatformUserId(platformUser.getId()).orElse(null);
+    String suggestedName =
+        profile != null && profile.getDisplayName() != null && !profile.getDisplayName().isBlank()
+            ? profile.getDisplayName()
+            : platformUser.getUsername();
+    String suggestedContact = profile == null ? null : profile.getContactPhone();
+    return new ClientProfileResponse(true, role, suggestedName, suggestedContact);
+  }
+
+  @PutMapping("/profile")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  public ClientProfileResponse updateClientProfile(
+      @Valid @RequestBody ClientProfileUpdateRequest request) {
+    var platformUser =
+        java.util.Optional.ofNullable(merchantAccessService.currentPlatformUserOrNull())
+            .orElseThrow(() -> new ApiException("Unauthorized", HttpStatus.UNAUTHORIZED));
+    ClientProfile profile =
+        clientProfileRepository
+            .findByPlatformUserId(platformUser.getId())
+            .orElseGet(
+                () -> {
+                  ClientProfile created = new ClientProfile();
+                  created.setPlatformUser(platformUser);
+                  return created;
+                });
+    profile.setDisplayName(trimToNull(request.suggestedName()));
+    profile.setContactPhone(trimToNull(request.suggestedContact()));
+    ClientProfile saved = clientProfileRepository.save(profile);
+    return new ClientProfileResponse(
+        true,
+        platformUser.getRole().name(),
+        saved.getDisplayName() == null ? platformUser.getUsername() : saved.getDisplayName(),
+        saved.getContactPhone());
+  }
+
+  private String trimToNull(String value) {
+    if (value == null) {
+      return null;
+    }
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
   }
 
   @PostMapping("/public/{slug}/bookings")
@@ -279,7 +389,15 @@ public class ClientBookingController {
             config.getAnnouncementText(),
             config.getBufferMinutes()),
         serviceItemRepository.findByMerchantId(merchant.getId()).stream()
-            .map(s -> new ServiceItemSummary(s.getId(), s.getName(), s.getDurationMinutes(), s.getPrice(), s.getCategory()))
+            .map(
+                s ->
+                    new ServiceItemSummary(
+                        s.getId(),
+                        s.getName(),
+                        s.getDurationMinutes(),
+                        s.getPrice(),
+                        s.getCategory(),
+                        s.getImageUrl()))
             .toList());
   }
 }

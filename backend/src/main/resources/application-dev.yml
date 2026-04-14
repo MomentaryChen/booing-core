@@ -21,32 +21,8 @@ booking:
     jwt:
       secret: ${JWT_SECRET}
     auth:
-      bootstrap-default-merchant:
-        enabled: ${BOOTSTRAP_DEFAULT_MERCHANT_ENABLED:true}
-        name: ${BOOTSTRAP_DEFAULT_MERCHANT_NAME:Demo Merchant}
-        slug: ${BOOTSTRAP_DEFAULT_MERCHANT_SLUG:demo-merchant}
-      bootstrap-default-merchant-user:
-        enabled: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_ENABLED:true}
-        username: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_USERNAME:merchant}
-        password: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_PASSWORD:}
-        merchant-slug: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_MERCHANT_SLUG:demo-merchant}
-      bootstrap-system-admin:
-        enabled: ${BOOTSTRAP_SYSTEM_ADMIN_ENABLED:true}
-        username: ${BOOTSTRAP_SYSTEM_ADMIN_USERNAME:admin}
-        password: ${BOOTSTRAP_SYSTEM_ADMIN_PASSWORD:}
-      bootstrap-default-client:
-        enabled: ${BOOTSTRAP_DEFAULT_CLIENT_ENABLED:true}
-        username: ${BOOTSTRAP_DEFAULT_CLIENT_USERNAME:client}
-        password: ${BOOTSTRAP_DEFAULT_CLIENT_PASSWORD:}
-    # Fallback logins when a username is not yet in platform_users (optional; bootstrap seeds DB above)
-    dev-users:
-      - username: ${DEV_USER_MERCHANT_USERNAME:merchant}
-        password: ${DEV_USER_MERCHANT_PASSWORD:}
-        role: MERCHANT
-      - username: ${DEV_USER_ADMIN_USERNAME:admin}
-        password: ${DEV_USER_ADMIN_PASSWORD:}
-        role: SYSTEM_ADMIN
-      - username: ${DEV_USER_CLIENT_USERNAME:client}
-        password: ${DEV_USER_CLIENT_PASSWORD:}
-        role: CLIENT
+      internal-system-admin:
+        auto-provision: ${INTERNAL_SYSTEM_ADMIN_AUTO_PROVISION:true}
+        username: ${INTERNAL_SYSTEM_ADMIN_USERNAME:admin}
+        password: ${INTERNAL_SYSTEM_ADMIN_PASSWORD:}
 

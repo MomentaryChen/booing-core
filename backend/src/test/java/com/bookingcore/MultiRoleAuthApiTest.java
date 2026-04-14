@@ -99,6 +99,8 @@ class MultiRoleAuthApiTest {
                             + "\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.role").value("MERCHANT"))
+            .andExpect(jsonPath("$.canonicalRole").value("MERCHANT_OWNER"))
+            .andExpect(jsonPath("$.roleAliases").isArray())
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -112,7 +114,10 @@ class MultiRoleAuthApiTest {
             .perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.role").value("MERCHANT"))
+            .andExpect(jsonPath("$.canonicalRole").value("MERCHANT_OWNER"))
             .andExpect(jsonPath("$.roles.length()").value(2))
+            .andExpect(jsonPath("$.canonicalRoles.length()").value(2))
+            .andExpect(jsonPath("$.roleAliases").isArray())
             .andExpect(jsonPath("$.availableContexts.length()").value(2))
             .andReturn()
             .getResponse()
@@ -126,9 +131,10 @@ class MultiRoleAuthApiTest {
             post("/api/auth/context/select")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"role\":\"CLIENT\"}"))
+                .content("{\"role\":\"CLIENT_USER\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.role").value("CLIENT"))
+        .andExpect(jsonPath("$.canonicalRole").value("CLIENT_USER"))
         .andExpect(jsonPath("$.roles.length()").value(2));
   }
 }

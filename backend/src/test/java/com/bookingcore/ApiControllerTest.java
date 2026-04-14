@@ -33,10 +33,20 @@ class ApiControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.slug").value("test-merchant"));
 
-    String merchantToken = TestJwtHelper.login(mockMvc, objectMapper, "merchant", "merchant");
+    String merchantToken =
+        TestJwtHelper.login(mockMvc, objectMapper, "merchant@example.com", "merchant");
+    String meJson =
+        mockMvc
+            .perform(get("/api/auth/me").header("Authorization", "Bearer " + merchantToken))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    long merchantId = objectMapper.readTree(meJson).path("merchantId").asLong();
     mockMvc
         .perform(
-            get("/api/merchant/1/customization").header("Authorization", "Bearer " + merchantToken))
+            get("/api/merchant/" + merchantId + "/customization")
+                .header("Authorization", "Bearer " + merchantToken))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.themeColor").exists())
         .andExpect(jsonPath("$.homepageSectionsJson").exists());
@@ -64,7 +74,8 @@ class ApiControllerTest {
                 .content("{\"name\":\"Seed For Merchant Test\",\"slug\":\"seed-merchant-merch-test\"}"))
         .andExpect(status().isOk());
 
-    String merchantToken = TestJwtHelper.login(mockMvc, objectMapper, "merchant", "merchant");
+    String merchantToken =
+        TestJwtHelper.login(mockMvc, objectMapper, "merchant@example.com", "merchant");
     mockMvc
         .perform(
             post("/api/merchant/merchants")
@@ -88,5 +99,15 @@ class ApiControllerTest {
         .andExpect(jsonPath("$.roles[0]").value("SYSTEM_ADMIN"))
         .andExpect(jsonPath("$.permissions").isArray())
         .andExpect(jsonPath("$.permissions[0]").exists());
+  }
+
+  @Test
+  void nonAdminLoginRejectsNonEmailIdentifier() throws Exception {
+    mockMvc
+        .perform(
+            post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"username\":\"merchant\",\"password\":\"merchant\"}"))
+        .andExpect(status().isUnauthorized());
   }
 }

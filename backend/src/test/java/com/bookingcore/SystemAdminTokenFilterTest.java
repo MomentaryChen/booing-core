@@ -72,7 +72,8 @@ class SystemAdminTokenFilterTest {
 
   @Test
   void merchantJwtGets403OnSystemApiButAdminJwtCanAccess() throws Exception {
-    String merchantToken = TestJwtHelper.login(mockMvc, objectMapper, "merchant", "merchant");
+    String merchantToken =
+        TestJwtHelper.login(mockMvc, objectMapper, "merchant@example.com", "merchant");
     mockMvc
         .perform(
             post("/api/system/domain-templates")

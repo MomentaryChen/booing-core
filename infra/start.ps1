@@ -1,5 +1,7 @@
 param(
-  [string]$ComposeFile = "docker-compose.yml",
+  [ValidateSet("all", "frontend")]
+  [string]$Mode = "all",
+  [string]$ComposeFile = "",
   [string]$ProjectName = "booking-core",
   [switch]$Rebuild = $true,
   [switch]$Detach = $true
@@ -8,13 +10,23 @@ param(
 $ErrorActionPreference = "Stop"
 
 $scriptRoot = $PSScriptRoot
-$composePath = Join-Path $scriptRoot $ComposeFile
+$defaultComposeFile = if ($Mode -eq "frontend") { "docker-compose.frontend.yml" } else { "docker-compose.yml" }
+$resolvedComposeFile = if ([string]::IsNullOrWhiteSpace($ComposeFile)) { $defaultComposeFile } else { $ComposeFile }
+$composePath = Join-Path $scriptRoot $resolvedComposeFile
+$envPath = Join-Path $scriptRoot ".env"
+$envExamplePath = Join-Path $scriptRoot ".env.example"
+
+if ((-not (Test-Path $envPath)) -and (Test-Path $envExamplePath)) {
+  Copy-Item -Path $envExamplePath -Destination $envPath
+  Write-Host "No .env found. Created from .env.example" -ForegroundColor Yellow
+}
 
 if (-not (Test-Path $composePath)) {
   throw "docker compose file not found: $composePath"
 }
 
 Write-Host "== booking-core ==" -ForegroundColor Cyan
+Write-Host "Mode: $Mode"
 Write-Host "Compose: $composePath"
 Write-Host "Project: $ProjectName"
 

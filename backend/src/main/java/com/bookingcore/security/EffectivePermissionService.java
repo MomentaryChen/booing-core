@@ -1,5 +1,6 @@
 package com.bookingcore.security;
 
+import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.modules.platform.PlatformUserRepository;
 import com.bookingcore.modules.platform.rbac.PlatformUserRbacBindingRepository;
 import com.bookingcore.modules.platform.rbac.RbacRoleRepository;
@@ -44,6 +45,11 @@ public class EffectivePermissionService {
   public Set<String> permissionSetFor(PlatformPrincipal principal) {
     var dbUser = platformUserRepository.findByUsername(principal.username());
     if (dbUser.isPresent()) {
+      if (isSystemOperator(dbUser.get())) {
+        // SYSTEM_ADMIN accounts may impersonate merchant contexts for support/debugging.
+        // RBAC bindings are optional for operators; treat catalog permissions as authoritative.
+        return new HashSet<>(catalogPermissionsForOperator(principal.role()));
+      }
       Long userId = dbUser.get().getId();
       if (rbacRoleRepository.count() == 0L) {
         return new HashSet<>(rolePermissionCatalog.permissionsFor(principal.role()));
@@ -60,6 +66,27 @@ public class EffectivePermissionService {
       return Set.of();
     }
     return new HashSet<>(rolePermissionCatalog.permissionsFor(principal.role()));
+  }
+
+  private static boolean isSystemOperator(PlatformUser user) {
+    return user.getRole() == PlatformUserRole.SYSTEM_ADMIN;
+  }
+
+  /**
+   * Union of catalog permissions for support impersonation contexts.
+   *
+   * <p>When an operator switches JWT context to {@link PlatformUserRole#MERCHANT} /
+   * {@link PlatformUserRole#SUB_MERCHANT}, we still want merchant portal access without requiring
+   * merchant RBAC bindings on the operator account.
+   */
+  private Set<String> catalogPermissionsForOperator(PlatformUserRole activeContextRole) {
+    if (activeContextRole == null || activeContextRole == PlatformUserRole.SYSTEM_ADMIN) {
+      return rolePermissionCatalog.permissionsFor(PlatformUserRole.SYSTEM_ADMIN);
+    }
+    Set<String> merged = new HashSet<>();
+    merged.addAll(rolePermissionCatalog.permissionsFor(PlatformUserRole.SYSTEM_ADMIN));
+    merged.addAll(rolePermissionCatalog.permissionsFor(activeContextRole));
+    return merged;
   }
 
   public List<String> sortedPermissionCodesFor(PlatformPrincipal principal) {

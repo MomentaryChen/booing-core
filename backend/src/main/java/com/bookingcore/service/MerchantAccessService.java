@@ -100,6 +100,42 @@ public class MerchantAccessService {
         && merchantId.equals(p.merchantId());
   }
 
+  public boolean hasActiveMembershipForCurrentUser(Long merchantId) {
+    PlatformUser user = currentPlatformUserOrNull();
+    if (user == null || merchantId == null) {
+      return false;
+    }
+    var membership =
+        merchantMembershipRepository.findByMerchantIdAndPlatformUserId(merchantId, user.getId());
+    return membership.isPresent()
+        && membership.get().getMembershipStatus() == MerchantMembershipStatus.ACTIVE;
+  }
+
+  public boolean hasActiveMembership(Long merchantId, Long platformUserId) {
+    if (merchantId == null || platformUserId == null) {
+      return false;
+    }
+    var membership =
+        merchantMembershipRepository.findByMerchantIdAndPlatformUserId(merchantId, platformUserId);
+    if (membership.isPresent()) {
+      return membership.get().getMembershipStatus() == MerchantMembershipStatus.ACTIVE;
+    }
+    return platformUserRepository
+        .findById(platformUserId)
+        .map(user -> user.getMerchant() != null && merchantId.equals(user.getMerchant().getId()))
+        .orElse(false);
+  }
+
+  public boolean hasStrictActiveMembership(Long merchantId, Long platformUserId) {
+    if (merchantId == null || platformUserId == null) {
+      return false;
+    }
+    return merchantMembershipRepository
+        .findByMerchantIdAndPlatformUserId(merchantId, platformUserId)
+        .map(membership -> membership.getMembershipStatus() == MerchantMembershipStatus.ACTIVE)
+        .orElse(false);
+  }
+
   @Transactional
   public MerchantMembership acceptInvitationByCode(String inviteCode) {
     if (!StringUtils.hasText(inviteCode)) {

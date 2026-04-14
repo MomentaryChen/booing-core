@@ -5,10 +5,13 @@ import com.bookingcore.modules.booking.BookingTransitionEvent;
 import com.bookingcore.modules.merchant.MerchantInvitationStatus;
 import com.bookingcore.modules.merchant.MerchantMembershipStatus;
 import com.bookingcore.modules.merchant.MerchantVisibility;
+import com.bookingcore.modules.merchant.ServiceTeamStatus;
+import com.bookingcore.modules.merchant.TeamMemberStatus;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -29,7 +32,7 @@ public final class ApiDtos {
    */
   /**
    * {@link PublicRegisterType#MERCHANT}: {@code name}, {@code slug} required.<br>
-   * {@link PublicRegisterType#CLIENT}: {@code username}, {@code password} required.<br>
+   * {@link PublicRegisterType#CLIENT}: {@code username} (email), {@code password} required.<br>
    * Other fields are ignored by the service layer.
    */
   public record PublicRegisterRequest(
@@ -46,13 +49,20 @@ public final class ApiDtos {
   public record PublicRegisterResponse(
       Long id, String name, String slug, Boolean active, String nextDestination) {}
 
-  public record MerchantProfileResponse(String description, String logoUrl) {}
+  public record MerchantProfileResponse(
+      String description,
+      String logoUrl,
+      String address,
+      String phone,
+      String email,
+      String website) {}
 
   public record ServiceItemRequest(
       @NotBlank String name,
       @NotNull @Min(10) Integer durationMinutes,
       @NotNull BigDecimal price,
-      @NotBlank String category) {}
+      @NotBlank String category,
+      String imageUrl) {}
 
   public record BusinessHoursRequest(
       @NotNull DayOfWeek dayOfWeek,
@@ -127,6 +137,20 @@ public final class ApiDtos {
 
   public record ClientJoinMerchantByCodeRequest(@NotBlank String inviteCode) {}
 
+  public record TeamCreateRequest(
+      @NotBlank String name,
+      @NotBlank @Size(max = 80) String code,
+      ServiceTeamStatus status) {}
+
+  public record TeamUpdateRequest(
+      @NotBlank String name,
+      ServiceTeamStatus status) {}
+
+  public record TeamMemberAssignRequest(
+      @NotNull Long userId,
+      @NotBlank @Size(max = 64) String role,
+      TeamMemberStatus status) {}
+
   public record DomainTemplateRequest(@NotBlank String domainName, @NotBlank String fieldsJson) {}
 
   public record SystemSettingsRequest(String emailTemplate, String smsTemplate, String maintenanceAnnouncement) {}
@@ -148,6 +172,23 @@ public final class ApiDtos {
       MerchantInvitationStatus status,
       LocalDateTime expiresAt) {}
 
+  public record TeamSummary(
+      Long id,
+      Long merchantId,
+      String name,
+      String code,
+      ServiceTeamStatus status,
+      LocalDateTime createdAt) {}
+
+  public record TeamMemberSummary(
+      Long id,
+      Long merchantId,
+      Long teamId,
+      Long userId,
+      String username,
+      String role,
+      TeamMemberStatus status) {}
+
   public record ClientJoinedMerchantSummary(
       Long merchantId,
       String merchantName,
@@ -166,7 +207,12 @@ public final class ApiDtos {
       Integer bufferMinutes) {}
 
   public record ServiceItemSummary(
-      Long id, String name, Integer durationMinutes, BigDecimal price, String category) {}
+      Long id,
+      String name,
+      Integer durationMinutes,
+      BigDecimal price,
+      String category,
+      String imageUrl) {}
 
   public record ResourceItemSummary(
       Long id,
@@ -175,7 +221,9 @@ public final class ApiDtos {
       String category,
       Integer capacity,
       Boolean active,
-      BigDecimal price) {}
+      BigDecimal price,
+      /** Optional storefront media; derived from scoped service items when available. */
+      String imageUrl) {}
 
   public record DynamicFieldSummary(
       Long id,
@@ -244,6 +292,15 @@ public final class ApiDtos {
 
   public record AvailabilitySlot(LocalDateTime startAt, LocalDateTime endAt, Boolean available, String status) {}
 
+  public record ClientResourceAvailabilityResponse(
+      LocalDate date, List<ClientResourceAvailabilitySlot> slots) {}
+
+  public record ClientResourceAvailabilitySlot(
+      LocalDateTime startAt,
+      LocalDateTime endAt,
+      Boolean isAvailable,
+      Integer capacityRemaining) {}
+
   public record BookingLockRequest(
       @NotNull Long merchantId,
       @NotNull Long serviceItemId,
@@ -266,9 +323,41 @@ public final class ApiDtos {
 
   public record ClientProfileResponse(Boolean authenticated, String role, String suggestedName, String suggestedContact) {}
 
+  public record ClientProfileUpdateRequest(
+      @Size(max = 120) String suggestedName,
+      @Size(max = 120) String suggestedContact) {}
+
   public record BookingSubmitResponse(
       Long bookingId, String bookingCode, LocalDateTime startAt, LocalDateTime endAt, String queryPath) {}
 
+  public record ClientBookingCreateRequest(
+      @NotNull Long resourceId, @NotNull LocalDateTime startAt, @Size(max = 500) String notes) {}
+
+  public record ClientBookingCreateResponse(
+      Long id,
+      String bookingNo,
+      BookingStatus status,
+      Long resourceId,
+      LocalDateTime startAt,
+      LocalDateTime endAt,
+      Long tenantId,
+      LocalDateTime createdAt) {}
+
+  public record ClientBookingListItem(
+      Long id,
+      String bookingNo,
+      String serviceName,
+      String providerName,
+      String date,
+      String time,
+      Integer durationMinutes,
+      BookingStatus status,
+      java.math.BigDecimal price) {}
+
+  public record ClientBookingListResponse(
+      java.util.List<ClientBookingListItem> items, int page, int size, long total) {}
+
+  /** Non-admin accounts must provide an email-formatted username; SYSTEM_ADMIN may still use plain username. */
   public record LoginRequest(@NotBlank String username, @NotBlank String password) {}
 
   /**
@@ -280,6 +369,9 @@ public final class ApiDtos {
       String username,
       String role,
       List<String> roles,
+      String canonicalRole,
+      List<String> canonicalRoles,
+      List<String> roleAliases,
       List<String> permissions,
       Long merchantId,
       String sessionState,
@@ -287,6 +379,10 @@ public final class ApiDtos {
       AuthContextOption activeContext) {
     public AuthMeResponse {
       roles = roles == null ? List.of() : Collections.unmodifiableList(List.copyOf(roles));
+      canonicalRoles =
+          canonicalRoles == null ? List.of() : Collections.unmodifiableList(List.copyOf(canonicalRoles));
+      roleAliases =
+          roleAliases == null ? List.of() : Collections.unmodifiableList(List.copyOf(roleAliases));
       permissions =
           permissions == null ? List.of() : Collections.unmodifiableList(List.copyOf(permissions));
       availableContexts =
@@ -305,15 +401,27 @@ public final class ApiDtos {
   /** Body for {@code POST /api/auth/context/select}. Omit or leave {@code role} empty to behave like refresh. */
   public record ContextSelectRequest(Long merchantId, String role) {}
 
+  public record MerchantEnableRequest(@NotBlank String name, @NotBlank String slug) {}
+
+  public record MerchantEnableResponse(
+      Long merchantId, String name, String slug, String ownerRole, String membershipStatus) {}
+
   public record TokenResponse(
       String accessToken,
       String tokenType,
       long expiresInSeconds,
       String role,
       List<String> roles,
+      String canonicalRole,
+      List<String> canonicalRoles,
+      List<String> roleAliases,
       List<String> permissions) {
     public TokenResponse {
       roles = roles == null ? List.of() : Collections.unmodifiableList(List.copyOf(roles));
+      canonicalRoles =
+          canonicalRoles == null ? List.of() : Collections.unmodifiableList(List.copyOf(canonicalRoles));
+      roleAliases =
+          roleAliases == null ? List.of() : Collections.unmodifiableList(List.copyOf(roleAliases));
       permissions =
           permissions == null ? List.of() : Collections.unmodifiableList(List.copyOf(permissions));
     }

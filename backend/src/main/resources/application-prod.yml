@@ -20,26 +20,19 @@ spring:
 server:
   port: 8080
 
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
 booking:
   platform:
     jwt:
       secret: ${JWT_SECRET}
     auth:
-      bootstrap-default-merchant:
-        enabled: ${BOOTSTRAP_DEFAULT_MERCHANT_ENABLED:false}
-        name: ${BOOTSTRAP_DEFAULT_MERCHANT_NAME:}
-        slug: ${BOOTSTRAP_DEFAULT_MERCHANT_SLUG:}
-      bootstrap-default-merchant-user:
-        enabled: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_ENABLED:false}
-        username: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_USERNAME:}
-        password: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_PASSWORD:}
-        merchant-slug: ${BOOTSTRAP_DEFAULT_MERCHANT_USER_MERCHANT_SLUG:}
-      bootstrap-system-admin:
-        enabled: ${BOOTSTRAP_SYSTEM_ADMIN_ENABLED:false}
-        username: ${BOOTSTRAP_SYSTEM_ADMIN_USERNAME:}
-        password: ${BOOTSTRAP_SYSTEM_ADMIN_PASSWORD:}
-      bootstrap-default-client:
-        enabled: ${BOOTSTRAP_DEFAULT_CLIENT_ENABLED:false}
-        username: ${BOOTSTRAP_DEFAULT_CLIENT_USERNAME:}
-        password: ${BOOTSTRAP_DEFAULT_CLIENT_PASSWORD:}
+      internal-system-admin:
+        auto-provision: ${INTERNAL_SYSTEM_ADMIN_AUTO_PROVISION:true}
+        username: ${INTERNAL_SYSTEM_ADMIN_USERNAME:admin}
+        password: ${INTERNAL_SYSTEM_ADMIN_PASSWORD:}
 

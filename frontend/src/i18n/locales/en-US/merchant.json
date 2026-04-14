@@ -1,0 +1,224 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back, {{name}}",
+    "stats": {
+      "totalBookings": "Total Bookings",
+      "todayBookings": "Today's Bookings",
+      "revenue": "Revenue",
+      "avgRating": "Average Rating"
+    },
+    "upcoming": {
+      "title": "Upcoming Bookings",
+      "viewAll": "View All"
+    },
+    "recentActivity": {
+      "title": "Recent Activity"
+    },
+    "vsLastMonth": "vs last month"
+  },
+  "resources": {
+    "title": "Resources",
+    "create": "Add Resource",
+    "search": "Search resources...",
+    "filters": {
+      "status": "Status",
+      "category": "Category"
+    },
+    "table": {
+      "name": "Name",
+      "category": "Category",
+      "price": "Price",
+      "duration": "Duration",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "form": {
+      "name": "Resource Name",
+      "namePlaceholder": "Enter resource name",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe your resource...",
+      "category": "Category",
+      "price": "Price",
+      "duration": "Duration (minutes)",
+      "capacity": "Capacity",
+      "images": "Images",
+      "status": "Status"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "draft": "Draft"
+    },
+    "categories": {
+      "wellness": "Wellness",
+      "beauty": "Beauty",
+      "skincare": "Skincare"
+    },
+    "durationMinutes": "{{count}} min",
+    "mock": {
+      "1": { "name": "Premium Spa Treatment" },
+      "2": { "name": "Deep Tissue Massage" },
+      "3": { "name": "Hair Cut & Style" },
+      "4": { "name": "Full Body Wax" },
+      "5": { "name": "Facial Treatment" }
+    }
+  },
+  "schedule": {
+    "title": "Schedule",
+    "workingHours": "Working Hours",
+    "exceptions": "Exceptions",
+    "addException": "Add Exception",
+    "days": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "time": {
+      "start": "Start Time",
+      "end": "End Time",
+      "break": "Break"
+    },
+    "exceptionTypes": {
+      "closed": "Closed"
+    },
+    "exceptionReasons": {
+      "holiday": "Holiday",
+      "specialHours": "Special hours"
+    },
+    "noExceptions": "No exceptions scheduled"
+  },
+  "bookings": {
+    "title": "Bookings",
+    "noMerchantContext": "No merchant is selected. Switch to a merchant context from the header, then reload.",
+    "searchPlaceholder": "Search by customer name or contact...",
+    "serviceItem": "Service #{{id}}",
+    "tabs": {
+      "all": "All",
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "actions": {
+      "confirm": "Confirm",
+      "reject": "Cancel booking",
+      "checkIn": "Check in",
+      "complete": "Mark Complete",
+      "contact": "Contact Customer"
+    },
+    "details": {
+      "customer": "Customer",
+      "resource": "Resource",
+      "datetime": "Date & Time",
+      "price": "Price",
+      "notes": "Notes",
+      "status": "Status",
+      "actions": "Actions"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "business": "Business Info",
+      "payment": "Payment",
+      "notifications": "Notifications",
+      "team": "Team"
+    },
+    "business": {
+      "name": "Business Name",
+      "description": "Description",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "descriptionText": "Manage your business information visible to customers"
+    },
+    "payment": {
+      "description": "Configure payment methods and billing settings",
+      "connect": "Connect",
+      "providers": {
+        "stripe": {
+          "name": "Stripe",
+          "description": "Accept credit card payments"
+        },
+        "paypal": {
+          "name": "PayPal",
+          "description": "Accept PayPal payments"
+        }
+      }
+    },
+    "notifications": {
+      "description": "Configure notification preferences",
+      "newBooking": {
+        "title": "New Booking Alerts",
+        "text": "Receive notifications for new bookings"
+      },
+      "cancellation": {
+        "title": "Cancellation Alerts",
+        "text": "Receive notifications when bookings are cancelled"
+      },
+      "dailySummary": {
+        "title": "Daily Summary",
+        "text": "Receive a daily summary of bookings"
+      }
+    },
+    "team": {
+      "description": "Manage team members and their permissions",
+      "planNotice": "Team management is available on Pro and Enterprise plans."
+    }
+  },
+  "teams": {
+    "title": "Team Management",
+    "description": "Manage merchant teams and member assignments.",
+    "actions": {
+      "createTeam": "Create Team",
+      "addMember": "Add Member"
+    },
+    "guard": {
+      "owner": "Owner access",
+      "staff": "Staff access",
+      "unknown": "Unknown role"
+    },
+    "list": {
+      "title": "Teams",
+      "description": "Current merchant team structure",
+      "memberCount": "{{count}} members"
+    },
+    "states": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "empty": "No teams yet.",
+      "forbidden": "You do not have merchant team access.",
+      "merchantMissing": "Missing merchant context. Please switch context and try again.",
+      "endpointPending": "Team API endpoint is not available yet. Adapter is ready for backend mapping.",
+      "loadError": "Failed to load teams."
+    }
+  },
+  "bootstrap": {
+    "title": "Set up your merchant workspace",
+    "subtitle": "This account does not have an active merchant tenant yet. Create one to continue.",
+    "namePlaceholder": "Merchant name",
+    "slugPlaceholder": "Merchant slug (e.g. cozy-salon)",
+    "cta": "Create merchant tenant",
+    "submitting": "Creating...",
+    "forbidden": "You are not allowed to create a merchant tenant.",
+    "error": "Failed to create merchant tenant.",
+    "backToClient": "Back to client",
+    "loadError": "Failed to load merchant bootstrap data.",
+    "accessForbidden": "Forbidden: no merchant access for this account."
+  },
+  "contextGate": {
+    "title": "Switch to a merchant context",
+    "description": "This account has merchant access, but your active context is not merchant. Switch context to continue.",
+    "switchCta": "Switch to merchant",
+    "switching": "Switching...",
+    "backToClient": "Back to client",
+    "switchForbidden": "You are not allowed to switch to this merchant context.",
+    "switchError": "Failed to switch context. Please try again."
+  }
+}

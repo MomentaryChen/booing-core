@@ -16,10 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @TestPropertySource(
     properties = {
-      "booking.platform.auth.bootstrap-system-admin.enabled=false",
-      "booking.platform.auth.bootstrap-default-client.enabled=false",
-      "booking.platform.auth.bootstrap-default-merchant.enabled=false",
-      "booking.platform.auth.bootstrap-default-merchant-user.enabled=false",
+      "booking.platform.auth.internal-system-admin.auto-provision=false",
       "booking.platform.dev-users[0].username=dev-only-user",
       "booking.platform.dev-users[0].password=dev-only-pass",
       "booking.platform.dev-users[0].role=SYSTEM_ADMIN"

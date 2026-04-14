@@ -1,0 +1,190 @@
+{
+  "home": {
+    "hero": {
+      "title": "Book Your Perfect Experience",
+      "subtitle": "Discover and book services from trusted providers",
+      "cta": "Explore Services"
+    },
+    "featured": {
+      "title": "Featured Services",
+      "viewAll": "View All"
+    },
+    "categories": {
+      "title": "Browse by Category"
+    },
+    "dynamic": {
+      "merchantsCount": "{{count}} merchants",
+      "categories": {
+        "public": "Public",
+        "private": "Private",
+        "unlisted": "Unlisted"
+      },
+      "joinState": {
+        "none": "Join required",
+        "public": "Open to all clients",
+        "joined": "Already joined",
+        "invite_required": "Invite required"
+      }
+    },
+    "mock": {
+      "image": "Image",
+      "servicesCount": "{{count}} services",
+      "durationMin": "{{minutes}} min",
+      "categories": {
+        "wellness": "Wellness",
+        "beauty": "Beauty",
+        "fitness": "Fitness",
+        "health": "Health",
+        "education": "Education",
+        "consulting": "Consulting"
+      },
+      "featured": {
+        "1": { "name": "Premium Spa Treatment" },
+        "2": { "name": "Hair Styling Session" },
+        "3": { "name": "Personal Training" },
+        "4": { "name": "Dental Checkup" }
+      }
+    },
+    "becomeMerchant": {
+      "title": "Become a Merchant",
+      "loading": "Loading merchant status...",
+      "cta": "Enable Merchant",
+      "submitting": "Enabling...",
+      "success": "Merchant mode is ready for this account.",
+      "goToMerchant": "Go to Merchant",
+      "namePlaceholder": "Merchant display name",
+      "slugPlaceholder": "Merchant slug (e.g. my-store)",
+      "error": "Unable to enable merchant right now.",
+      "forbidden": "You are not allowed to enable merchant."
+    }
+  },
+  "search": {
+    "title": "Find Services",
+    "placeholder": "Search for services...",
+    "filters": {
+      "category": "Category",
+      "priceRange": "Price Range",
+      "rating": "Rating",
+      "location": "Location",
+      "availability": "Availability"
+    },
+    "results": "{{count}} results found",
+    "noResults": "No services found",
+    "sortBy": {
+      "label": "Sort by",
+      "relevance": "Relevance",
+      "priceAsc": "Price: Low to High",
+      "priceDesc": "Price: High to Low",
+      "rating": "Rating"
+    },
+    "showResources": "Show bookable resources",
+    "hideResources": "Hide resources",
+    "noResources": "No active resources for this merchant.",
+    "categories": {
+      "all": "All"
+    },
+    "visibility": {
+      "public": "Public",
+      "private": "Private",
+      "unlisted": "Unlisted"
+    }
+  },
+  "booking": {
+    "title": "Book Service",
+    "invalidResource": "Invalid resource link.",
+    "resourceNotFound": "This resource is not available for booking.",
+    "unknownMerchant": "Provider",
+    "selectDate": "Select Date",
+    "selectTime": "Select Time",
+    "duration": "Duration",
+    "price": "Price",
+    "total": "Total",
+    "notes": "Additional Notes",
+    "notesPlaceholder": "Any special requests or notes...",
+    "confirm": "Confirm Booking",
+    "success": "Booking confirmed!",
+    "noSlots": "No available slots for this date",
+    "resourceFallbackName": "Resource #{{id}}",
+    "serviceImage": "Service Image",
+    "durationMinutes": "{{count}} minutes"
+  },
+  "myBookings": {
+    "title": "My Bookings",
+    "tabs": {
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "cancelled": "Cancelled"
+    },
+    "empty": {
+      "title": "No bookings yet",
+      "subtitle": "Start exploring and book your first service",
+      "cta": "Find Services"
+    },
+    "actions": {
+      "view": "View Details",
+      "cancel": "Cancel Booking",
+      "reschedule": "Reschedule",
+      "review": "Leave Review"
+    },
+    "errors": {
+      "signInRequired": "Please sign in to view your bookings.",
+      "forbidden": "You do not have access to this page.",
+      "loadFailed": "Could not load bookings."
+    }
+  },
+  "profile": {
+    "title": "My Profile",
+    "tabs": {
+      "personal": "Personal Info",
+      "preferences": "Preferences",
+      "notifications": "Notifications",
+      "security": "Security"
+    },
+    "personal": {
+      "name": "Full Name",
+      "email": "Email",
+      "phone": "Phone Number",
+      "avatar": "Profile Picture",
+      "description": "Manage your personal information",
+      "changeAvatar": "Change Avatar",
+      "phonePlaceholder": "+1 (555) 000-0000"
+    },
+    "preferences": {
+      "language": "Language",
+      "timezone": "Timezone",
+      "currency": "Currency",
+      "description": "Customize your experience",
+      "timezones": {
+        "pacific": "Pacific Time (UTC-8)",
+        "eastern": "Eastern Time (UTC-5)",
+        "taipei": "Taipei Time (UTC+8)"
+      },
+      "currencies": {
+        "usd": "USD ($)",
+        "twd": "TWD (NT$)",
+        "eur": "EUR (€)"
+      }
+    },
+    "notifications": {
+      "description": "Manage how you receive notifications",
+      "email": {
+        "title": "Email Notifications",
+        "description": "Receive booking confirmations and reminders via email"
+      },
+      "sms": {
+        "title": "SMS Notifications",
+        "description": "Receive booking reminders via text message"
+      }
+    },
+    "security": {
+      "description": "Manage your account security",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password",
+      "confirmPassword": "Confirm New Password",
+      "confirmPasswordPlaceholder": "Confirm new password",
+      "updatePassword": "Update Password"
+    }
+  }
+}

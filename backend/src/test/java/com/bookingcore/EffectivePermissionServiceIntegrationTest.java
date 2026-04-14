@@ -138,4 +138,36 @@ class EffectivePermissionServiceIntegrationTest {
         new PlatformPrincipal(user.getUsername(), PlatformUserRole.MERCHANT, merchant.getId());
     assertThat(effectivePermissionService.permissionSetFor(principal)).isEmpty();
   }
+
+  @Test
+  void systemAdminWithoutRbacBinding_stillGetsCatalogPermissions_includingMerchantPortal() {
+    RbacRole rbacInitialized = new RbacRole();
+    rbacInitialized.setCode("z" + System.nanoTime());
+    entityManager.persist(rbacInitialized);
+    entityManager.flush();
+
+    Merchant merchant = new Merchant();
+    merchant.setName("Admin Impersonation Merchant");
+    merchant.setSlug("admin-impersonation-merchant-" + System.nanoTime());
+    merchant.setActive(true);
+    merchant.setServiceLimit(5);
+    entityManager.persist(merchant);
+
+    PlatformUser admin = new PlatformUser();
+    admin.setUsername("rbac-admin-no-binding-" + System.nanoTime());
+    admin.setPasswordHash(passwordEncoder.encode("secret"));
+    admin.setRole(PlatformUserRole.SYSTEM_ADMIN);
+    admin.setMerchant(null);
+    admin.setEnabled(true);
+    entityManager.persist(admin);
+    entityManager.flush();
+
+    PlatformPrincipal merchantScoped =
+        new PlatformPrincipal(admin.getUsername(), PlatformUserRole.MERCHANT, merchant.getId());
+
+    assertThat(effectivePermissionService.hasPermission(merchantScoped, "merchant.portal.access"))
+        .isTrue();
+    assertThat(effectivePermissionService.hasPermission(merchantScoped, "system.dashboard.read"))
+        .isTrue();
+  }
 }

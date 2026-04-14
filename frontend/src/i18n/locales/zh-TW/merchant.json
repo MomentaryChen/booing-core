@@ -1,0 +1,224 @@
+{
+  "dashboard": {
+    "title": "儀表板",
+    "welcome": "歡迎回來，{{name}}",
+    "stats": {
+      "totalBookings": "總預約數",
+      "todayBookings": "今日預約",
+      "revenue": "營收",
+      "avgRating": "平均評分"
+    },
+    "upcoming": {
+      "title": "即將到來的預約",
+      "viewAll": "查看全部"
+    },
+    "recentActivity": {
+      "title": "近期活動"
+    },
+    "vsLastMonth": "較上月"
+  },
+  "resources": {
+    "title": "資源管理",
+    "create": "新增資源",
+    "search": "搜尋資源...",
+    "filters": {
+      "status": "狀態",
+      "category": "類別"
+    },
+    "table": {
+      "name": "名稱",
+      "category": "類別",
+      "price": "價格",
+      "duration": "時長",
+      "status": "狀態",
+      "actions": "操作"
+    },
+    "form": {
+      "name": "資源名稱",
+      "namePlaceholder": "輸入資源名稱",
+      "description": "描述",
+      "descriptionPlaceholder": "描述您的資源...",
+      "category": "類別",
+      "price": "價格",
+      "duration": "時長（分鐘）",
+      "capacity": "容量",
+      "images": "圖片",
+      "status": "狀態"
+    },
+    "status": {
+      "active": "啟用",
+      "inactive": "停用",
+      "draft": "草稿"
+    },
+    "categories": {
+      "wellness": "身心舒壓",
+      "beauty": "美容美髮",
+      "skincare": "肌膚保養"
+    },
+    "durationMinutes": "{{count}} 分鐘",
+    "mock": {
+      "1": { "name": "高級 SPA 療程" },
+      "2": { "name": "深層肌肉按摩" },
+      "3": { "name": "剪髮與造型" },
+      "4": { "name": "全身除毛" },
+      "5": { "name": "臉部護理" }
+    }
+  },
+  "schedule": {
+    "title": "排程管理",
+    "workingHours": "營業時間",
+    "exceptions": "例外日期",
+    "addException": "新增例外",
+    "days": {
+      "monday": "週一",
+      "tuesday": "週二",
+      "wednesday": "週三",
+      "thursday": "週四",
+      "friday": "週五",
+      "saturday": "週六",
+      "sunday": "週日"
+    },
+    "time": {
+      "start": "開始時間",
+      "end": "結束時間",
+      "break": "休息時間"
+    },
+    "exceptionTypes": {
+      "closed": "休息"
+    },
+    "exceptionReasons": {
+      "holiday": "假日",
+      "specialHours": "特殊營業時間"
+    },
+    "noExceptions": "目前沒有排定例外時段"
+  },
+  "bookings": {
+    "title": "預約管理",
+    "noMerchantContext": "尚未選擇商家情境。請從頁首切換商家情境後重新整理。",
+    "searchPlaceholder": "依客戶名稱或聯絡方式搜尋...",
+    "serviceItem": "服務 #{{id}}",
+    "tabs": {
+      "all": "全部",
+      "pending": "待處理",
+      "confirmed": "已確認",
+      "completed": "已完成",
+      "cancelled": "已取消"
+    },
+    "actions": {
+      "confirm": "確認",
+      "reject": "取消預約",
+      "checkIn": "報到",
+      "complete": "標記完成",
+      "contact": "聯繫客戶"
+    },
+    "details": {
+      "customer": "客戶",
+      "resource": "資源",
+      "datetime": "日期時間",
+      "price": "價格",
+      "notes": "備註",
+      "status": "狀態",
+      "actions": "操作"
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "tabs": {
+      "business": "商家資訊",
+      "payment": "付款設定",
+      "notifications": "通知設定",
+      "team": "團隊管理"
+    },
+    "business": {
+      "name": "商家名稱",
+      "description": "描述",
+      "address": "地址",
+      "phone": "電話",
+      "email": "電子郵件",
+      "website": "網站",
+      "descriptionText": "管理對客戶顯示的商家資訊"
+    },
+    "payment": {
+      "description": "設定付款方式與帳務參數",
+      "connect": "連接",
+      "providers": {
+        "stripe": {
+          "name": "Stripe",
+          "description": "接受信用卡付款"
+        },
+        "paypal": {
+          "name": "PayPal",
+          "description": "接受 PayPal 付款"
+        }
+      }
+    },
+    "notifications": {
+      "description": "設定通知偏好",
+      "newBooking": {
+        "title": "新預約通知",
+        "text": "有新預約時接收通知"
+      },
+      "cancellation": {
+        "title": "取消通知",
+        "text": "預約取消時接收通知"
+      },
+      "dailySummary": {
+        "title": "每日摘要",
+        "text": "每日接收預約摘要"
+      }
+    },
+    "team": {
+      "description": "管理團隊成員與其權限",
+      "planNotice": "團隊管理功能僅提供於 Pro 與 Enterprise 方案。"
+    }
+  },
+  "teams": {
+    "title": "團隊管理",
+    "description": "管理商家團隊與成員配置。",
+    "actions": {
+      "createTeam": "新增團隊",
+      "addMember": "新增成員"
+    },
+    "guard": {
+      "owner": "擁有者權限",
+      "staff": "員工權限",
+      "unknown": "未知角色"
+    },
+    "list": {
+      "title": "團隊列表",
+      "description": "目前商家團隊結構",
+      "memberCount": "{{count}} 位成員"
+    },
+    "states": {
+      "active": "啟用",
+      "inactive": "停用",
+      "empty": "目前尚無團隊。",
+      "forbidden": "您沒有商家團隊存取權限。",
+      "merchantMissing": "缺少商家情境，請切換情境後再試。",
+      "endpointPending": "團隊 API 端點尚未開放，前端轉接層已就緒可對應後端命名。",
+      "loadError": "載入團隊失敗。"
+    }
+  },
+  "bootstrap": {
+    "title": "設定您的商家工作區",
+    "subtitle": "此帳號目前尚未啟用商家租戶，請先建立後再繼續。",
+    "namePlaceholder": "商家名稱",
+    "slugPlaceholder": "商家代稱（例如 cozy-salon）",
+    "cta": "建立商家租戶",
+    "submitting": "建立中...",
+    "forbidden": "您沒有建立商家租戶的權限。",
+    "error": "建立商家租戶失敗。",
+    "backToClient": "返回客戶端",
+    "loadError": "載入商家啟動資料失敗。",
+    "accessForbidden": "禁止存取：此帳號沒有商家權限。"
+  },
+  "contextGate": {
+    "title": "請先切換到商家情境",
+    "description": "此帳號具備商家權限，但目前啟用情境不是商家。請先切換後再繼續。",
+    "switchCta": "切換為商家情境",
+    "switching": "切換中...",
+    "backToClient": "返回客戶端",
+    "switchForbidden": "您沒有切換到此商家情境的權限。",
+    "switchError": "切換情境失敗，請稍後再試。"
+  }
+}

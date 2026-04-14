@@ -25,6 +25,20 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+  private static final String[] AUTHENTICATED_ROLE_AUTHORITIES = {
+    "ROLE_CLIENT",
+    "ROLE_CLIENT_USER",
+    "ROLE_MERCHANT",
+    "ROLE_MERCHANT_OWNER",
+    "ROLE_SUB_MERCHANT",
+    "ROLE_MERCHANT_STAFF",
+    "ROLE_SYSTEM_ADMIN"
+  };
+
+  private static final String[] MERCHANT_ROLE_AUTHORITIES = {
+    "ROLE_MERCHANT", "ROLE_MERCHANT_OWNER", "ROLE_SUB_MERCHANT", "ROLE_MERCHANT_STAFF"
+  };
+
   private final BookingPlatformProperties platformProperties;
   private final ObjectProvider<JwtAuthenticationFilter> jwtAuthenticationFilter;
   private final ObjectMapper objectMapper;
@@ -56,25 +70,33 @@ public class SecurityConfig {
           a ->
               a.requestMatchers("/h2-console", "/h2-console/**")
                   .permitAll()
+                  .requestMatchers(HttpMethod.POST, "/api/client/bookings")
+                  .hasAnyAuthority("ROLE_CLIENT", "ROLE_CLIENT_USER")
+                  .requestMatchers(HttpMethod.GET, "/api/client/bookings")
+                  .hasAnyAuthority("ROLE_CLIENT", "ROLE_CLIENT_USER")
                   .requestMatchers("/api/client/**")
                   .permitAll()
                   .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register")
                   .permitAll()
                   .requestMatchers(HttpMethod.GET, "/api/auth/me")
-                  .hasAnyRole("CLIENT", "MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  .hasAnyAuthority(AUTHENTICATED_ROLE_AUTHORITIES)
                   .requestMatchers(HttpMethod.POST, "/api/auth/logout", "/api/auth/refresh")
-                  .hasAnyRole("CLIENT", "MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  .hasAnyAuthority(AUTHENTICATED_ROLE_AUTHORITIES)
                   .requestMatchers(HttpMethod.POST, "/api/auth/context/select")
-                  .hasAnyRole("CLIENT", "MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  .hasAnyAuthority(AUTHENTICATED_ROLE_AUTHORITIES)
+                  .requestMatchers(HttpMethod.POST, "/api/auth/context/switch")
+                  .hasAnyAuthority(AUTHENTICATED_ROLE_AUTHORITIES)
+                  .requestMatchers(HttpMethod.POST, "/api/auth/merchant/enable")
+                  .hasAnyAuthority(AUTHENTICATED_ROLE_AUTHORITIES)
                   .requestMatchers(HttpMethod.POST, "/api/merchant/register")
                   .permitAll()
                   .requestMatchers("/api/me/**")
-                  .hasAnyRole("CLIENT", "MERCHANT", "SUB_MERCHANT", "SYSTEM_ADMIN")
+                  .hasAnyAuthority(AUTHENTICATED_ROLE_AUTHORITIES)
                   // Explicit system operation endpoint under merchant namespace (legacy route).
                   .requestMatchers(HttpMethod.POST, "/api/merchant/merchants")
                   .hasRole("SYSTEM_ADMIN")
                   .requestMatchers("/api/merchant/**")
-                  .hasAnyRole("MERCHANT", "SUB_MERCHANT")
+                  .hasAnyAuthority(MERCHANT_ROLE_AUTHORITIES)
                   .requestMatchers("/api/system/**")
                   .hasRole("SYSTEM_ADMIN")
                   .anyRequest()
@@ -86,6 +108,10 @@ public class SecurityConfig {
           a ->
               a.requestMatchers("/h2-console", "/h2-console/**")
                   .permitAll()
+                  .requestMatchers(HttpMethod.POST, "/api/client/bookings")
+                  .denyAll()
+                  .requestMatchers(HttpMethod.GET, "/api/client/bookings")
+                  .denyAll()
                   .requestMatchers("/api/client/**")
                   .permitAll()
                   .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register")

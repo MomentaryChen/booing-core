@@ -14,9 +14,11 @@ import com.bookingcore.modules.platform.rbac.PlatformUserRbacBindingRepository;
 import com.bookingcore.modules.platform.rbac.RbacRoleRepository;
 import com.bookingcore.security.PlatformUserRole;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,8 @@ public class PublicRegistrationService {
       "/?auth=login&intent=client&registered=1";
 
   private static final int USERNAME_MAX = 120;
+  private static final Pattern SIMPLE_EMAIL_PATTERN =
+      Pattern.compile("^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$", Pattern.CASE_INSENSITIVE);
 
   private final MerchantProvisioningService merchantProvisioningService;
   private final PlatformAuditService platformAuditService;
@@ -105,20 +109,24 @@ public class PublicRegistrationService {
     String username = request.username() == null ? "" : request.username().trim();
     String password = request.password() == null ? "" : request.password();
     if (!StringUtils.hasText(username) || !StringUtils.hasText(password)) {
-      throw new ApiException("Username and password are required for user registration", HttpStatus.BAD_REQUEST);
+      throw new ApiException("Email and password are required for user registration", HttpStatus.BAD_REQUEST);
     }
+    if (!looksLikeEmail(username)) {
+      throw new ApiException("A valid email is required for user registration", HttpStatus.BAD_REQUEST);
+    }
+    String normalizedEmail = username.toLowerCase(Locale.ROOT);
     if (username.length() > USERNAME_MAX) {
       throw new ApiException("Username is too long", HttpStatus.BAD_REQUEST);
     }
     if (password.length() < 6) {
       throw new ApiException("Password must be at least 6 characters", HttpStatus.BAD_REQUEST);
     }
-    if (platformUserRepository.findByUsername(username).isPresent()) {
-      throw new ApiException("Username already taken", HttpStatus.CONFLICT);
+    if (platformUserRepository.findByUsernameIgnoreCase(normalizedEmail).isPresent()) {
+      throw new ApiException("Email already registered", HttpStatus.CONFLICT);
     }
 
     PlatformUser user = new PlatformUser();
-    user.setUsername(username);
+    user.setUsername(normalizedEmail);
     user.setPasswordHash(passwordEncoder.encode(password));
     user.setRole(PlatformUserRole.CLIENT);
     user.setEnabled(true);
@@ -128,9 +136,13 @@ public class PublicRegistrationService {
     ensureRbacBinding(user, PlatformUserRole.CLIENT, null);
 
     platformAuditService.record(
-        "client.self_registered", "platform_user", user.getId(), "username=" + username, "anonymous");
+        "client.self_registered", "platform_user", user.getId(), "username=" + normalizedEmail, "anonymous");
 
-    return new PublicRegisterResponse(user.getId(), username, "-", true, NEXT_DESTINATION_CLIENT_LOGIN);
+    return new PublicRegisterResponse(user.getId(), normalizedEmail, "-", true, NEXT_DESTINATION_CLIENT_LOGIN);
+  }
+
+  private static boolean looksLikeEmail(String value) {
+    return StringUtils.hasText(value) && SIMPLE_EMAIL_PATTERN.matcher(value.trim()).matches();
   }
 
   /** Mirrors bootstrap binding logic so self-registered CLIENT users get baseline permissions. */

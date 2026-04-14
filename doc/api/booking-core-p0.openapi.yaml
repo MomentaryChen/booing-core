@@ -1,0 +1,912 @@
+openapi: 3.0.3
+info:
+  title: booking-core P0 API (normative contract)
+  version: "0.0.1"
+  description: |
+    Wave 1 (P0) **as implemented** in booking-core backend. Paths match running controllers under
+    `/api/auth`, `/api/client`, `/api/merchant`.
+
+    **Spec delta vs PM table (§4):** Login uses **username** + **password** (not email). Client
+    “resource search/detail” for storefront is exposed as `GET /api/client/merchant/{slug}` (embeds
+    services + resources). Merchant booking actions use a single
+    `PUT /api/merchant/{merchantId}/bookings/{bookingId}/status` with `BookingStatus` body, not
+    separate `/confirm` `/reject` `/complete` paths.
+
+    **Error envelope** (ApiException / validation): JSON object `code` (string) and `message` (string).
+servers:
+  - url: /
+tags:
+  - name: Auth
+  - name: Client
+  - name: Merchant
+
+components:
+  securitySchemes:
+    bearer-jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Value from `accessToken` after login.
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: INVALID_CREDENTIALS
+        message:
+          type: string
+          example: Invalid credentials
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    TokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresInSeconds:
+          type: integer
+          format: int64
+        role:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        canonicalRole:
+          type: string
+        canonicalRoles:
+          type: array
+          items:
+            type: string
+        roleAliases:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+    ClientBookingCreateRequest:
+      type: object
+      required: [resourceId, startAt]
+      properties:
+        resourceId:
+          type: integer
+          format: int64
+        startAt:
+          type: string
+          format: date-time
+          description: ISO-8601 local or offset datetime
+        notes:
+          type: string
+          maxLength: 500
+    ClientBookingCreateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        bookingNo:
+          type: string
+          example: BK-42
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, CANCELLED, COMPLETED]
+        resourceId:
+          type: integer
+          format: int64
+        startAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        tenantId:
+          type: integer
+          format: int64
+          description: Merchant id (tenant scope)
+        createdAt:
+          type: string
+          format: date-time
+    ClientBookingListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer, format: int64 }
+              bookingNo: { type: string }
+              serviceName: { type: string }
+              providerName: { type: string }
+              date: { type: string, example: "2026-04-15" }
+              time: { type: string, example: "10:30" }
+              durationMinutes: { type: integer }
+              status:
+                type: string
+                enum: [PENDING, CONFIRMED, CANCELLED, COMPLETED]
+              price: { type: number }
+        page: { type: integer }
+        size: { type: integer }
+        total: { type: integer, format: int64 }
+    MerchantBookingStatusUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, CANCELLED, COMPLETED]
+        reason:
+          type: string
+          nullable: true
+    ClientResourceAvailabilityResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          example: "2026-04-15"
+        slots:
+          type: array
+          items:
+            type: object
+            properties:
+              startAt: { type: string, format: date-time }
+              endAt: { type: string, format: date-time }
+              isAvailable: { type: boolean }
+              capacityRemaining: { type: integer, nullable: true }
+    TeamCreateRequest:
+      type: object
+      required: [name, code]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+          maxLength: 80
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+    TeamUpdateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+    TeamSummary:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        merchantId: { type: integer, format: int64 }
+        name: { type: string }
+        code: { type: string }
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+        createdAt: { type: string, format: date-time }
+    TeamMemberAssignRequest:
+      type: object
+      required: [userId, role]
+      properties:
+        userId: { type: integer, format: int64 }
+        role: { type: string, maxLength: 64 }
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+    TeamMemberSummary:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        merchantId: { type: integer, format: int64 }
+        teamId: { type: integer, format: int64 }
+        userId: { type: integer, format: int64 }
+        username: { type: string }
+        role: { type: string }
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+paths:
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (JWT access token)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+            examples:
+              ok:
+                summary: Valid body
+                value:
+                  username: client-demo
+                  password: "secret123"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+              examples:
+                success:
+                  value:
+                    accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                    tokenType: Bearer
+                    expiresInSeconds: 3600
+                    role: CLIENT
+                    roles: [CLIENT]
+                    permissions: []
+        "400":
+          description: Validation / bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                validation:
+                  value:
+                    code: VALIDATION_FAILED
+                    message: password must not be blank
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                badCreds:
+                  value:
+                    code: API_BAD_REQUEST
+                    message: Invalid credentials
+        "429":
+          description: Login rate limited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                limited:
+                  value:
+                    code: API_BAD_REQUEST
+                    message: Too many login attempts
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Current principal (roles, permissions, contexts)
+      security:
+        - bearer-jwt: []
+      responses:
+        "200":
+          description: Profile snapshot
+          content:
+            application/json:
+              schema:
+                type: object
+                description: AuthMeResponse — see runtime `/v3/api-docs` for full record fields
+        "401":
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                unauthorized:
+                  value:
+                    code: API_BAD_REQUEST
+                    message: Unauthorized
+
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (stateless no-op; client discards token)
+      security:
+        - bearer-jwt: []
+      responses:
+        "204":
+          description: No content
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/client/merchant/{slug}:
+    get:
+      tags: [Client]
+      summary: Storefront + embedded services and resources (client catalog/detail)
+      security: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Merchant storefront payload
+        "404":
+          description: Unknown slug
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Visibility / membership — invite-only without access
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/client/resources/{resourceId}/availability:
+    get:
+      tags: [Client]
+      summary: Availability for a resource on a calendar day
+      security: []
+      parameters:
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+      responses:
+        "200":
+          description: Slots for the date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientResourceAvailabilityResponse"
+        "400":
+          description: Invalid date format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                badDate:
+                  value:
+                    code: API_BAD_REQUEST
+                    message: Invalid date format, expected YYYY-MM-DD
+        "404":
+          description: Resource not found or not visible (cross-tenant masked as 404)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                notFound:
+                  value:
+                    code: RESOURCE_NOT_FOUND
+                    message: Resource not found
+
+  /api/client/availability:
+    get:
+      tags: [Client]
+      summary: Availability by merchant + service (+ optional resource)
+      security: []
+      parameters:
+        - name: merchantId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: serviceItemId
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: resourceId
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Slot list
+        "403":
+          description: Merchant not accessible to caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/client/bookings:
+    post:
+      tags: [Client]
+      summary: Create booking (CLIENT / CLIENT_USER)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientBookingCreateRequest"
+      responses:
+        "201":
+          description: Booking created (PENDING)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBookingCreateResponse"
+        "400":
+          description: Validation or business rule (e.g. start in past)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Resource not found / not visible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Slot conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                conflict:
+                  value:
+                    code: BOOKING_SLOT_CONFLICT
+                    message: Selected time conflicts with an existing booking
+        "422":
+          description: Strategy / rule rejection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                noStrategy:
+                  value:
+                    code: BOOKING_STRATEGY_NOT_REGISTERED
+                    message: Resource booking strategy is not registered
+                ruleRejected:
+                  value:
+                    code: BOOKING_RULE_REJECTED
+                    message: "Resource strategy rejected booking: no service scope"
+    get:
+      tags: [Client]
+      summary: My bookings (tabs)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: tab
+          in: query
+          schema:
+            type: string
+            enum: [upcoming, past, cancelled]
+            default: upcoming
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Page of bookings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientBookingListResponse"
+        "401":
+          description: Not logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: Wrong role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/merchant/{merchantId}/resources:
+    get:
+      tags: [Merchant]
+      summary: List resource items for merchant
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Resource list
+        "401":
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "403":
+          description: No portal access / wrong merchant scope
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/merchant/{merchantId}/bookings:
+    get:
+      tags: [Merchant]
+      summary: List bookings (optional status filter)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, CONFIRMED, CANCELLED, COMPLETED]
+      responses:
+        "200":
+          description: Bookings
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/merchant/{merchantId}/bookings/{bookingId}/status:
+    put:
+      tags: [Merchant]
+      summary: Transition booking status (state machine)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MerchantBookingStatusUpdateRequest"
+            examples:
+              confirm:
+                value:
+                  status: CONFIRMED
+              rejectAsCancel:
+                summary: Reject maps to CANCELLED per spec §10.1
+                value:
+                  status: CANCELLED
+                  reason: No show
+      responses:
+        "200":
+          description: Updated booking summary
+        "404":
+          description: Booking not in merchant (or cross-tenant)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Illegal transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+              examples:
+                illegal:
+                  value:
+                    code: STATE_CONFLICT
+                    message: Illegal booking transition
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/merchant/{merchantId}/teams:
+    get:
+      tags: [Merchant]
+      summary: List merchant teams
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Team list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamSummary"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      tags: [Merchant]
+      summary: Create merchant team
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamCreateRequest"
+      responses:
+        "200":
+          description: Created team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamSummary"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Team code already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/merchant/{merchantId}/teams/{teamId}:
+    put:
+      tags: [Merchant]
+      summary: Update merchant team
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamUpdateRequest"
+      responses:
+        "200":
+          description: Updated team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamSummary"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/merchant/{merchantId}/teams/{teamId}/members:
+    get:
+      tags: [Merchant]
+      summary: List team members
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Team member list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMemberSummary"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      tags: [Merchant]
+      summary: Assign team member
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberAssignRequest"
+      responses:
+        "200":
+          description: Assigned member summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMemberSummary"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Team or user not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/merchant/{merchantId}/teams/{teamId}/members/{memberId}:
+    delete:
+      tags: [Merchant]
+      summary: Remove team member
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: merchantId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: memberId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Removed
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Team member not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
