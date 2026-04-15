@@ -1,5 +1,6 @@
 package com.bookingcore.service;
 
+import java.util.UUID;
 import com.bookingcore.api.ApiDtos.SystemRbacRoleResponse;
 import com.bookingcore.api.ApiDtos.SystemUserBindingSummary;
 import com.bookingcore.api.ApiDtos.SystemUserBindingUpsertRequest;
@@ -83,7 +84,7 @@ public class SystemUserManagementService {
   }
 
   @Transactional(readOnly = true)
-  public SystemUserDetailResponse getUserDetail(Long userId) {
+  public SystemUserDetailResponse getUserDetail(UUID userId) {
     PlatformUser user = requireUser(userId);
     List<PlatformUserRbacBinding> bindings = bindingsForUser(user.getId());
     List<SystemUserBindingSummary> bindingDtos =
@@ -91,7 +92,8 @@ public class SystemUserManagementService {
             .map(this::toBindingSummary)
             .sorted(
                 Comparator.comparing(SystemUserBindingSummary::roleCode)
-                    .thenComparing(b -> b.merchantId() == null ? Long.MIN_VALUE : b.merchantId())
+                    .thenComparing(
+                        SystemUserBindingSummary::merchantId, Comparator.nullsFirst(Comparator.naturalOrder()))
                     .thenComparing(SystemUserBindingSummary::status))
             .toList();
 
@@ -119,7 +121,7 @@ public class SystemUserManagementService {
   }
 
   @Transactional
-  public SystemUserDetailResponse updateUserStatus(Long userId, SystemUserStatusUpdateRequest request) {
+  public SystemUserDetailResponse updateUserStatus(UUID userId, SystemUserStatusUpdateRequest request) {
     PlatformUser user = requireUser(userId);
     platformUserRbacBindingRepository.lockEnabledActiveSystemAdminBindings();
     boolean beforeEnabled = Boolean.TRUE.equals(user.getEnabled());
@@ -144,7 +146,7 @@ public class SystemUserManagementService {
   }
 
   @Transactional
-  public SystemUserDetailResponse replaceBindings(Long userId, SystemUserBindingsUpdateRequest request) {
+  public SystemUserDetailResponse replaceBindings(UUID userId, SystemUserBindingsUpdateRequest request) {
     PlatformUser user = requireUser(userId);
     platformUserRbacBindingRepository.lockBindingsForUser(userId);
     platformUserRbacBindingRepository.lockEnabledActiveSystemAdminBindings();
@@ -256,7 +258,7 @@ public class SystemUserManagementService {
         .toList();
   }
 
-  private PlatformUser requireUser(Long userId) {
+  private PlatformUser requireUser(UUID userId) {
     return platformUserRepository
         .findById(userId)
         .orElseThrow(
@@ -272,7 +274,7 @@ public class SystemUserManagementService {
                     "RBAC role not found: " + roleCode, HttpStatus.BAD_REQUEST, "RBAC_ROLE_NOT_FOUND"));
   }
 
-  private Merchant resolveMerchant(Long merchantId) {
+  private Merchant resolveMerchant(UUID merchantId) {
     if (merchantId == null) {
       return null;
     }
@@ -282,7 +284,7 @@ public class SystemUserManagementService {
             () -> new ApiException("Merchant not found", HttpStatus.BAD_REQUEST, "MERCHANT_NOT_FOUND"));
   }
 
-  private List<PlatformUserRbacBinding> bindingsForUser(Long userId) {
+  private List<PlatformUserRbacBinding> bindingsForUser(UUID userId) {
     return platformUserRbacBindingRepository.findBindingsForUserWithRoleAndPermissions(userId);
   }
 
@@ -302,7 +304,7 @@ public class SystemUserManagementService {
     return roleCode.trim().toUpperCase(Locale.ROOT);
   }
 
-  private boolean hasActiveSystemAdminBinding(Long userId) {
+  private boolean hasActiveSystemAdminBinding(UUID userId) {
     return bindingsForUser(userId).stream()
         .anyMatch(
             b ->
@@ -321,7 +323,7 @@ public class SystemUserManagementService {
                     && d.merchantId() == null);
   }
 
-  private void ensureAnotherEnabledSystemAdminExists(Long excludedUserId) {
+  private void ensureAnotherEnabledSystemAdminExists(UUID excludedUserId) {
     long other = platformUserRbacBindingRepository.countOtherEnabledActiveSystemAdmins(excludedUserId);
     if (other <= 0) {
       throw new ApiException(
@@ -331,7 +333,7 @@ public class SystemUserManagementService {
     }
   }
 
-  private void validateRoleScope(PlatformUser targetUser, String roleCode, Long merchantId) {
+  private void validateRoleScope(PlatformUser targetUser, String roleCode, UUID merchantId) {
     if (!rbacRoleRepository.findByCode(roleCode).isPresent()) {
       throw new ApiException(
           "Unknown roleCode: " + roleCode, HttpStatus.BAD_REQUEST, "RBAC_ROLE_UNKNOWN");
@@ -370,7 +372,7 @@ public class SystemUserManagementService {
     return PlatformUserRole.parse(roleCode).orElse(null);
   }
 
-  private static String key(String roleCode, Long merchantId) {
+  private static String key(String roleCode, UUID merchantId) {
     return roleCode + "|" + (merchantId == null ? "null" : merchantId);
   }
 }

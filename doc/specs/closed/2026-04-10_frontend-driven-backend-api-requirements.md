@@ -1,5 +1,7 @@
 # booking-core 前端導向後端 API 需求清單（PM）
 
+> Closeout Note (2026-04-14): 本規格主要交付範圍（建立預約、重疊防護、查詢分頁、取消預約、前端操作 UI）已完成並驗證通過；檔案將歸檔至 `doc/specs/closed/2026-04-10_frontend-driven-backend-api-requirements.md`。剩餘 UI 文案細化將以新規格追蹤，不再阻擋本案結案。
+
 ## 1. 問題與目標
 
 - 目前 `frontend` 已有可見頁面與流程（`auth`、`/client`、`/merchant`、`/admin`），但多數資料仍為 mock，尚未與後端正式契約對接。
@@ -750,4 +752,118 @@ Fallback / 失敗處理（先實作統一層）：
 | Checklist Item | Owner | Status | Completion Evidence |
 |---|---|---|---|
 | Round 7：前端 P0 wire-first | frontend-engineer-agent | done | 本節 §19、`pnpm build` |
+
+## 21. Round 8：Merchant Service/Resource 語意收斂（progress continuation）
+
+- 需求背景：
+  - merchant 端 `resources` 頁面目前同時管理 service 與 resource，語意容易混淆。
+  - 產品確認方向為「resource 需可對應 staff assignment」，作為後續避免 double booking 的核心能力之一。
+- 本輪已完成（Frontend/UI）：
+  - 頁面標題與導覽文案改為 `Service & Resource Management`（zh-TW/en-US 同步）。
+  - Resources 區塊新增管理開關（enable/disable）。
+  - Resources 區塊加入 service 依賴 UI 規則：
+    - 無 service 時，resource 管理開關與相關操作不可用，並顯示導引文案。
+    - 開關關閉時，resource 清單與搜尋不啟用。
+- 本輪已完成（PM/Spec）：
+  - 新增 staff assignment 導向規格，明確定義 `Service / Resource / Staff / Assignment` 語意與 API 邊界：
+    - `doc/specs/closed/2026-04-14_merchant-resources-crud.md`
+- 待續（Backend + QA）：
+  - Resource CRUD 擴充 `assignedStaffIds` 寫入與查詢回傳。
+  - 新增 assignment command API（assign/reassign/release）與 `409` 衝突測試。
+  - 加上 tenant-scoped 唯一鍵與狀態轉移合法性測試。
+
+## 22. Round 8 PM 追蹤更新
+
+| Checklist Item | Owner | Status | Completion Evidence |
+|---|---|---|---|
+| Round 8：Service/Resource UI 語意收斂 | frontend-engineer-agent | done | `frontend/src/apps/merchant/pages/ResourcesPage.tsx` + i18n 變更 |
+| Round 8：staff assignment 規格封包建立 | pm-agent | done | `doc/specs/closed/2026-04-14_merchant-resources-crud.md` |
+| Round 8：Resource-assignment API 實作 | backend-engineer-agent | todo | 待下一輪 auto-dev 實作 |
+| Round 8：assignment QA 測試矩陣 | qa-agent | todo | 待 API 契約凍結後執行 |
+
+## 23. Round 9：Resource staff assignment（Backend 第一版）
+
+- 本輪完成（backend）：
+  - `resource_items` 新增 `assigned_staff_ids_json` 欄位（migration `V18__resource_items_assigned_staff_ids.sql`）。
+  - Merchant resource API 支援 `assignedStaffIds`：
+    - `POST /api/merchant/{merchantId}/resources`
+    - `PATCH /api/merchant/{merchantId}/resources/{resourceId}`
+    - `GET /api/merchant/{merchantId}/resources` 回傳 `assignedStaffIds`
+  - 指派驗證規則：
+    - 僅允許指派該 merchant 下 `ACTIVE` 的 team members（以 `platformUserId` 判定）。
+    - 無效/跨租戶/非 active 成員會回 `400`。
+    - 會自動去重與過濾非正整數 id。
+- 本輪測試：
+  - `MerchantResourceCrudApiTest` 新增案例：
+    - 可成功建立含 `assignedStaffIds` 的 resource。
+    - 指派非成員或無效成員時回 `400`。
+  - 驗證命令：
+    - `mvn -Dtest=MerchantResourceCrudApiTest test`（PASS）。
+
+## 24. Round 9 PM 追蹤更新
+
+| Checklist Item | Owner | Status | Completion Evidence |
+|---|---|---|---|
+| Round 8：Resource-assignment API 實作 | backend-engineer-agent | done | `V18__resource_items_assigned_staff_ids.sql`、`MerchantPortalController`、`ApiDtos`、`ResourceItem` |
+| Round 8：assignment QA 測試矩陣 | qa-agent | in_progress | `MerchantResourceCrudApiTest` 已補兩個 assignment 測試；待補 E2E 與衝突情境 |
+
+## 25. Round 10：Resource staff assignment（Frontend 串接）
+
+- 本輪完成（frontend）：
+  - `merchantPortalApi` 補齊 `assignedStaffIds` 契約欄位（Resource DTO、create/update payload）。
+  - `ResourcesPage` 串接 team/member 資料：
+    - 透過 `listMerchantTeams` + `listMerchantTeamMembers` 載入可指派員工清單（active members）。
+  - 建立資源可直接傳 `assignedStaffIds`（multi-select）。
+  - 編輯資源可更新 `assignedStaffIds`（現階段以 prompt comma-list 形式）。
+  - 資源表格新增 `Assigned Staff` 欄位顯示已指派人員。
+
+## 26. Round 10 PM 追蹤更新
+
+| Checklist Item | Owner | Status | Completion Evidence |
+|---|---|---|---|
+| Round 10：Frontend assignment 串接 | frontend-engineer-agent | done | `ResourcesPage.tsx` + `merchantPortalApi.ts` |
+| Round 10：UI/UX polish（專用對話框與欄位文案 i18n） | frontend-engineer-agent + uiux-agent | todo | 待下一輪優化 |
+
+## 27. Round 11：Client booking cancellation + validation closure
+
+- 本輪完成（backend）：
+  - 新增 client 取消預約端點：`PATCH /api/client/bookings/{bookingId}/cancel`
+  - 僅允許本人預約且狀態為 `PENDING/CONFIRMED` 取消，其他狀態回 `409`。
+  - DTO 新增：
+    - `ClientBookingCancelRequest`
+    - `ClientBookingStatusResponse`
+  - `BookingRepository` 新增 `findByIdAndPlatformUserId` 供 ownership 驗證。
+- 本輪完成（frontend）：
+  - `clientBookingApi` 新增 `cancelClientBooking(...)`。
+  - `MyBookingsPage` upcoming 卡片的 `Cancel` 動作改為實際呼叫 API，成功後自動刷新三個 tab 列表。
+- 本輪測試與驗證：
+  - 新增測試：`ClientBookingListApiTest.cancelOwnBooking_movesToCancelledAndAppearsInCancelledTab`。
+  - 修正 client booking 相關測試登入帳號為 email 形式（符合目前 auth 規則）。
+  - 執行：
+    - `mvn "-Dtest=ClientBookingCreateApiTest,ClientBookingListApiTest,ClientResourceAvailabilityApiTest" test` -> PASS
+    - `pnpm build` -> PASS
+
+## 28. Round 11 PM 追蹤更新
+
+| Checklist Item | Owner | Status | Completion Evidence |
+|---|---|---|---|
+| 使用者可取消預約（client） | backend-engineer-agent + frontend-engineer-agent | done | `ClientBookingController` / `ClientBookingService` / `clientBookingApi` / `MyBookingsPage` |
+| 建立、衝突、查詢分頁、取消流程驗證 | qa-agent | done | 指定測試集 PASS + frontend build PASS |
+
+## 29. Round 12：Merchant Resources 編輯 UX polish（移除 prompt）
+
+- 本輪完成（frontend）：
+  - 移除 `ResourcesPage` 內的 `window.prompt` 編輯流程。
+  - 以 inline 編輯面板取代：
+    - 可編輯欄位：`name/category/price/capacity/active/assignedStaffIds`
+    - 指派員工維持 multi-select（沿用 Round 10 staff options）
+    - 提供 Save/Cancel 行為並呼叫既有 `updateMerchantResource`
+- 驗證：
+  - `pnpm build` PASS。
+
+## 30. Round 12 PM 追蹤更新
+
+| Checklist Item | Owner | Status | Completion Evidence |
+|---|---|---|---|
+| Round 10：UI/UX polish（專用對話框與欄位文案 i18n） | frontend-engineer-agent + uiux-agent | in_progress | 已移除 prompt 並改正式編輯面板；i18n 文案細化待下一輪 |
 

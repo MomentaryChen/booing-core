@@ -1,6 +1,7 @@
 package com.bookingcore.modules.platform.rbac;
 
 import java.util.List;
+import java.util.UUID;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -20,9 +21,9 @@ public interface PlatformUserRbacBindingRepository extends JpaRepository<Platfor
           or (b.merchant is not null and b.merchant.id = :merchantId))
       """)
   boolean existsActiveBindingForContext(
-      @Param("userId") Long userId,
+      @Param("userId") UUID userId,
       @Param("roleCode") String roleCode,
-      @Param("merchantId") Long merchantId);
+      @Param("merchantId") UUID merchantId);
 
   @Query(
       """
@@ -36,9 +37,9 @@ public interface PlatformUserRbacBindingRepository extends JpaRepository<Platfor
           or (b.merchant is not null and b.merchant.id = :merchantId))
       """)
   List<String> findPermissionCodesForUserContext(
-      @Param("userId") Long userId,
+      @Param("userId") UUID userId,
       @Param("roleCode") String roleCode,
-      @Param("merchantId") Long merchantId);
+      @Param("merchantId") UUID merchantId);
 
   @Query(
       """
@@ -51,9 +52,9 @@ public interface PlatformUserRbacBindingRepository extends JpaRepository<Platfor
       order by b.id asc
       """)
   List<PlatformUserRbacBinding> findBindingsForUserContext(
-      @Param("userId") Long userId,
+      @Param("userId") UUID userId,
       @Param("roleCode") String roleCode,
-      @Param("merchantId") Long merchantId);
+      @Param("merchantId") UUID merchantId);
 
   @Query(
       """
@@ -66,9 +67,9 @@ public interface PlatformUserRbacBindingRepository extends JpaRepository<Platfor
           or (b.merchant is not null and b.merchant.id = :merchantId))
       """)
   long countActiveBindingsForContext(
-      @Param("userId") Long userId,
+      @Param("userId") UUID userId,
       @Param("roleCode") String roleCode,
-      @Param("merchantId") Long merchantId);
+      @Param("merchantId") UUID merchantId);
 
   @Query(
       """
@@ -79,7 +80,7 @@ public interface PlatformUserRbacBindingRepository extends JpaRepository<Platfor
       where b.platformUser.id = :userId and b.status = 'ACTIVE'
       order by b.id asc
       """)
-  List<ActiveAuthContext> findActiveAuthContexts(@Param("userId") Long userId);
+  List<ActiveAuthContext> findActiveAuthContexts(@Param("userId") UUID userId);
 
   @Query(
       """
@@ -90,7 +91,7 @@ public interface PlatformUserRbacBindingRepository extends JpaRepository<Platfor
       where b.platformUser.id = :userId
       order by b.id asc
       """)
-  List<PlatformUserRbacBinding> findBindingsForUserWithRoleAndPermissions(@Param("userId") Long userId);
+  List<PlatformUserRbacBinding> findBindingsForUserWithRoleAndPermissions(@Param("userId") UUID userId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
@@ -99,7 +100,7 @@ public interface PlatformUserRbacBindingRepository extends JpaRepository<Platfor
       where b.platformUser.id = :userId
       order by b.id asc
       """)
-  List<PlatformUserRbacBinding> lockBindingsForUser(@Param("userId") Long userId);
+  List<PlatformUserRbacBinding> lockBindingsForUser(@Param("userId") UUID userId);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
@@ -126,5 +127,5 @@ public interface PlatformUserRbacBindingRepository extends JpaRepository<Platfor
         and b.merchant is null
         and u.id <> :excludedUserId
       """)
-  long countOtherEnabledActiveSystemAdmins(@Param("excludedUserId") Long excludedUserId);
+  long countOtherEnabledActiveSystemAdmins(@Param("excludedUserId") UUID excludedUserId);
 }

@@ -31,6 +31,21 @@ public class ClientProfile {
   @Column(name = "contact_phone", length = 120)
   private String contactPhone;
 
+  @Column(name = "language", length = 16)
+  private String language;
+
+  @Column(name = "timezone", length = 64)
+  private String timezone;
+
+  @Column(name = "currency", length = 16)
+  private String currency;
+
+  @Column(name = "email_notifications")
+  private Boolean emailNotifications;
+
+  @Column(name = "sms_notifications")
+  private Boolean smsNotifications;
+
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
 
@@ -77,5 +92,45 @@ public class ClientProfile {
 
   public void setContactPhone(String contactPhone) {
     this.contactPhone = contactPhone;
+  }
+
+  public String getLanguage() {
+    return language;
+  }
+
+  public void setLanguage(String language) {
+    this.language = language;
+  }
+
+  public String getTimezone() {
+    return timezone;
+  }
+
+  public void setTimezone(String timezone) {
+    this.timezone = timezone;
+  }
+
+  public String getCurrency() {
+    return currency;
+  }
+
+  public void setCurrency(String currency) {
+    this.currency = currency;
+  }
+
+  public Boolean getEmailNotifications() {
+    return emailNotifications;
+  }
+
+  public void setEmailNotifications(Boolean emailNotifications) {
+    this.emailNotifications = emailNotifications;
+  }
+
+  public Boolean getSmsNotifications() {
+    return smsNotifications;
+  }
+
+  public void setSmsNotifications(Boolean smsNotifications) {
+    this.smsNotifications = smsNotifications;
   }
 }

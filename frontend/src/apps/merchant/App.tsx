@@ -17,6 +17,7 @@ import { isCanonicalClientRole, isCanonicalMerchantRole } from '@/shared/lib/rol
 import type { AuthContextOption } from '@/shared/types/authContext'
 import type { UserRole } from '@/shared/types/auth'
 import { BootstrapGatePage } from './pages/BootstrapGatePage'
+import { Toaster } from '@/components/ui/toaster'
 
 function MerchantEntryGuard({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation('merchant')
@@ -159,23 +160,26 @@ function MerchantEntryGuard({ children }: { children: React.ReactNode }) {
 export function MerchantApp() {
   return (
     <BrowserRouter basename="/merchant">
-      <Routes>
-        <Route
-          element={
-            <MerchantEntryGuard>
-              <MerchantLayout />
-            </MerchantEntryGuard>
-          }
-        >
-          <Route index element={<DashboardPage />} />
-          <Route path="resources" element={<ResourcesPage />} />
-          <Route path="schedule" element={<SchedulePage />} />
-          <Route path="bookings" element={<BookingsPage />} />
-          <Route path="teams" element={<TeamsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="." replace />} />
-        </Route>
-      </Routes>
+      <>
+        <Routes>
+          <Route
+            element={
+              <MerchantEntryGuard>
+                <MerchantLayout />
+              </MerchantEntryGuard>
+            }
+          >
+            <Route index element={<DashboardPage />} />
+            <Route path="resources" element={<ResourcesPage />} />
+            <Route path="schedule" element={<SchedulePage />} />
+            <Route path="bookings" element={<BookingsPage />} />
+            <Route path="teams" element={<TeamsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+            <Route path="*" element={<Navigate to="." replace />} />
+          </Route>
+        </Routes>
+        <Toaster />
+      </>
     </BrowserRouter>
   )
 }

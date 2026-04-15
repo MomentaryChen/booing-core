@@ -1,0 +1,37 @@
+# Spec Requests Must Route to PM Agent
+
+Any request related to spec work MUST be handled by `pm-agent` first.
+
+## Trigger Conditions
+
+Treat a request as spec-related if it includes any of the following intent:
+
+- Create a spec or planning doc
+- Update spec scope, tasks, acceptance criteria, or owners
+- Decompose requirements into executable tasks
+- Move spec status across `open/progress/closed`
+- Request a task checklist, traceability map, or delivery plan
+- Mentions keywords such as: `spec`, `規格`, `任務清單`, `task breakdown`, `acceptance criteria`
+
+## Mandatory Workflow
+
+1. Route to `pm-agent` first for structured output.
+2. PM round must include architect collaboration in the same planning round.
+3. PM output must include at minimum:
+   - spec path and status
+   - tasks with single owner and dependencies
+   - success checklist
+   - checklist traceability mapping
+   - sequential and parallel execution groups (after architect phase)
+4. Only after PM output is confirmed can implementation agents proceed.
+
+## Enforcement
+
+- Non-PM agents must not directly finalize spec content when trigger conditions are met.
+- If a non-PM agent receives a spec-related request, it must hand off to PM workflow first.
+- If PM/architect evidence is missing, treat the result as incomplete.
+
+## Exceptions
+
+- Purely editorial typo fixes in an existing spec file that do not change scope, tasks, checklist, owners, status, or dependencies.
+- User explicitly requests bypass (must be acknowledged as non-standard flow).

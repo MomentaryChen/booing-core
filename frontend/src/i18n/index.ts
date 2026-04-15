@@ -8,12 +8,14 @@ import enUSAuth from './locales/en-US/auth.json'
 import enUSClient from './locales/en-US/client.json'
 import enUSMerchant from './locales/en-US/merchant.json'
 import enUSAdmin from './locales/en-US/admin.json'
+import enUSHomepage from './locales/en-US/homepage.json'
 
 import zhTWCommon from './locales/zh-TW/common.json'
 import zhTWAuth from './locales/zh-TW/auth.json'
 import zhTWClient from './locales/zh-TW/client.json'
 import zhTWMerchant from './locales/zh-TW/merchant.json'
 import zhTWAdmin from './locales/zh-TW/admin.json'
+import zhTWHomepage from './locales/zh-TW/homepage.json'
 
 const resources = {
   'en-US': {
@@ -22,6 +24,7 @@ const resources = {
     client: enUSClient,
     merchant: enUSMerchant,
     admin: enUSAdmin,
+    homepage: enUSHomepage,
   },
   'zh-TW': {
     common: zhTWCommon,
@@ -29,6 +32,7 @@ const resources = {
     client: zhTWClient,
     merchant: zhTWMerchant,
     admin: zhTWAdmin,
+    homepage: zhTWHomepage,
   },
 }
 
@@ -40,7 +44,7 @@ i18n
     fallbackLng: 'en-US',
     supportedLngs: ['en-US', 'zh-TW'],
     defaultNS: 'common',
-    ns: ['common', 'auth', 'client', 'merchant', 'admin'],
+    ns: ['common', 'auth', 'client', 'merchant', 'admin', 'homepage'],
     interpolation: {
       escapeValue: false,
     },

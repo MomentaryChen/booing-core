@@ -29,7 +29,7 @@
 
 | Item | Owner | Status | Evidence |
 |---|---|---|---|
-| Spec confirmed | pm-agent | done | This file in `doc/specs/progress/` |
+| Spec confirmed | pm-agent | done | This file in `doc/specs/closed/` |
 | Architect alignment completed | architect-agent | done | Same-round planning output |
 | Backend data plan (migration/index/rollback) completed | backend-engineer-agent | done | `backend/src/main/resources/db/manual/seed_manual_baseline.sql` |
 | Implementation delivered | frontend-engineer-agent / backend-engineer-agent | done | Backend de-mock + manual SQL + docs updated |
@@ -66,3 +66,24 @@
 
 - Final reviewer gate: `pass` (no high/critical).
 - PM final adjudication: `done`.
+
+### Round 3 (PM Closeout)
+
+- Doc consistency fix: README and README.zh-TW manual seed steps now match `seed_manual_baseline.sql` current `INPUTS` model (no stale placeholder replacement step).
+- Test baseline fix: `AuthMeApiTest` now provisions its own admin test user and uses email-format login id for merchant-context test user so it no longer depends on removed runtime fallback credentials.
+- Lifecycle transition: spec moved from `doc/specs/progress/` to `doc/specs/closed/`.
+- Final closeout decision: `closed`.
+
+## PM Closeout Note
+
+- Implementation summary:
+  - Runtime demo/mock fallback login path was removed.
+  - Default demo bootstrap behavior is no longer enabled by default.
+  - Manual idempotent baseline SQL seed flow is the single supported path for demo merchant/client data.
+  - English and zh-TW README instructions are aligned with current SQL script behavior.
+- Test/validation evidence:
+  - Existing target test pack from Round 1 passed: `DevUsersFallbackProfileGuardTest`, `AuthMeApiTest`, `ApiNamespaceGovernanceTest`, `OpenApiContractDriftTest`.
+  - Re-validated in closeout round: `mvn "-Dtest=DevUsersFallbackProfileGuardTest,AuthMeApiTest,ApiNamespaceGovernanceTest,OpenApiContractDriftTest" test` -> `BUILD SUCCESS`.
+  - Closeout round additionally verified doc/script consistency and retained acceptance criteria mapping.
+- Unresolved follow-ups:
+  - None for this scope.

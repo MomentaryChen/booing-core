@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { ToastAction } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/use-toast'
 import { useAuthStore } from '@/shared/stores/authStore'
 import {
   createMerchantAvailabilityException,
@@ -38,6 +40,7 @@ export function SchedulePage() {
   const [newExceptionDate, setNewExceptionDate] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const { toast } = useToast()
 
   const loadSchedule = useCallback(async () => {
     if (!merchantId) return
@@ -97,9 +100,27 @@ export function SchedulePage() {
         .filter((d) => d.enabled)
         .map((d) => ({ dayOfWeek: d.apiDay, startTime: d.start, endTime: d.end }))
       await putMerchantBusinessHours(merchantId, payload)
+      toast({
+        title: t('common:status.success'),
+        description: t('schedule.workingHours'),
+      })
       await loadSchedule()
     } catch (e) {
-      setError(isMerchantPortalApiError(e) ? e.message : t('common:errors.generic'))
+      const message = isMerchantPortalApiError(e) ? e.message : t('common:errors.generic')
+      setError(message)
+      toast({
+        variant: 'destructive',
+        title: t('common:errors.generic'),
+        description: message,
+        action: (
+          <ToastAction
+            altText={t('common:actions.retry', { defaultValue: 'Retry' })}
+            onClick={() => void handleSaveHours()}
+          >
+            {t('common:actions.retry', { defaultValue: 'Retry' })}
+          </ToastAction>
+        ),
+      })
     }
   }
 
@@ -114,9 +135,19 @@ export function SchedulePage() {
         reason: 'holiday',
       })
       setNewExceptionDate('')
+      toast({
+        title: t('common:status.success'),
+        description: t('schedule.addException'),
+      })
       await loadSchedule()
     } catch (e) {
-      setError(isMerchantPortalApiError(e) ? e.message : t('common:errors.generic'))
+      const message = isMerchantPortalApiError(e) ? e.message : t('common:errors.generic')
+      setError(message)
+      toast({
+        variant: 'destructive',
+        title: t('common:errors.generic'),
+        description: message,
+      })
     }
   }
 
@@ -125,9 +156,19 @@ export function SchedulePage() {
     setError('')
     try {
       await deleteMerchantAvailabilityException(merchantId, exceptionId)
+      toast({
+        title: t('common:status.success'),
+        description: t('common:actions.delete'),
+      })
       await loadSchedule()
     } catch (e) {
-      setError(isMerchantPortalApiError(e) ? e.message : t('common:errors.generic'))
+      const message = isMerchantPortalApiError(e) ? e.message : t('common:errors.generic')
+      setError(message)
+      toast({
+        variant: 'destructive',
+        title: t('common:errors.generic'),
+        description: message,
+      })
     }
   }
 

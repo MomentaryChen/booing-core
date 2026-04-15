@@ -1,0 +1,120 @@
+{
+  "sections": {
+    "nav": {
+      "brand": "Booking Core",
+      "linkFeatures": "產品功能",
+      "linkSolutions": "流程",
+      "linkFaq": "常見問題",
+      "linkContact": "聯絡我們",
+      "ctaLogin": "登入",
+      "ctaStart": "免費開始",
+      "tenantLabel": "租戶"
+    },
+    "hero": {
+      "title": "規格驅動的多租戶預約平台",
+      "subtitle": "一次配置資源、時段與策略，服務多產業場景，而不把流程寫死在單一業種程式碼裡。",
+      "primaryCta": "免費開始",
+      "secondaryCta": "觀看 Demo",
+      "statusNote": "系統僅提供流程自動化，最終預約確認權限由商戶配置決定。",
+      "mockDisclaimer": "時段由規則與例外計算—此卡片僅為示意，非即時可用性。",
+      "previewTitle": "Resource／Slot 示意預覽",
+      "mockTenantKeyLabel": "tenant_id",
+      "tnt_a": {
+        "title": "租戶 A — Resource／Slot 排程",
+        "subtitle": "同一套平台原語，租戶專屬敘事，供展示與 QA 驗證。",
+        "primaryCta": "免費開始",
+        "secondaryCta": "觀看 Demo",
+        "statusNote": "系統僅提供流程自動化，最終預約確認權限由商戶配置決定。",
+        "mockDisclaimer": "時段由規則與例外計算—此卡片僅為示意，非即時可用性。",
+        "previewTitle": "Resource／Slot 示意預覽",
+        "mockTenantKeyLabel": "tenant_id"
+      },
+      "tnt_b": {
+        "title": "租戶 B — 中性預約管線",
+        "subtitle": "展示租戶隔離的首頁內容與 SEO。",
+        "primaryCta": "免費開始",
+        "secondaryCta": "觀看 Demo",
+        "statusNote": "系統僅提供流程自動化，最終預約確認權限由商戶配置決定。",
+        "mockDisclaimer": "時段由規則與例外計算—此卡片僅為示意，非即時可用性。",
+        "previewTitle": "Resource／Slot 示意預覽",
+        "mockTenantKeyLabel": "tenant_id"
+      }
+    },
+    "features": {
+      "title": "核心能力",
+      "intro": "可組合規則、策略、時段計算與協作流程，並以共通語彙描述。",
+      "c1t": "可配置規則",
+      "c1b": "以資料與策略表達政策，避免散落的一次性條件式。",
+      "c2t": "可擴充策略",
+      "c2b": "依資源類型掛載驗證與定價行為。",
+      "c3t": "時段引擎",
+      "c3b": "由營業時間與例外事件計算可用時段，而非預先展開每分鐘。",
+      "c4t": "跨角色流程",
+      "c4b": "客戶、商家與營運共用同一套生命週期與清楚轉移。"
+    },
+    "process": {
+      "title": "運作方式",
+      "notice": "實際狀態依租戶規則與資源策略。",
+      "s1t": "註冊商戶",
+      "s1b": "建立租戶空間並邀請營運角色。",
+      "s2t": "定義資源與規則",
+      "s2b": "建模可預約實體、營業時段、例外與策略掛鉤。",
+      "s3t": "發佈預約連結",
+      "s3b": "分享店面或嵌入流程—客戶選擇的時段必須符合你的政策。",
+      "s4t": "自動化管理",
+      "s4b": "追蹤利用率並演進規則，無需改寫核心管線。"
+    },
+    "use_cases": {
+      "title": "可建模的資源類型",
+      "intro": "範例橫跨不同場域，但共用同一套 Resource／Slot 管線。",
+      "tab1": "課程",
+      "tab2": "場地",
+      "tab3": "顧問",
+      "tab4": "設備",
+      "u1t": "課程／場次",
+      "u1b": "週期性開課、多人名額上限，以及講師或教室 metadata。",
+      "u2t": "場地／空間",
+      "u2b": "空間分配、設備清單與黑窗時段。",
+      "u3t": "顧問／諮詢",
+      "u3b": "一對一時段、技能 metadata 與政策一致的可用時段。",
+      "u4t": "設備",
+      "u4b": "庫存、借還邏輯與維護驅動的例外。"
+    },
+    "faq": {
+      "title": "常見問題",
+      "q1": "導入需要多久？",
+      "a1": "視目錄規模與規則複雜度而定；建議先以預設起步再迭代。",
+      "q2": "租戶資料在技術上如何隔離？",
+      "a2": "設定、SEO 與前端快取鍵皆含 tenant／locale／variant。API 禁止跨租戶內容回退，避免內容污染。",
+      "q3": "是否包含費用方案？",
+      "a3": "本頁說明能力；商務條件依部署約定。",
+      "q4": "平台會自動確認每一筆預約嗎？",
+      "a4": "沒有全域保證。確認屬於狀態轉移，由各租戶規則、策略與人工介入共同決定—與正式預約引擎一致。"
+    },
+    "cta": {
+      "title": "準備好開始經營您的預約生意了嗎？",
+      "body": "開啟商家後台配置資源，或先從客戶端體驗瀏覽。",
+      "primary": "客戶端瀏覽",
+      "secondary": "商家登入"
+    },
+    "footer": {
+      "col1Title": "產品",
+      "col1a": "能力總覽",
+      "col1b": "安全與隔離",
+      "col1c": "路線圖",
+      "col2Title": "開發者",
+      "col2a": "API 概觀",
+      "col2b": "Resource／Slot 模型",
+      "col2c": "Webhooks（規劃中）",
+      "col3Title": "法務",
+      "col3a": "隱私權",
+      "col3b": "條款",
+      "col3c": "DPA（聯絡我們）",
+      "col4Title": "公司",
+      "col4a": "聯絡",
+      "col4b": "系統狀態",
+      "col4c": "徵才",
+      "rights": "版權所有。"
+    }
+  }
+}

@@ -12,6 +12,27 @@
     "categories": {
       "title": "依類別瀏覽"
     },
+    "discovery": {
+      "title": "依預約型態探索",
+      "types": {
+        "service": {
+          "title": "服務型預約",
+          "subtitle": "依人員與時長進行預約"
+        },
+        "space": {
+          "title": "空間型預約",
+          "subtitle": "預約球場、會議室與座位"
+        },
+        "class": {
+          "title": "課程型預約",
+          "subtitle": "預約固定場次活動"
+        },
+        "nearby": {
+          "title": "附近今日可約",
+          "subtitle": "快速找到今日可預約商戶"
+        }
+      }
+    },
     "dynamic": {
       "merchantsCount": "{{count}} 個商家",
       "categories": {
@@ -60,6 +81,38 @@
   },
   "search": {
     "title": "尋找服務",
+    "filterBar": {
+      "title": "智能篩選列",
+      "clear": "清除全部"
+    },
+    "resourceType": {
+      "all": "全部類型",
+      "service": "服務型",
+      "space": "空間型",
+      "class": "課程型"
+    },
+    "availability": {
+      "all": "全部時段",
+      "today": "今日可約"
+    },
+    "availabilityLabels": {
+      "available": "今日可約",
+      "limited": "名額有限",
+      "unavailable": "今日額滿",
+      "stale": "可用性更新中"
+    },
+    "feed": {
+      "fastestSlot": "最快可預約時段",
+      "remainingSpaces": "剩餘 {{count}} 個空間",
+      "remainingSeats": "剩餘 {{count}} 個名額"
+    },
+    "mapHint": "地理型商戶可切換地圖模式探索。",
+    "discoveryMode": "全行業通用探索模式",
+    "pagination": {
+      "prev": "上一頁",
+      "next": "下一頁",
+      "page": "第 {{page}} 頁"
+    },
     "placeholder": "搜尋服務...",
     "filters": {
       "category": "類別",
@@ -90,6 +143,24 @@
     }
   },
   "booking": {
+    "mode": {
+      "label": "預約模式",
+      "time": "選時間",
+      "resourceTime": "選資源 + 時間",
+      "session": "選固定場次",
+      "hint": {
+        "time": "直接選擇可用時段完成預約。",
+        "resource_time": "選擇時段並帶入指定資源偏好。",
+        "session": "選擇固定活動場次進行預約。"
+      }
+    },
+    "guest": {
+      "enable": "訪客代約",
+      "name": "訪客姓名",
+      "phone": "訪客電話",
+      "email": "訪客 Email（選填）",
+      "required": "訪客姓名與電話為必填。"
+    },
     "title": "預約服務",
     "invalidResource": "資源連結無效。",
     "resourceNotFound": "找不到可預約的資源。",
@@ -104,6 +175,7 @@
     "confirm": "確認預約",
     "success": "預約成功！",
     "noSlots": "此日期沒有可用時段",
+    "conflict": "該時段已被預約或暫不可用，請改選其他時間。",
     "resourceFallbackName": "資源 #{{id}}",
     "serviceImage": "服務圖片",
     "durationMinutes": "{{count}} 分鐘"
@@ -120,6 +192,7 @@
       "subtitle": "開始探索並預約您的第一個服務",
       "cta": "尋找服務"
     },
+    "emptyPage": "此頁沒有預約。請使用分頁或跳至其他頁。",
     "actions": {
       "view": "查看詳情",
       "cancel": "取消預約",
@@ -129,7 +202,9 @@
     "errors": {
       "signInRequired": "請先登入以查看您的預約。",
       "forbidden": "您沒有權限存取此頁面。",
-      "loadFailed": "無法載入預約資料。"
+      "loadFailed": "無法載入預約資料。",
+      "cancelFailed": "取消預約失敗，請稍後再試。",
+      "cancelConflict": "此預約目前無法取消，請重新整理後再試。"
     }
   },
   "profile": {
@@ -184,7 +259,9 @@
       "newPasswordPlaceholder": "輸入新密碼",
       "confirmPassword": "確認新密碼",
       "confirmPasswordPlaceholder": "再次輸入新密碼",
-      "updatePassword": "更新密碼"
+      "updatePassword": "更新密碼",
+      "passwordMismatch": "新密碼與確認密碼不一致。",
+      "passwordUpdated": "密碼更新成功。"
     }
   }
 }

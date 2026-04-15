@@ -21,6 +21,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuthStore } from '@/shared/stores/authStore'
+import { ToastAction } from '@/components/ui/toast'
+import { useToast } from '@/components/ui/use-toast'
 import {
   fetchMerchantBookings,
   isMerchantBookingsApiError,
@@ -52,6 +54,7 @@ function formatDateTime(iso: string): { date: string; time: string } {
 
 export function BookingsPage() {
   const { t } = useTranslation(['merchant', 'common'])
+  const { toast } = useToast()
   const merchantId = Number(useAuthStore((s) => s.user?.tenantId))
   const [bookings, setBookings] = useState<MerchantBookingRowDto[]>([])
   const [loading, setLoading] = useState(true)
@@ -104,9 +107,24 @@ export function BookingsPage() {
     setActionError('')
     try {
       await putMerchantBookingStatus(merchantId, bookingId, status)
+      toast({ title: t('common:status.success'), description: t('bookings.details.status') })
       await reload()
     } catch (e) {
-      setActionError(isMerchantBookingsApiError(e) ? e.message : t('common:errors.generic'))
+      const message = isMerchantBookingsApiError(e) ? e.message : t('common:errors.generic')
+      setActionError(message)
+      toast({
+        variant: 'destructive',
+        title: t('common:errors.generic'),
+        description: message,
+        action: (
+          <ToastAction
+            altText={t('common:actions.retry', { defaultValue: 'Retry' })}
+            onClick={() => void runTransition(bookingId, status)}
+          >
+            {t('common:actions.retry', { defaultValue: 'Retry' })}
+          </ToastAction>
+        ),
+      })
     }
   }
 

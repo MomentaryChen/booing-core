@@ -18,9 +18,15 @@
     "vsLastMonth": "vs last month"
   },
   "resources": {
-    "title": "Resources",
+    "title": "Service & Resource",
     "create": "Add Resource",
     "search": "Search resources...",
+    "resourceToggle": {
+      "label": "Enable Resource Management",
+      "needService": "Create at least one service before managing resources.",
+      "enabledDescription": "Resource management is enabled. You can create and manage bookable resources.",
+      "disabledDescription": "Resource management is disabled. Turn it on to view the resource table."
+    },
     "filters": {
       "status": "Status",
       "category": "Category"
@@ -132,11 +138,91 @@
     "business": {
       "name": "Business Name",
       "description": "Description",
+      "logo": "Business Logo",
+      "uploadLogo": "Upload Logo",
+      "removeLogo": "Remove Logo",
+      "logoHint": "Upload an image and it will be stored in the required format automatically.",
+      "logoPreviewAlt": "Business logo preview",
+      "logoOnlyImage": "Please select an image file.",
+      "logoUploadFailed": "Failed to upload logo. Please try again.",
       "address": "Address",
       "phone": "Phone",
       "email": "Email",
       "website": "Website",
       "descriptionText": "Manage your business information visible to customers"
+    },
+    "layout": {
+      "subtitle": "Organized by area, with a live customer preview on the right.",
+      "dimA": "General account",
+      "dimB": "Financials & operations",
+      "dimC": "Security & alerts",
+      "dimD": "Advanced",
+      "storeProfile": "Store profile",
+      "contactInfo": "Contact info",
+      "businessHours": "Business hours",
+      "payments": "Payments",
+      "tax": "Tax & billing",
+      "delivery": "Delivery",
+      "staff": "Staff management",
+      "notifications": "Notifications",
+      "theme": "Theme",
+      "integrations": "Integrations",
+      "stickyHint": "Save to apply changes. Business hours require at least one enabled day to sync.",
+      "livePreview": "Live preview",
+      "logoPlaceholder": "Logo",
+      "previewStoreFallback": "Your store",
+      "previewDescriptionFallback": "Customers will see your description here."
+    },
+    "storeProfile": {
+      "description": "Name, logo, description, and category shape the first impression.",
+      "category": "Store category",
+      "categoryPlaceholder": "e.g. Beauty, Wellness"
+    },
+    "contact": {
+      "description": "Support channels and address. Address can open a map link.",
+      "line": "Official LINE / chat link",
+      "website": "Website",
+      "openMaps": "Open in Maps",
+      "mapsHint": "Enter an address to generate a map link."
+    },
+    "hours": {
+      "description": "Weekly hours and special closures.",
+      "exceptionsTitle": "Exceptions & holidays",
+      "addException": "Add exception day",
+      "saveHint": "Exceptions save immediately; weekly hours sync when you press Save below (you can disable all days to clear hours)."
+    },
+    "financials": {
+      "connectDisabled": "Payment connect is not available yet; button is preview-only.",
+      "paymentsEmptyTitle": "Payments not connected",
+      "paymentsEmptyBody": "Connect a payment provider or add payout details so customers can pay.",
+      "taxDescription": "Tax ID, invoicing, and tax rate configuration.",
+      "taxEmptyTitle": "Tax & invoicing not configured",
+      "taxEmptyBody": "This will ship in a future release—keep your tax ID and invoicing needs documented.",
+      "deliveryDescription": "Delivery radius, fees, and pickup rules.",
+      "deliveryEmptyTitle": "Delivery not configured",
+      "deliveryEmptyBody": "If you offer delivery, you will be able to define zones and fee templates here (coming soon)."
+    },
+    "security": {
+      "staffDescription": "Admins and staff roles & permissions.",
+      "staffEmptyTitle": "Go to team management",
+      "staffEmptyBody": "Add members, assign roles, and maintain permissions on the Teams page.",
+      "goTeams": "Open teams"
+    },
+    "advanced": {
+      "themeDescription": "Theme preset and color, plus announcement text as a storefront banner.",
+      "presets": {
+        "minimal": "Minimal",
+        "ocean": "Ocean",
+        "warm": "Warm",
+        "contrast": "Contrast"
+      },
+      "themePreset": "Theme preset",
+      "themeColor": "Theme color",
+      "banner": "Announcement / banner text",
+      "integrationsDescription": "Webhooks and third-party integrations.",
+      "integrationsEmptyTitle": "Integrations not configured",
+      "integrationsEmptyBody": "Webhooks and integrations will be available in a future release.",
+      "webhookUrl": "Webhook URL (preview)"
     },
     "payment": {
       "description": "Configure payment methods and billing settings",
@@ -153,6 +239,7 @@
       }
     },
     "notifications": {
+      "localHint": "These toggles are saved with your merchant customization on the server; actual push/email delivery still depends on the notifications pipeline.",
       "description": "Configure notification preferences",
       "newBooking": {
         "title": "New Booking Alerts",
@@ -177,7 +264,30 @@
     "description": "Manage merchant teams and member assignments.",
     "actions": {
       "createTeam": "Create Team",
-      "addMember": "Add Member"
+      "addMember": "Add Member",
+      "ownerOnly": "Only the merchant owner can create teams or assign members."
+    },
+    "dialog": {
+      "create": {
+        "title": "Create team",
+        "description": "Teams group staff for scheduling. Choose a short unique code (letters, numbers, hyphen).",
+        "name": "Team name",
+        "code": "Team code",
+        "submit": "Create",
+        "validation": "Name and code are required.",
+        "genericError": "Could not create the team."
+      },
+      "add": {
+        "title": "Add team member",
+        "description": "The user must already exist and have an active membership for this merchant (e.g. accepted an invite). Enter their platform user id.",
+        "team": "Team",
+        "userId": "Platform user id",
+        "userIdPlaceholder": "e.g. 12",
+        "role": "Role label",
+        "submit": "Add member",
+        "noTeam": "Create a team first, then add members.",
+        "genericError": "Could not add the member."
+      }
     },
     "guard": {
       "owner": "Owner access",

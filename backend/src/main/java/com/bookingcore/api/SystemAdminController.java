@@ -1,5 +1,6 @@
 package com.bookingcore.api;
 
+import java.util.UUID;
 import com.bookingcore.api.ApiDtos.DomainTemplateRequest;
 import com.bookingcore.api.ApiDtos.MerchantLimitRequest;
 import com.bookingcore.api.ApiDtos.MerchantStatusRequest;
@@ -104,7 +105,7 @@ public class SystemAdminController {
 
   @GetMapping("/tenants/{tenantId}/merchants/{merchantId}/bookings")
   @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.registry.manage')")
-  public List<Booking> adminTenantMerchantBookings(@PathVariable Long tenantId, @PathVariable Long merchantId) {
+  public List<Booking> adminTenantMerchantBookings(@PathVariable UUID tenantId, @PathVariable UUID merchantId) {
     if (!tenantId.equals(merchantId)) {
       throw new ApiException("Tenant scope mismatch", HttpStatus.BAD_REQUEST);
     }
@@ -115,8 +116,8 @@ public class SystemAdminController {
   @PostMapping("/tenants/{tenantId}/bookings/{bookingId}/transitions")
   @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.registry.manage')")
   public Map<String, Object> adminTransitionBookingForTenant(
-      @PathVariable Long tenantId,
-      @PathVariable Long bookingId,
+      @PathVariable UUID tenantId,
+      @PathVariable UUID bookingId,
       @Valid @RequestBody SystemBookingTransitionRequest request) {
     if (!tenantId.equals(request.merchantId())) {
       throw new ApiException("Tenant scope mismatch", HttpStatus.BAD_REQUEST);
@@ -154,7 +155,7 @@ public class SystemAdminController {
 
   @PutMapping("/merchants/{merchantId}/status")
   @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'merchant.registry.manage')")
-  public Merchant adminUpdateMerchantStatus(@PathVariable Long merchantId, @RequestBody MerchantStatusRequest request) {
+  public Merchant adminUpdateMerchantStatus(@PathVariable UUID merchantId, @RequestBody MerchantStatusRequest request) {
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     merchant.setActive(request.active());
     Merchant saved = merchantRepository.save(merchant);
@@ -165,7 +166,7 @@ public class SystemAdminController {
 
   @PutMapping("/merchants/{merchantId}/service-limit")
   @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.settings.write')")
-  public Merchant adminUpdateServiceLimit(@PathVariable Long merchantId, @RequestBody MerchantLimitRequest request) {
+  public Merchant adminUpdateServiceLimit(@PathVariable UUID merchantId, @RequestBody MerchantLimitRequest request) {
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     merchant.setServiceLimit(request.serviceLimit());
     Merchant saved = merchantRepository.save(merchant);
@@ -354,21 +355,21 @@ public class SystemAdminController {
 
   @GetMapping("/users/{userId}")
   @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.users.read')")
-  public SystemUserDetailResponse adminGetUserDetail(@PathVariable Long userId) {
+  public SystemUserDetailResponse adminGetUserDetail(@PathVariable UUID userId) {
     return systemUserManagementService.getUserDetail(userId);
   }
 
   @PutMapping("/users/{userId}/status")
   @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.users.write')")
   public SystemUserDetailResponse adminUpdateUserStatus(
-      @PathVariable Long userId, @Valid @RequestBody SystemUserStatusUpdateRequest request) {
+      @PathVariable UUID userId, @Valid @RequestBody SystemUserStatusUpdateRequest request) {
     return systemUserManagementService.updateUserStatus(userId, request);
   }
 
   @PutMapping("/users/{userId}/rbac-bindings")
   @PreAuthorize("@permissionAuthorizer.hasPermission(authentication, 'system.users.write')")
   public SystemUserDetailResponse adminReplaceUserBindings(
-      @PathVariable Long userId, @Valid @RequestBody SystemUserBindingsUpdateRequest request) {
+      @PathVariable UUID userId, @Valid @RequestBody SystemUserBindingsUpdateRequest request) {
     return systemUserManagementService.replaceBindings(userId, request);
   }
 

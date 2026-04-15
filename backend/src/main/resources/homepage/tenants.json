@@ -1,0 +1,115 @@
+{
+  "tenants": {
+    "default": {
+      "primaryLocale": "en-US",
+      "sections": [
+        { "id": "nav", "enabled": true, "order": 1, "contentKey": "homepage.sections.nav" },
+        { "id": "hero", "enabled": true, "order": 2, "contentKey": "homepage.sections.hero" },
+        { "id": "features", "enabled": true, "order": 3, "contentKey": "homepage.sections.features" },
+        { "id": "process", "enabled": true, "order": 4, "contentKey": "homepage.sections.process" },
+        { "id": "use_cases", "enabled": true, "order": 5, "contentKey": "homepage.sections.use_cases" },
+        { "id": "faq", "enabled": true, "order": 6, "contentKey": "homepage.sections.faq" },
+        { "id": "cta", "enabled": true, "order": 7, "contentKey": "homepage.sections.cta" },
+        { "id": "footer", "enabled": true, "order": 8, "contentKey": "homepage.sections.footer" }
+      ],
+      "seo": {
+        "zh-TW": {
+          "title": "Booking Core — 可配置預約與時段引擎",
+          "description": "以 Resource 與 Slot 抽象管理可預約實體與時間容量，支援多產業擴充。",
+          "canonicalUrl": "https://bookingcore.local/",
+          "robots": "index,follow",
+          "structuredData": {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Booking Core"
+          }
+        },
+        "en-US": {
+          "title": "Booking Core — Configurable booking platform",
+          "description": "Manage bookable resources and slot capacity with Resource/Slot abstractions across industries.",
+          "canonicalUrl": "https://bookingcore.local/en/",
+          "robots": "index,follow",
+          "structuredData": {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Booking Core"
+          }
+        }
+      }
+    },
+    "tnt_a": {
+      "primaryLocale": "zh-TW",
+      "sections": [
+        { "id": "nav", "enabled": true, "order": 1, "contentKey": "homepage.sections.nav" },
+        { "id": "hero", "enabled": true, "order": 2, "contentKey": "homepage.sections.hero.tnt_a" },
+        { "id": "features", "enabled": true, "order": 3, "contentKey": "homepage.sections.features" },
+        { "id": "process", "enabled": true, "order": 4, "contentKey": "homepage.sections.process" },
+        { "id": "use_cases", "enabled": true, "order": 5, "contentKey": "homepage.sections.use_cases" },
+        { "id": "faq", "enabled": true, "order": 6, "contentKey": "homepage.sections.faq" },
+        { "id": "cta", "enabled": true, "order": 7, "contentKey": "homepage.sections.cta" },
+        { "id": "footer", "enabled": true, "order": 8, "contentKey": "homepage.sections.footer" }
+      ],
+      "seo": {
+        "zh-TW": {
+          "title": "Tenant A — Resource/Slot 預約",
+          "description": "租戶 A 專屬首頁 SEO（中文）。",
+          "canonicalUrl": "https://tenant-a.bookingcore.local/",
+          "robots": "index,follow",
+          "structuredData": {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Tenant A"
+          }
+        },
+        "en-US": {
+          "title": "Tenant A — Scheduling",
+          "description": "Tenant A homepage SEO (English).",
+          "canonicalUrl": "https://tenant-a.bookingcore.local/en/",
+          "robots": "index,follow",
+          "structuredData": {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Tenant A"
+          }
+        }
+      }
+    },
+    "tnt_b": {
+      "primaryLocale": "en-US",
+      "sections": [
+        { "id": "nav", "enabled": true, "order": 1, "contentKey": "homepage.sections.nav" },
+        { "id": "hero", "enabled": true, "order": 2, "contentKey": "homepage.sections.hero.tnt_b" },
+        { "id": "features", "enabled": true, "order": 3, "contentKey": "homepage.sections.features" },
+        { "id": "process", "enabled": true, "order": 4, "contentKey": "homepage.sections.process" },
+        { "id": "use_cases", "enabled": true, "order": 5, "contentKey": "homepage.sections.use_cases" },
+        { "id": "faq", "enabled": true, "order": 6, "contentKey": "homepage.sections.faq" },
+        { "id": "cta", "enabled": true, "order": 7, "contentKey": "homepage.sections.cta" },
+        { "id": "footer", "enabled": true, "order": 8, "contentKey": "homepage.sections.footer" }
+      ],
+      "seo": {
+        "en-US": {
+          "title": "Tenant B — Different brand",
+          "description": "Tenant B uses a distinct SEO bundle to prove tenant isolation.",
+          "canonicalUrl": "https://tenant-b.bookingcore.local/",
+          "robots": "index,follow",
+          "structuredData": {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Tenant B"
+          }
+        },
+        "zh-TW": {
+          "title": "Tenant B — 另一品牌",
+          "description": "租戶 B 中文 SEO，與 tnt_a 不同。",
+          "canonicalUrl": "https://tenant-b.bookingcore.local/zh/",
+          "robots": "index,follow",
+          "structuredData": {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Tenant B"
+          }
+        }
+      }
+    }
+  }
+}

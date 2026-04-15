@@ -113,7 +113,11 @@ export async function createMerchantTeam(
 ): Promise<void> {
   await requestJson<BackendTeamSummary>(merchantTeamEndpoints.createTeam({ merchantId }), {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      name: payload.name.trim(),
+      code: payload.code.trim(),
+      status: payload.status ?? 'ACTIVE',
+    }),
   })
 }
 
@@ -154,9 +158,17 @@ export async function addMerchantTeamMember(
   teamId: string,
   payload: MerchantTeamMemberAddRequest
 ): Promise<void> {
+  const userId = Number(payload.userId)
+  if (!Number.isFinite(userId) || userId <= 0) {
+    throw new MerchantTeamApiError(400, 'Invalid user id')
+  }
   await requestJson<BackendTeamMemberSummary>(merchantTeamEndpoints.addMember({ merchantId, teamId }), {
     method: 'POST',
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      userId,
+      role: payload.role.trim(),
+      ...(payload.status ? { status: payload.status } : {}),
+    }),
   })
 }
 

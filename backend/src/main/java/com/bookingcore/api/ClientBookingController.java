@@ -1,11 +1,18 @@
 package com.bookingcore.api;
 
+import java.util.UUID;
 import com.bookingcore.api.ApiDtos.AvailabilityResponse;
+import com.bookingcore.api.ApiDtos.ApiEnvelope;
 import com.bookingcore.api.ApiDtos.BookingLockRequest;
 import com.bookingcore.api.ApiDtos.BookingLockResponse;
 import com.bookingcore.api.ApiDtos.ClientBookingCreateRequest;
 import com.bookingcore.api.ApiDtos.ClientBookingCreateResponse;
+import com.bookingcore.api.ApiDtos.ClientBookingCancelRequest;
 import com.bookingcore.api.ApiDtos.ClientBookingListResponse;
+import com.bookingcore.api.ApiDtos.ClientBookingRescheduleRequest;
+import com.bookingcore.api.ApiDtos.ClientBookingStatusResponse;
+import com.bookingcore.api.ApiDtos.ClientCatalogResourceSummary;
+import com.bookingcore.api.ApiDtos.ClientCategorySummary;
 import com.bookingcore.api.ApiDtos.ClientJoinMerchantByCodeRequest;
 import com.bookingcore.api.ApiDtos.ClientJoinedMerchantSummary;
 import com.bookingcore.api.ApiDtos.CustomizationSummary;
@@ -13,13 +20,18 @@ import com.bookingcore.api.ApiDtos.ClientMerchantCardSummary;
 import com.bookingcore.api.ApiDtos.ClientMerchantResponse;
 import com.bookingcore.api.ApiDtos.ClientProfileResponse;
 import com.bookingcore.api.ApiDtos.ClientProfileUpdateRequest;
+import com.bookingcore.api.ApiDtos.ClientPasswordUpdateRequest;
+import com.bookingcore.api.ApiDtos.ClientPasswordUpdateResponse;
+import com.bookingcore.api.ApiDtos.ClientProfilePreferencesResponse;
+import com.bookingcore.api.ApiDtos.ClientProfilePreferencesUpdateRequest;
+import com.bookingcore.api.ApiDtos.ClientResourceDetailResponse;
 import com.bookingcore.api.ApiDtos.ClientResourceAvailabilityResponse;
+import com.bookingcore.api.ApiDtos.ResourceOperationalStatus;
 import com.bookingcore.api.ApiDtos.DynamicFieldSummary;
 import com.bookingcore.api.ApiDtos.MerchantProfileSummary;
 import com.bookingcore.api.ApiDtos.MerchantSummary;
 import com.bookingcore.api.ApiDtos.PublicBookingRequest;
 import com.bookingcore.api.ApiDtos.PublicBookingResponse;
-import com.bookingcore.api.ApiDtos.ResourceItemSummary;
 import com.bookingcore.api.ApiDtos.ServiceItemSummary;
 import com.bookingcore.api.ApiDtos.StorefrontResponse;
 import com.bookingcore.api.support.ResourceItemMediaResolver;
@@ -43,7 +55,9 @@ import com.bookingcore.modules.service.ServiceItem;
 import com.bookingcore.modules.service.ServiceItemRepository;
 import com.bookingcore.service.BookingCommandService;
 import com.bookingcore.service.ClientBookingService;
+import com.bookingcore.service.ClientBookingService.ClientCatalogResourcesPage;
 import com.bookingcore.service.ClientAvailabilityService;
+import com.bookingcore.service.ClientProfileService;
 import com.bookingcore.service.MerchantAccessService;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -58,6 +72,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -84,6 +99,7 @@ public class ClientBookingController {
   private final ClientAvailabilityService clientAvailabilityService;
   private final MerchantAccessService merchantAccessService;
   private final ClientBookingService clientBookingService;
+  private final ClientProfileService clientProfileService;
   private final ResourceItemMediaResolver resourceItemMediaResolver;
 
   public ClientBookingController(
@@ -99,6 +115,7 @@ public class ClientBookingController {
       ClientAvailabilityService clientAvailabilityService,
       MerchantAccessService merchantAccessService,
       ClientBookingService clientBookingService,
+      ClientProfileService clientProfileService,
       ResourceItemMediaResolver resourceItemMediaResolver) {
     this.merchantRepository = merchantRepository;
     this.profileRepository = profileRepository;
@@ -112,12 +129,13 @@ public class ClientBookingController {
     this.clientAvailabilityService = clientAvailabilityService;
     this.merchantAccessService = merchantAccessService;
     this.clientBookingService = clientBookingService;
+    this.clientProfileService = clientProfileService;
     this.resourceItemMediaResolver = resourceItemMediaResolver;
   }
 
   @GetMapping("/merchants")
   public java.util.List<ClientMerchantCardSummary> listVisibleMerchants() {
-    Long userId =
+    UUID userId =
         java.util.Optional.ofNullable(merchantAccessService.currentPlatformUserOrNull())
             .map(u -> u.getId())
             .orElse(null);
@@ -206,10 +224,20 @@ public class ClientBookingController {
                         s.getDurationMinutes(),
                         s.getPrice(),
                         s.getCategory(),
-                        s.getImageUrl()))
+                        s.getImageUrl(),
+                        Boolean.TRUE.equals(s.getActive()),
+                        0L))
             .toList(),
         resourceItemRepository.findByMerchantId(merchant.getId()).stream()
-            .map(r -> resourceItemMediaResolver.toSummary(r, merchant.getId(), serviceById))
+            .map(
+                r ->
+                    resourceItemMediaResolver.toSummary(
+                        r,
+                        merchant.getId(),
+                        serviceById,
+                        Boolean.TRUE.equals(r.getMaintenance())
+                            ? ResourceOperationalStatus.MAINTENANCE
+                            : ResourceOperationalStatus.ACTIVE))
             .toList(),
         dynamicFieldConfigRepository.findByMerchantId(merchant.getId()).stream()
             .map(f -> new DynamicFieldSummary(f.getId(), f.getLabel(), f.getType(), f.getRequiredField(), f.getOptionsJson()))
@@ -218,9 +246,9 @@ public class ClientBookingController {
 
   @GetMapping("/availability")
   public AvailabilityResponse getClientAvailability(
-      @RequestParam Long merchantId,
-      @RequestParam Long serviceItemId,
-      @RequestParam(required = false) Long resourceId,
+      @RequestParam UUID merchantId,
+      @RequestParam UUID serviceItemId,
+      @RequestParam(required = false) UUID resourceId,
       @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     merchantAccessService.assertClientCanAccessMerchant(merchant);
@@ -229,7 +257,7 @@ public class ClientBookingController {
 
   @GetMapping("/resources/{resourceId}/availability")
   public ClientResourceAvailabilityResponse getResourceAvailability(
-      @PathVariable Long resourceId, @RequestParam String date) {
+      @PathVariable UUID resourceId, @RequestParam String date) {
     if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
       throw new ApiException("Invalid date format, expected YYYY-MM-DD", HttpStatus.BAD_REQUEST);
     }
@@ -255,6 +283,32 @@ public class ClientBookingController {
     return clientAvailabilityService.getResourceAvailability(resourceId, parsedDate);
   }
 
+  @GetMapping("/resources/featured")
+  public java.util.List<ClientCatalogResourceSummary> getFeaturedResources(
+      @RequestParam(defaultValue = "6") int limit) {
+    return clientBookingService.listFeaturedResources(limit);
+  }
+
+  @GetMapping("/categories")
+  public java.util.List<ClientCategorySummary> getClientCategories() {
+    return clientBookingService.listClientCategories();
+  }
+
+  @GetMapping("/resources")
+  public ClientCatalogResourcesPage listClientResources(
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) String category,
+      @RequestParam(defaultValue = "relevance") String sort,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return clientBookingService.listClientResources(q, category, sort, page, size);
+  }
+
+  @GetMapping("/resources/{resourceId}")
+  public ClientResourceDetailResponse getClientResourceDetail(@PathVariable UUID resourceId) {
+    return clientBookingService.getResourceDetail(resourceId);
+  }
+
   @PostMapping("/booking/lock")
   public BookingLockResponse lockBookingSlot(@Valid @RequestBody BookingLockRequest request) {
     Merchant merchant = bookingCommandService.ensureMerchant(request.merchantId());
@@ -274,18 +328,35 @@ public class ClientBookingController {
       @ApiResponse(responseCode = "409", description = "Slot conflict"),
       @ApiResponse(responseCode = "422", description = "Business rule rejected")
   })
-  public ResponseEntity<ClientBookingCreateResponse> createClientBooking(
+  public ResponseEntity<ApiEnvelope<ClientBookingCreateResponse>> createClientBooking(
       @Valid @RequestBody ClientBookingCreateRequest request) {
-    return ResponseEntity.status(HttpStatus.CREATED).body(clientBookingService.createBooking(request));
+    return ResponseEntity
+        .status(HttpStatus.CREATED)
+        .body(ApiDtos.success(clientBookingService.createBooking(request)));
   }
 
   @GetMapping("/bookings")
   @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
-  public ClientBookingListResponse listMyBookings(
+  public ApiEnvelope<ClientBookingListResponse> listMyBookings(
       @RequestParam(defaultValue = "upcoming") String tab,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return clientBookingService.listMyBookings(tab, page, size);
+    return ApiDtos.success(clientBookingService.listMyBookings(tab, page, size));
+  }
+
+  @PatchMapping("/bookings/{bookingId}/cancel")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  public ApiEnvelope<ClientBookingStatusResponse> cancelMyBooking(
+      @PathVariable UUID bookingId, @Valid @RequestBody(required = false) ClientBookingCancelRequest request) {
+    return ApiDtos.success(
+        clientBookingService.cancelMyBooking(bookingId, request == null ? null : request.reason()));
+  }
+
+  @PatchMapping("/bookings/{bookingId}/reschedule")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  public ApiEnvelope<ClientBookingStatusResponse> rescheduleMyBooking(
+      @PathVariable UUID bookingId, @Valid @RequestBody ClientBookingRescheduleRequest request) {
+    return ApiDtos.success(clientBookingService.rescheduleMyBooking(bookingId, request));
   }
 
   @GetMapping("/profile")
@@ -294,7 +365,7 @@ public class ClientBookingController {
     if (auth == null
         || !auth.isAuthenticated()
         || "anonymousUser".equals(String.valueOf(auth.getPrincipal()))) {
-      return new ClientProfileResponse(false, null, null, null);
+      return new ClientProfileResponse(false, null, null, null, null, null, null, null, null);
     }
     String role = auth.getAuthorities().stream()
         .map(GrantedAuthority::getAuthority)
@@ -304,7 +375,7 @@ public class ClientBookingController {
         .orElse(null);
     var platformUser = merchantAccessService.currentPlatformUserOrNull();
     if (platformUser == null) {
-      return new ClientProfileResponse(true, role, String.valueOf(auth.getPrincipal()), null);
+      return new ClientProfileResponse(true, role, String.valueOf(auth.getPrincipal()), null, null, null, null, null, null);
     }
     var profile = clientProfileRepository.findByPlatformUserId(platformUser.getId()).orElse(null);
     String suggestedName =
@@ -312,7 +383,16 @@ public class ClientBookingController {
             ? profile.getDisplayName()
             : platformUser.getUsername();
     String suggestedContact = profile == null ? null : profile.getContactPhone();
-    return new ClientProfileResponse(true, role, suggestedName, suggestedContact);
+    return new ClientProfileResponse(
+        true,
+        role,
+        suggestedName,
+        suggestedContact,
+        profile == null ? null : profile.getLanguage(),
+        profile == null ? null : profile.getTimezone(),
+        profile == null ? null : profile.getCurrency(),
+        profile == null ? null : profile.getEmailNotifications(),
+        profile == null ? null : profile.getSmsNotifications());
   }
 
   @PutMapping("/profile")
@@ -333,12 +413,42 @@ public class ClientBookingController {
                 });
     profile.setDisplayName(trimToNull(request.suggestedName()));
     profile.setContactPhone(trimToNull(request.suggestedContact()));
+    profile.setLanguage(trimToNull(request.language()));
+    profile.setTimezone(trimToNull(request.timezone()));
+    profile.setCurrency(trimToNull(request.currency()));
+    profile.setEmailNotifications(request.emailNotifications());
+    profile.setSmsNotifications(request.smsNotifications());
     ClientProfile saved = clientProfileRepository.save(profile);
     return new ClientProfileResponse(
         true,
         platformUser.getRole().name(),
         saved.getDisplayName() == null ? platformUser.getUsername() : saved.getDisplayName(),
-        saved.getContactPhone());
+        saved.getContactPhone(),
+        saved.getLanguage(),
+        saved.getTimezone(),
+        saved.getCurrency(),
+        saved.getEmailNotifications(),
+        saved.getSmsNotifications());
+  }
+
+  @PatchMapping("/profile/password")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  public ClientPasswordUpdateResponse updateClientPassword(
+      @Valid @RequestBody ClientPasswordUpdateRequest request) {
+    return clientProfileService.updatePassword(request);
+  }
+
+  @GetMapping("/profile/preferences")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  public ClientProfilePreferencesResponse getClientProfilePreferences() {
+    return clientProfileService.getPreferences();
+  }
+
+  @PutMapping("/profile/preferences")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  public ClientProfilePreferencesResponse updateClientProfilePreferences(
+      @Valid @RequestBody ClientProfilePreferencesUpdateRequest request) {
+    return clientProfileService.updatePreferences(request);
   }
 
   private String trimToNull(String value) {
@@ -397,7 +507,9 @@ public class ClientBookingController {
                         s.getDurationMinutes(),
                         s.getPrice(),
                         s.getCategory(),
-                        s.getImageUrl()))
+                        s.getImageUrl(),
+                        Boolean.TRUE.equals(s.getActive()),
+                        0L))
             .toList());
   }
 }

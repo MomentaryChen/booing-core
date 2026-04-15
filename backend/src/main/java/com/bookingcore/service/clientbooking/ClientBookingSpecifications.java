@@ -7,6 +7,7 @@ import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.data.jpa.domain.Specification;
 
 public final class ClientBookingSpecifications {
@@ -14,7 +15,7 @@ public final class ClientBookingSpecifications {
   private ClientBookingSpecifications() {}
 
   /** Tab: upcoming | past | cancelled */
-  public static Specification<Booking> forClientMyBookingsTab(Long platformUserId, String tab) {
+  public static Specification<Booking> forClientMyBookingsTab(UUID platformUserId, String tab) {
     String normalized = tab == null || tab.isBlank() ? "upcoming" : tab.trim().toLowerCase();
     return (root, query, cb) -> {
       List<Predicate> preds = new ArrayList<>();

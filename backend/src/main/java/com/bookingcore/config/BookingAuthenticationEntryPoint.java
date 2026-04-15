@@ -1,10 +1,10 @@
 package com.bookingcore.config;
 
+import com.bookingcore.api.ApiDtos;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -28,6 +28,7 @@ public class BookingAuthenticationEntryPoint implements AuthenticationEntryPoint
     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     response.setCharacterEncoding("UTF-8");
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-    objectMapper.writeValue(response.getOutputStream(), Map.of("message", message));
+    objectMapper.writeValue(
+        response.getOutputStream(), new ApiDtos.ApiEnvelope<>(-1, message, java.util.Map.of("errorCode", "UNAUTHORIZED")));
   }
 }

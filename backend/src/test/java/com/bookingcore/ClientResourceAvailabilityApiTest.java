@@ -67,11 +67,11 @@ class ClientResourceAvailabilityApiTest {
     entityManager.persist(hours);
     entityManager.flush();
 
-    String adminToken = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
+    String clientToken = loginClientUser();
     mockMvc
         .perform(
             get("/api/client/resources/" + resource.getId() + "/availability")
-                .header("Authorization", "Bearer " + adminToken)
+                .header("Authorization", "Bearer " + clientToken)
                 .param("date", date.toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.date").value(date.toString()))
@@ -102,11 +102,11 @@ class ClientResourceAvailabilityApiTest {
     entityManager.persist(resource);
     entityManager.flush();
 
-    String adminToken = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
+    String clientToken = loginClientUser();
     mockMvc
         .perform(
             get("/api/client/resources/" + resource.getId() + "/availability")
-                .header("Authorization", "Bearer " + adminToken)
+                .header("Authorization", "Bearer " + clientToken)
                 .param("date", "2026/04/10"))
         .andExpect(status().isBadRequest());
   }
@@ -138,7 +138,7 @@ class ClientResourceAvailabilityApiTest {
     entityManager.persist(tenantB);
 
     PlatformUser merchantUser = new PlatformUser();
-    merchantUser.setUsername("merchant-cross-" + System.nanoTime());
+    merchantUser.setUsername("merchant-cross-" + System.nanoTime() + "@example.com");
     merchantUser.setPasswordHash(passwordEncoder.encode("secret-pass"));
     merchantUser.setRole(PlatformUserRole.MERCHANT);
     merchantUser.setMerchant(tenantB);
@@ -194,7 +194,7 @@ class ClientResourceAvailabilityApiTest {
     entityManager.persist(resource);
 
     PlatformUser client = new PlatformUser();
-    client.setUsername("client-no-membership-" + System.nanoTime());
+    client.setUsername("client-no-membership-" + System.nanoTime() + "@example.com");
     client.setPasswordHash(passwordEncoder.encode("secret-pass"));
     client.setRole(PlatformUserRole.CLIENT);
     client.setEnabled(true);
@@ -247,7 +247,7 @@ class ClientResourceAvailabilityApiTest {
     entityManager.persist(unrelatedService);
 
     entityManager.flush();
-    resource.setServiceItemsJson("[" + serviceForResource.getId() + "]");
+    resource.setServiceItemsJson("[\"" + serviceForResource.getId() + "\"]");
 
     LocalDate date = LocalDate.now().plusDays(1);
     BusinessHours hours = new BusinessHours();
@@ -268,11 +268,11 @@ class ClientResourceAvailabilityApiTest {
     entityManager.persist(unrelatedBooking);
     entityManager.flush();
 
-    String adminToken = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
+    String clientToken = loginClientUser();
     mockMvc
         .perform(
             get("/api/client/resources/" + resource.getId() + "/availability")
-                .header("Authorization", "Bearer " + adminToken)
+                .header("Authorization", "Bearer " + clientToken)
                 .param("date", date.toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.slots[0].isAvailable").value(true))
@@ -326,14 +326,25 @@ class ClientResourceAvailabilityApiTest {
     entityManager.persist(unrelatedBooking);
     entityManager.flush();
 
-    String adminToken = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
+    String clientToken = loginClientUser();
     mockMvc
         .perform(
             get("/api/client/resources/" + resource.getId() + "/availability")
-                .header("Authorization", "Bearer " + adminToken)
+                .header("Authorization", "Bearer " + clientToken)
                 .param("date", date.toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.slots[0].isAvailable").value(true))
         .andExpect(jsonPath("$.slots[0].capacityRemaining").value(1));
+  }
+
+  private String loginClientUser() throws Exception {
+    PlatformUser client = new PlatformUser();
+    client.setUsername("availability-client-" + System.nanoTime() + "@example.com");
+    client.setPasswordHash(passwordEncoder.encode("secret-pass"));
+    client.setRole(PlatformUserRole.CLIENT);
+    client.setEnabled(true);
+    entityManager.persist(client);
+    entityManager.flush();
+    return TestJwtHelper.login(mockMvc, objectMapper, client.getUsername(), "secret-pass");
   }
 }

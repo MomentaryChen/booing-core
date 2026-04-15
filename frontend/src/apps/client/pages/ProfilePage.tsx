@@ -18,8 +18,11 @@ import {
 import { Separator } from '@/components/ui/separator'
 import {
   fetchClientProfile,
+  fetchClientProfilePreferences,
   isClientProfileApiError,
+  patchClientProfilePassword,
   putClientProfile,
+  putClientProfilePreferences,
 } from '@/shared/lib/clientProfileApi'
 
 export function ProfilePage() {
@@ -32,8 +35,14 @@ export function ProfilePage() {
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [smsNotifications, setSmsNotifications] = useState(false)
   const [saveNotice, setSaveNotice] = useState<string | null>(null)
+  const [securityNotice, setSecurityNotice] = useState<string | null>(null)
   const [loadError, setLoadError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [timezone, setTimezone] = useState('utc+8')
+  const [currency, setCurrency] = useState('usd')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -41,13 +50,31 @@ export function ProfilePage() {
       setLoading(true)
       setLoadError('')
       try {
-        const profile = await fetchClientProfile()
+        const [profile, preferences] = await Promise.all([
+          fetchClientProfile(),
+          fetchClientProfilePreferences(),
+        ])
         if (!mounted) return
         if (profile.suggestedName) {
           setName(profile.suggestedName)
         }
         if (profile.suggestedContact) {
           setPhone(profile.suggestedContact)
+        }
+        if (preferences.language) {
+          setLanguage(preferences.language)
+        }
+        if (preferences.timezone) {
+          setTimezone(preferences.timezone)
+        }
+        if (preferences.currency) {
+          setCurrency(preferences.currency)
+        }
+        if (preferences.notificationPrefs.email != null) {
+          setEmailNotifications(preferences.notificationPrefs.email)
+        }
+        if (preferences.notificationPrefs.sms != null) {
+          setSmsNotifications(preferences.notificationPrefs.sms)
         }
       } catch (e) {
         if (!mounted) return
@@ -78,7 +105,7 @@ export function ProfilePage() {
     i18n.changeLanguage(lang)
   }
 
-  const handleSave = async () => {
+  const handleSavePersonal = async () => {
     setSaveNotice(null)
     setLoadError('')
     try {
@@ -89,6 +116,60 @@ export function ProfilePage() {
       setName(updated.suggestedName ?? name)
       setPhone(updated.suggestedContact ?? phone)
       setSaveNotice(t('common:status.success'))
+    } catch (e) {
+      setLoadError(isClientProfileApiError(e) ? e.message : t('common:errors.generic'))
+    }
+  }
+
+  const handleSavePreferences = async () => {
+    setSaveNotice(null)
+    setLoadError('')
+    try {
+      const updated = await putClientProfilePreferences({
+        language,
+        timezone,
+        currency,
+        notificationPrefs: {
+          email: emailNotifications,
+          sms: smsNotifications,
+        },
+      })
+      setLanguage(updated.language ?? language)
+      setTimezone(updated.timezone ?? timezone)
+      setCurrency(updated.currency ?? currency)
+      if (updated.notificationPrefs.email != null) {
+        setEmailNotifications(updated.notificationPrefs.email)
+      }
+      if (updated.notificationPrefs.sms != null) {
+        setSmsNotifications(updated.notificationPrefs.sms)
+      }
+      setSaveNotice(t('common:status.success'))
+    } catch (e) {
+      setLoadError(isClientProfileApiError(e) ? e.message : t('common:errors.generic'))
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    setSecurityNotice(null)
+    setLoadError('')
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setLoadError(t('common:validation.required'))
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setLoadError(t('profile.security.passwordMismatch'))
+      return
+    }
+    if (newPassword.length < 8) {
+      setLoadError(t('common:validation.minLength', { min: 8 }))
+      return
+    }
+    try {
+      await patchClientProfilePassword({ currentPassword, newPassword })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setSecurityNotice(t('profile.security.passwordUpdated'))
     } catch (e) {
       setLoadError(isClientProfileApiError(e) ? e.message : t('common:errors.generic'))
     }
@@ -158,7 +239,7 @@ export function ProfilePage() {
                   />
                 </div>
               </div>
-              <Button onClick={() => void handleSave()}>{t('common:actions.save')}</Button>
+              <Button onClick={() => void handleSavePersonal()}>{t('common:actions.save')}</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -184,7 +265,7 @@ export function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <Label>{t('profile.preferences.timezone')}</Label>
-                <Select defaultValue="utc-8">
+                <Select value={timezone} onValueChange={setTimezone}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -197,7 +278,7 @@ export function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <Label>{t('profile.preferences.currency')}</Label>
-                <Select defaultValue="usd">
+                <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -208,7 +289,7 @@ export function ProfilePage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={() => void handleSave()}>{t('common:actions.save')}</Button>
+              <Button onClick={() => void handleSavePreferences()}>{t('common:actions.save')}</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -245,7 +326,7 @@ export function ProfilePage() {
                   onCheckedChange={setSmsNotifications}
                 />
               </div>
-              <Button onClick={() => void handleSave()}>{t('common:actions.save')}</Button>
+              <Button onClick={() => void handleSavePreferences()}>{t('common:actions.save')}</Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -259,17 +340,37 @@ export function ProfilePage() {
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label>{t('profile.security.currentPassword')}</Label>
-                <Input type="password" placeholder={t('profile.security.currentPasswordPlaceholder')} />
+                <Input
+                  type="password"
+                  placeholder={t('profile.security.currentPasswordPlaceholder')}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>{t('profile.security.newPassword')}</Label>
-                <Input type="password" placeholder={t('profile.security.newPasswordPlaceholder')} />
+                <Input
+                  type="password"
+                  placeholder={t('profile.security.newPasswordPlaceholder')}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label>{t('profile.security.confirmPassword')}</Label>
-                <Input type="password" placeholder={t('profile.security.confirmPasswordPlaceholder')} />
+                <Input
+                  type="password"
+                  placeholder={t('profile.security.confirmPasswordPlaceholder')}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
               </div>
-              <Button>{t('profile.security.updatePassword')}</Button>
+              {securityNotice ? (
+                <p className="text-sm text-muted-foreground" role="status">
+                  {securityNotice}
+                </p>
+              ) : null}
+              <Button onClick={() => void handleUpdatePassword()}>{t('profile.security.updatePassword')}</Button>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,13 +1,17 @@
 package com.bookingcore.api.support;
 
 import com.bookingcore.api.ApiDtos.ResourceItemSummary;
+import com.bookingcore.api.ApiDtos.ResourceOperationalStatus;
 import com.bookingcore.modules.merchant.ResourceItem;
 import com.bookingcore.modules.service.ServiceItem;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -20,7 +24,11 @@ public class ResourceItemMediaResolver {
     this.objectMapper = objectMapper;
   }
 
-  public ResourceItemSummary toSummary(ResourceItem resource, long merchantId, Map<Long, ServiceItem> serviceById) {
+  public ResourceItemSummary toSummary(
+      ResourceItem resource,
+      UUID merchantId,
+      Map<UUID, ServiceItem> serviceById,
+      ResourceOperationalStatus status) {
     String imageUrl = resolveCoverImageUrl(resource, merchantId, serviceById);
     return new ResourceItemSummary(
         resource.getId(),
@@ -30,11 +38,15 @@ public class ResourceItemMediaResolver {
         resource.getCapacity(),
         resource.getActive(),
         resource.getPrice(),
-        imageUrl);
+        parseUuidArray(resource.getAssignedStaffIdsJson()),
+        resource.getServiceItemsJson(),
+        imageUrl,
+        status,
+        resource.getBusinessHoursJson());
   }
 
-  public Map<Long, ServiceItem> indexById(Iterable<ServiceItem> services) {
-    Map<Long, ServiceItem> map = new HashMap<>();
+  public Map<UUID, ServiceItem> indexById(Iterable<ServiceItem> services) {
+    Map<UUID, ServiceItem> map = new HashMap<>();
     for (ServiceItem s : services) {
       if (s.getId() != null) {
         map.put(s.getId(), s);
@@ -43,7 +55,7 @@ public class ResourceItemMediaResolver {
     return map;
   }
 
-  private String resolveCoverImageUrl(ResourceItem resource, long merchantId, Map<Long, ServiceItem> serviceById) {
+  private String resolveCoverImageUrl(ResourceItem resource, UUID merchantId, Map<UUID, ServiceItem> serviceById) {
     if (resource.getMerchant() == null || !Objects.equals(resource.getMerchant().getId(), merchantId)) {
       return null;
     }
@@ -57,10 +69,10 @@ public class ResourceItemMediaResolver {
         return null;
       }
       for (JsonNode idNode : node) {
-        if (idNode == null || !idNode.canConvertToLong()) {
+        UUID serviceId = parseUuidNode(idNode);
+        if (serviceId == null) {
           continue;
         }
-        long serviceId = idNode.longValue();
         ServiceItem service = serviceById.get(serviceId);
         if (service == null) {
           continue;
@@ -75,6 +87,45 @@ public class ResourceItemMediaResolver {
       return null;
     } catch (Exception ignored) {
       return null;
+    }
+  }
+
+  private static UUID parseUuidNode(JsonNode idNode) {
+    if (idNode == null || idNode.isNull()) {
+      return null;
+    }
+    if (idNode.isTextual()) {
+      try {
+        return UUID.fromString(idNode.asText());
+      } catch (IllegalArgumentException ex) {
+        return null;
+      }
+    }
+    if (idNode.canConvertToLong()) {
+      return null;
+    }
+    return null;
+  }
+
+  private List<UUID> parseUuidArray(String raw) {
+    if (!StringUtils.hasText(raw)) {
+      return List.of();
+    }
+    try {
+      JsonNode node = objectMapper.readTree(raw);
+      if (!node.isArray()) {
+        return List.of();
+      }
+      LinkedHashSet<UUID> ids = new LinkedHashSet<>();
+      for (JsonNode idNode : node) {
+        UUID id = parseUuidNode(idNode);
+        if (id != null) {
+          ids.add(id);
+        }
+      }
+      return List.copyOf(ids);
+    } catch (Exception ignored) {
+      return List.of();
     }
   }
 }

@@ -42,14 +42,17 @@ class ApiControllerTest {
             .andReturn()
             .getResponse()
             .getContentAsString();
-    long merchantId = objectMapper.readTree(meJson).path("merchantId").asLong();
+    String merchantId = objectMapper.readTree(meJson).path("merchantId").asText();
     mockMvc
         .perform(
             get("/api/merchant/" + merchantId + "/customization")
                 .header("Authorization", "Bearer " + merchantToken))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.themeColor").exists())
-        .andExpect(jsonPath("$.homepageSectionsJson").exists());
+        .andExpect(jsonPath("$.homepageSectionsJson").exists())
+        .andExpect(jsonPath("$.notificationNewBooking").value(true))
+        .andExpect(jsonPath("$.notificationCancellation").value(true))
+        .andExpect(jsonPath("$.notificationDailySummary").value(false));
   }
 
   @Test

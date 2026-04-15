@@ -5,6 +5,7 @@ import com.bookingcore.modules.booking.BookingTransitionEvent;
 import com.bookingcore.modules.merchant.MerchantInvitationStatus;
 import com.bookingcore.modules.merchant.MerchantMembershipStatus;
 import com.bookingcore.modules.merchant.MerchantVisibility;
+import com.bookingcore.modules.merchant.ResourceStaffAssignmentStatus;
 import com.bookingcore.modules.merchant.ServiceTeamStatus;
 import com.bookingcore.modules.merchant.TeamMemberStatus;
 import jakarta.validation.constraints.Min;
@@ -14,15 +15,23 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public final class ApiDtos {
   private ApiDtos() {}
+
+  public record ApiEnvelope<T>(int code, String message, T data) {}
+
+  public static <T> ApiEnvelope<T> success(T data) {
+    return new ApiEnvelope<>(0, "success", data);
+  }
 
   public record CreateMerchantRequest(@NotBlank String name, @NotBlank String slug) {}
 
@@ -47,7 +56,7 @@ public final class ApiDtos {
    * client input).
    */
   public record PublicRegisterResponse(
-      Long id, String name, String slug, Boolean active, String nextDestination) {}
+      UUID id, String name, String slug, Boolean active, String nextDestination) {}
 
   public record MerchantProfileResponse(
       String description,
@@ -55,7 +64,9 @@ public final class ApiDtos {
       String address,
       String phone,
       String email,
-      String website) {}
+      String website,
+      String storeCategory,
+      String lineContactUrl) {}
 
   public record ServiceItemRequest(
       @NotBlank String name,
@@ -80,10 +91,13 @@ public final class ApiDtos {
       @NotBlank String faqJson,
       @NotNull Integer bufferMinutes,
       @NotBlank String homepageSectionsJson,
-      @NotBlank String categoryOrderJson) {}
+      @NotBlank String categoryOrderJson,
+      @NotNull Boolean notificationNewBooking,
+      @NotNull Boolean notificationCancellation,
+      @NotNull Boolean notificationDailySummary) {}
 
   public record PublicBookingRequest(
-      @NotNull Long serviceItemId,
+      @NotNull UUID serviceItemId,
       @NotNull LocalDateTime startAt,
       @NotBlank String customerName,
       @NotBlank String customerContact) {}
@@ -101,7 +115,38 @@ public final class ApiDtos {
       @Min(1) Integer capacity,
       Boolean active,
       @NotBlank String serviceItemsJson,
+      List<@NotNull UUID> assignedStaffIds,
       @NotNull BigDecimal price) {}
+
+  public record ResourceUpdateRequest(
+      String name,
+      String type,
+      String category,
+      @Min(1) Integer capacity,
+      Boolean active,
+      String serviceItemsJson,
+      List<@NotNull UUID> assignedStaffIds,
+      @Min(0) BigDecimal price) {}
+
+  public enum ResourceOperationalStatus {
+    ACTIVE,
+    MAINTENANCE,
+    FULLY_BOOKED
+  }
+
+  public record ServiceCloneRequest(@Size(max = 60) String nameSuffix) {}
+
+  public record ResourceBatchPriceRequest(
+      @NotEmpty List<@NotNull UUID> resourceIds, @NotNull @Min(0) BigDecimal price) {}
+
+  public record ResourceBatchStatusRequest(
+      @NotEmpty List<@NotNull UUID> resourceIds, @NotNull ResourceOperationalStatus status) {}
+
+  public record ResourceBatchBusinessHoursRequest(
+      @NotEmpty List<@NotNull UUID> resourceIds, @NotBlank String businessHoursJson) {}
+
+  public record MerchantResourceListResponse(
+      List<ResourceItemSummary> items, int page, int size, long total) {}
 
   public record AvailabilityExceptionRequest(
       @NotBlank String type,
@@ -118,7 +163,7 @@ public final class ApiDtos {
   public record BookingTransitionRequest(@NotNull BookingTransitionEvent event, String reason) {}
 
   public record ManualBookingRequest(
-      @NotNull Long serviceItemId,
+      @NotNull UUID serviceItemId,
       @NotNull LocalDateTime startAt,
       @NotBlank String customerName,
       @NotBlank String customerContact) {}
@@ -147,18 +192,24 @@ public final class ApiDtos {
       ServiceTeamStatus status) {}
 
   public record TeamMemberAssignRequest(
-      @NotNull Long userId,
+      @NotNull UUID userId,
       @NotBlank @Size(max = 64) String role,
       TeamMemberStatus status) {}
+
+  public record BookingAssignmentCommandRequest(
+      @NotNull UUID resourceId,
+      UUID staffId,
+      UUID newStaffId,
+      @Size(max = 300) String reason) {}
 
   public record DomainTemplateRequest(@NotBlank String domainName, @NotBlank String fieldsJson) {}
 
   public record SystemSettingsRequest(String emailTemplate, String smsTemplate, String maintenanceAnnouncement) {}
 
-  public record MerchantSummary(Long id, String name, String slug, Boolean active) {}
+  public record MerchantSummary(UUID id, String name, String slug, Boolean active) {}
 
   public record ClientMerchantCardSummary(
-      Long merchantId,
+      UUID merchantId,
       String merchantName,
       String merchantSlug,
       MerchantVisibility visibility,
@@ -166,7 +217,7 @@ public final class ApiDtos {
 
   public record MerchantInvitationSummary(
       Long invitationId,
-      Long merchantId,
+      UUID merchantId,
       String inviteCode,
       String inviteeUsername,
       MerchantInvitationStatus status,
@@ -174,7 +225,7 @@ public final class ApiDtos {
 
   public record TeamSummary(
       Long id,
-      Long merchantId,
+      UUID merchantId,
       String name,
       String code,
       ServiceTeamStatus status,
@@ -182,15 +233,30 @@ public final class ApiDtos {
 
   public record TeamMemberSummary(
       Long id,
-      Long merchantId,
+      UUID merchantId,
       Long teamId,
-      Long userId,
+      UUID userId,
       String username,
       String role,
       TeamMemberStatus status) {}
 
+  public record BookingAssignmentSummary(
+      Long assignmentId,
+      UUID bookingId,
+      UUID merchantId,
+      UUID resourceId,
+      UUID staffId,
+      String staffUsername,
+      ResourceStaffAssignmentStatus status,
+      String reason,
+      LocalDateTime startAt,
+      LocalDateTime endAt) {}
+
+  public record StaffCandidateSummary(
+      UUID staffId, String staffUsername, Boolean active, Boolean available, String unavailableReason) {}
+
   public record ClientJoinedMerchantSummary(
-      Long merchantId,
+      UUID merchantId,
       String merchantName,
       String merchantSlug,
       MerchantMembershipStatus membershipStatus) {}
@@ -207,23 +273,29 @@ public final class ApiDtos {
       Integer bufferMinutes) {}
 
   public record ServiceItemSummary(
-      Long id,
+      UUID id,
       String name,
       Integer durationMinutes,
       BigDecimal price,
       String category,
-      String imageUrl) {}
+      String imageUrl,
+      Boolean active,
+      Long resourceCount) {}
 
   public record ResourceItemSummary(
-      Long id,
+      UUID id,
       String name,
       String type,
       String category,
       Integer capacity,
       Boolean active,
       BigDecimal price,
+      List<UUID> assignedStaffIds,
+      String serviceItemsJson,
       /** Optional storefront media; derived from scoped service items when available. */
-      String imageUrl) {}
+      String imageUrl,
+      ResourceOperationalStatus status,
+      String businessHoursJson) {}
 
   public record DynamicFieldSummary(
       Long id,
@@ -256,11 +328,14 @@ public final class ApiDtos {
       String faqJson,
       Integer bufferMinutes,
       String homepageSectionsJson,
-      String categoryOrderJson) {}
+      String categoryOrderJson,
+      Boolean notificationNewBooking,
+      Boolean notificationCancellation,
+      Boolean notificationDailySummary) {}
 
   public record MerchantBookingSummary(
-      Long id,
-      Long serviceItemId,
+      UUID id,
+      UUID serviceItemId,
       LocalDateTime startAt,
       LocalDateTime endAt,
       String customerName,
@@ -282,7 +357,7 @@ public final class ApiDtos {
       List<DynamicFieldSummary> dynamicFields) {}
 
   public record PublicBookingResponse(
-      Long bookingId,
+      UUID bookingId,
       String bookingCode,
       LocalDateTime startAt,
       LocalDateTime endAt,
@@ -302,17 +377,17 @@ public final class ApiDtos {
       Integer capacityRemaining) {}
 
   public record BookingLockRequest(
-      @NotNull Long merchantId,
-      @NotNull Long serviceItemId,
-      Long resourceId,
+      @NotNull UUID merchantId,
+      @NotNull UUID serviceItemId,
+      UUID resourceId,
       @NotNull LocalDateTime startAt) {}
 
   public record BookingLockResponse(String lockId, LocalDateTime expiresAt) {}
 
   public record ClientBookingRequest(
-      @NotNull Long merchantId,
-      @NotNull Long serviceItemId,
-      Long resourceId,
+      @NotNull UUID merchantId,
+      @NotNull UUID serviceItemId,
+      UUID resourceId,
       @NotBlank String lockId,
       @NotNull LocalDateTime startAt,
       String inviteCode,
@@ -321,30 +396,64 @@ public final class ApiDtos {
       @NotNull Boolean agreeTerms,
       Map<String, String> dynamicFieldValues) {}
 
-  public record ClientProfileResponse(Boolean authenticated, String role, String suggestedName, String suggestedContact) {}
+  public record ClientProfileResponse(
+      Boolean authenticated,
+      String role,
+      String suggestedName,
+      String suggestedContact,
+      String language,
+      String timezone,
+      String currency,
+      Boolean emailNotifications,
+      Boolean smsNotifications) {}
 
   public record ClientProfileUpdateRequest(
       @Size(max = 120) String suggestedName,
-      @Size(max = 120) String suggestedContact) {}
+      @Size(max = 120) String suggestedContact,
+      @Size(max = 16) String language,
+      @Size(max = 64) String timezone,
+      @Size(max = 16) String currency,
+      Boolean emailNotifications,
+      Boolean smsNotifications) {}
+
+  public record ClientPasswordUpdateRequest(
+      @NotBlank @Size(min = 8, max = 120) String currentPassword,
+      @NotBlank @Size(min = 8, max = 120) String newPassword) {}
+
+  public record ClientProfilePreferencesResponse(
+      String language,
+      String timezone,
+      String currency,
+      Boolean emailNotifications,
+      Boolean smsNotifications) {}
+
+  public record ClientProfilePreferencesUpdateRequest(
+      @Size(max = 16) String language,
+      @Size(max = 64) String timezone,
+      @Size(max = 16) String currency,
+      Boolean emailNotifications,
+      Boolean smsNotifications) {}
+
+  public record ClientPasswordUpdateResponse(LocalDateTime updatedAt) {}
 
   public record BookingSubmitResponse(
-      Long bookingId, String bookingCode, LocalDateTime startAt, LocalDateTime endAt, String queryPath) {}
+      UUID bookingId, String bookingCode, LocalDateTime startAt, LocalDateTime endAt, String queryPath) {}
 
   public record ClientBookingCreateRequest(
-      @NotNull Long resourceId, @NotNull LocalDateTime startAt, @Size(max = 500) String notes) {}
+      @NotNull UUID resourceId, @NotNull LocalDateTime startAt, @Size(max = 500) String notes) {}
 
   public record ClientBookingCreateResponse(
-      Long id,
+      UUID id,
       String bookingNo,
       BookingStatus status,
-      Long resourceId,
+      UUID resourceId,
       LocalDateTime startAt,
       LocalDateTime endAt,
-      Long tenantId,
+      UUID tenantId,
       LocalDateTime createdAt) {}
 
   public record ClientBookingListItem(
-      Long id,
+      UUID id,
       String bookingNo,
       String serviceName,
       String providerName,
@@ -356,6 +465,35 @@ public final class ApiDtos {
 
   public record ClientBookingListResponse(
       java.util.List<ClientBookingListItem> items, int page, int size, long total) {}
+
+  public record ClientBookingCancelRequest(@Size(max = 300) String reason) {}
+
+  public record ClientBookingRescheduleRequest(@NotNull LocalDateTime newStartAt, @Size(max = 300) String reason) {}
+
+  public record ClientBookingStatusResponse(UUID id, BookingStatus status, LocalDateTime updatedAt) {}
+
+  public record ClientCatalogResourceSummary(
+      UUID id,
+      String name,
+      String category,
+      BigDecimal price,
+      Integer durationMinutes,
+      Double rating,
+      String imageUrl,
+      String merchantName) {}
+
+  public record ClientCategorySummary(String key, String label, long count) {}
+
+  public record ClientResourceDetailResponse(
+      UUID id,
+      String name,
+      String description,
+      String category,
+      BigDecimal price,
+      Integer durationMinutes,
+      Double rating,
+      MerchantSummary merchant,
+      String imageUrl) {}
 
   /** Non-admin accounts must provide an email-formatted username; SYSTEM_ADMIN may still use plain username. */
   public record LoginRequest(@NotBlank String username, @NotBlank String password) {}
@@ -373,7 +511,7 @@ public final class ApiDtos {
       List<String> canonicalRoles,
       List<String> roleAliases,
       List<String> permissions,
-      Long merchantId,
+      UUID merchantId,
       String sessionState,
       List<AuthContextOption> availableContexts,
       AuthContextOption activeContext) {
@@ -396,15 +534,15 @@ public final class ApiDtos {
    * One selectable auth context. {@code kind} is diagnostic: {@code PLATFORM} matches the stored platform
    * role; {@code MERCHANT_SCOPED} is a derived MERCHANT view (e.g. admin previewing a tenant).
    */
-  public record AuthContextOption(String kind, Long merchantId, String role) {}
+  public record AuthContextOption(String kind, UUID merchantId, String role) {}
 
   /** Body for {@code POST /api/auth/context/select}. Omit or leave {@code role} empty to behave like refresh. */
-  public record ContextSelectRequest(Long merchantId, String role) {}
+  public record ContextSelectRequest(UUID merchantId, String role) {}
 
   public record MerchantEnableRequest(@NotBlank String name, @NotBlank String slug) {}
 
   public record MerchantEnableResponse(
-      Long merchantId, String name, String slug, String ownerRole, String membershipStatus) {}
+      UUID merchantId, String name, String slug, String ownerRole, String membershipStatus) {}
 
   public record TokenResponse(
       String accessToken,
@@ -433,25 +571,25 @@ public final class ApiDtos {
   public record NavigationItem(String routeKey, String path, String labelKey, int sortOrder) {}
 
   public record SystemUserSummary(
-      Long id,
+      UUID id,
       String username,
       Boolean enabled,
       String primaryRole,
-      Long primaryMerchantId,
+      UUID primaryMerchantId,
       Long activeBindingsCount,
       List<String> roleCodes,
       LocalDateTime lastLoginAt,
       LocalDateTime updatedAt) {}
 
   public record SystemUserBindingSummary(
-      Long bindingId, String roleCode, Long merchantId, String status, List<String> permissions) {}
+      Long bindingId, String roleCode, UUID merchantId, String status, List<String> permissions) {}
 
   public record SystemUserDetailResponse(
-      Long id,
+      UUID id,
       String username,
       Boolean enabled,
       String primaryRole,
-      Long primaryMerchantId,
+      UUID primaryMerchantId,
       List<SystemUserBindingSummary> bindings,
       List<String> effectivePermissions,
       LocalDateTime lastLoginAt,
@@ -461,7 +599,7 @@ public final class ApiDtos {
 
   public record SystemUserBindingUpsertRequest(
       @NotBlank String roleCode,
-      Long merchantId,
+      UUID merchantId,
       @NotNull Boolean active) {}
 
   public record SystemUserBindingsUpdateRequest(
@@ -470,7 +608,48 @@ public final class ApiDtos {
   public record SystemRbacRoleResponse(String roleCode, List<String> permissions) {}
 
   public record SystemBookingTransitionRequest(
-      @NotNull Long merchantId,
+      @NotNull UUID merchantId,
       @NotNull BookingTransitionEvent event,
       String reason) {}
+
+  public record HomepageConfigSection(String id, boolean enabled, int order, String contentKey) {}
+
+  public record HomepageFallbackPolicy(boolean allowTenantDefault, boolean crossTenantFallback) {}
+
+  public record HomepageConfigResponse(
+      String tenantId,
+      String locale,
+      String pageVariant,
+      List<HomepageConfigSection> sections,
+      HomepageFallbackPolicy fallbackPolicy,
+      String stateLegalityNotice) {}
+
+  public record HomepageSeoResponse(
+      String tenantId,
+      String locale,
+      String variant,
+      String title,
+      String description,
+      String canonicalUrl,
+      String robots,
+      Map<String, Object> structuredData) {}
+
+  public record HomepageTrackingEventRequest(
+      @NotBlank String eventType,
+      @NotBlank String tenantId,
+      @NotBlank String locale,
+      @NotBlank String sectionId,
+      @NotBlank String campaign,
+      String pageVariant,
+      @NotNull Instant occurredAt,
+      Map<String, Object> metadata) {
+    public HomepageTrackingEventRequest {
+      metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
+    }
+  }
+
+  public record HomepageTrackingBatchRequest(
+      @NotEmpty @jakarta.validation.Valid List<HomepageTrackingEventRequest> events) {}
+
+  public record HomepageTrackingAcceptResponse(int accepted, int rejected) {}
 }

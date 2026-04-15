@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -30,7 +31,7 @@ public class JwtService {
     this.platformUserRepository = platformUserRepository;
   }
 
-  public String createAccessToken(String subject, PlatformUserRole role, Long merchantId) {
+  public String createAccessToken(String subject, PlatformUserRole role, UUID merchantId) {
     return createAccessToken(subject, role, merchantId, null);
   }
 
@@ -40,7 +41,7 @@ public class JwtService {
    *     accounts that are not stored in {@code platform_users}.
    */
   public String createAccessToken(
-      String subject, PlatformUserRole role, Long merchantId, Integer credentialVersion) {
+      String subject, PlatformUserRole role, UUID merchantId, Integer credentialVersion) {
     long expSec = properties.getJwt().getExpirationSeconds();
     Date now = new Date();
     Date exp = new Date(now.getTime() + expSec * 1000);
@@ -51,7 +52,7 @@ public class JwtService {
         .expiration(exp)
         .signWith(signingKey());
     if (merchantId != null) {
-      builder.claim(MERCHANT_ID_CLAIM, merchantId);
+      builder.claim(MERCHANT_ID_CLAIM, merchantId.toString());
     }
     if (credentialVersion != null) {
       builder.claim(CREDENTIAL_VERSION_CLAIM, credentialVersion);
@@ -95,16 +96,17 @@ public class JwtService {
     PlatformUserRole role =
         PlatformUserRole.parse(roleName)
             .orElseThrow(() -> new IllegalArgumentException("Unknown role"));
-    Long merchantId = null;
+    UUID merchantId = null;
     Object rawMerchantId = claims.get(MERCHANT_ID_CLAIM);
-    if (rawMerchantId instanceof Number n) {
-      merchantId = n.longValue();
-    } else if (rawMerchantId instanceof String s) {
+    if (rawMerchantId instanceof String s) {
       try {
-        merchantId = Long.parseLong(s);
-      } catch (NumberFormatException ignored) {
+        merchantId = UUID.fromString(s);
+      } catch (IllegalArgumentException ignored) {
         merchantId = null;
       }
+    } else if (rawMerchantId instanceof Number n) {
+      // Legacy numeric merchant ids are no longer valid UUIDs; treat as absent scope.
+      merchantId = null;
     }
     LinkedHashSet<SimpleGrantedAuthority> authorities = new LinkedHashSet<>();
     for (String authority : role.authorityAliases()) {

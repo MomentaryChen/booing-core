@@ -25,8 +25,8 @@ public class AuditLog {
   @Column(nullable = false, length = 80)
   private String targetType;
 
-  @Column(nullable = false)
-  private Long targetId;
+  @Column(name = "target_id", nullable = false, length = 64)
+  private String targetId;
 
   @Column(nullable = false, length = 80)
   private String correlationId;
@@ -74,11 +74,11 @@ public class AuditLog {
     this.targetType = targetType;
   }
 
-  public Long getTargetId() {
+  public String getTargetId() {
     return targetId;
   }
 
-  public void setTargetId(Long targetId) {
+  public void setTargetId(String targetId) {
     this.targetId = targetId;
   }
 

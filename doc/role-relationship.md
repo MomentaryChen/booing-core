@@ -51,6 +51,8 @@ flowchart LR
   A[SYSTEM_ADMIN] -->|governs| T
 ```
 
+
+
 ### 4.2 圖解說明（角色關係）
 
 - `User` 是全域登入主體，一個帳號可同時擁有多種身分。
@@ -120,7 +122,7 @@ flowchart LR
 ## 8. API 命名空間對應
 
 - 前端路由：
-  - `/client/*`
+  - `/client/`*
   - `/merchant/*`
   - `/admin/*`（UI）
 - 後端 API：
@@ -139,3 +141,4 @@ flowchart LR
 - 文件版本：`v1`
 - 維護責任：PM 主責、Architect/Backend 共同審核
 - 更新時機：角色調整、RBAC 變更、租戶模型變更、服務隊模型變更
+

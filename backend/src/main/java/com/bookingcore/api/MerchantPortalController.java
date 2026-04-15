@@ -1,5 +1,6 @@
 package com.bookingcore.api;
 
+import java.util.UUID;
 import com.bookingcore.api.ApiDtos.AvailabilityExceptionRequest;
 import com.bookingcore.api.ApiDtos.AvailabilityExceptionSummary;
 import com.bookingcore.api.ApiDtos.BusinessHoursSummary;
@@ -11,6 +12,8 @@ import com.bookingcore.api.ApiDtos.CustomizationRequest;
 import com.bookingcore.api.ApiDtos.DynamicFieldSummary;
 import com.bookingcore.api.ApiDtos.DynamicFieldRequest;
 import com.bookingcore.api.ApiDtos.ManualBookingRequest;
+import com.bookingcore.api.ApiDtos.BookingAssignmentCommandRequest;
+import com.bookingcore.api.ApiDtos.BookingAssignmentSummary;
 import com.bookingcore.api.ApiDtos.MerchantInvitationCreateRequest;
 import com.bookingcore.api.ApiDtos.MerchantInvitationSummary;
 import com.bookingcore.api.ApiDtos.MerchantInvitationUpdateRequest;
@@ -26,7 +29,15 @@ import com.bookingcore.api.ApiDtos.TeamMemberSummary;
 import com.bookingcore.api.ApiDtos.TeamSummary;
 import com.bookingcore.api.ApiDtos.TeamUpdateRequest;
 import com.bookingcore.api.ApiDtos.ResourceItemSummary;
+import com.bookingcore.api.ApiDtos.StaffCandidateSummary;
 import com.bookingcore.api.ApiDtos.ResourceRequest;
+import com.bookingcore.api.ApiDtos.ResourceBatchBusinessHoursRequest;
+import com.bookingcore.api.ApiDtos.ResourceBatchPriceRequest;
+import com.bookingcore.api.ApiDtos.ResourceBatchStatusRequest;
+import com.bookingcore.api.ApiDtos.MerchantResourceListResponse;
+import com.bookingcore.api.ApiDtos.ResourceOperationalStatus;
+import com.bookingcore.api.ApiDtos.ResourceUpdateRequest;
+import com.bookingcore.api.ApiDtos.ServiceCloneRequest;
 import com.bookingcore.api.ApiDtos.ServiceItemSummary;
 import com.bookingcore.api.ApiDtos.ServiceItemRequest;
 import com.bookingcore.api.support.ResourceItemMediaResolver;
@@ -67,9 +78,20 @@ import com.bookingcore.service.MerchantProvisioningService;
 import com.bookingcore.service.PublicRegistrationService;
 import com.bookingcore.service.PlatformAuditService;
 import com.bookingcore.service.MerchantAccessService;
+import com.bookingcore.service.MerchantBookingAssignmentService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -84,6 +106,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -109,7 +132,9 @@ public class MerchantPortalController {
   private final MerchantAccessService merchantAccessService;
   private final ServiceTeamRepository serviceTeamRepository;
   private final TeamMemberRepository teamMemberRepository;
+  private final MerchantBookingAssignmentService merchantBookingAssignmentService;
   private final ResourceItemMediaResolver resourceItemMediaResolver;
+  private final ObjectMapper objectMapper;
 
   public MerchantPortalController(
       MerchantProfileRepository profileRepository,
@@ -130,7 +155,9 @@ public class MerchantPortalController {
       MerchantAccessService merchantAccessService,
       ServiceTeamRepository serviceTeamRepository,
       TeamMemberRepository teamMemberRepository,
-      ResourceItemMediaResolver resourceItemMediaResolver) {
+      MerchantBookingAssignmentService merchantBookingAssignmentService,
+      ResourceItemMediaResolver resourceItemMediaResolver,
+      ObjectMapper objectMapper) {
     this.profileRepository = profileRepository;
     this.merchantRepository = merchantRepository;
     this.serviceItemRepository = serviceItemRepository;
@@ -149,10 +176,12 @@ public class MerchantPortalController {
     this.merchantAccessService = merchantAccessService;
     this.serviceTeamRepository = serviceTeamRepository;
     this.teamMemberRepository = teamMemberRepository;
+    this.merchantBookingAssignmentService = merchantBookingAssignmentService;
     this.resourceItemMediaResolver = resourceItemMediaResolver;
+    this.objectMapper = objectMapper;
   }
 
-  private void assertMerchantScope(Long merchantId) {
+  private void assertMerchantScope(UUID merchantId) {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || !auth.isAuthenticated()) {
       throw new ApiException("Unauthorized", HttpStatus.UNAUTHORIZED);
@@ -217,7 +246,7 @@ public class MerchantPortalController {
   }
 
   @GetMapping("/{merchantId}/profile")
-  public MerchantProfileResponse getProfile(@PathVariable Long merchantId) {
+  public MerchantProfileResponse getProfile(@PathVariable UUID merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     MerchantProfile profile = profileRepository.findByMerchantId(merchantId)
@@ -232,12 +261,14 @@ public class MerchantPortalController {
         profile.getAddress(),
         profile.getPhone(),
         profile.getEmail(),
-        profile.getWebsite());
+        profile.getWebsite(),
+        profile.getStoreCategory(),
+        profile.getLineContactUrl());
   }
 
   @PutMapping("/{merchantId}/profile/visibility")
   public MerchantSummary updateVisibility(
-      @PathVariable Long merchantId, @Valid @RequestBody MerchantVisibilityUpdateRequest request) {
+      @PathVariable UUID merchantId, @Valid @RequestBody MerchantVisibilityUpdateRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     merchant.setVisibility(request.visibility());
@@ -251,7 +282,7 @@ public class MerchantPortalController {
   }
 
   @GetMapping("/{merchantId}/invitations")
-  public List<MerchantInvitationSummary> listInvitations(@PathVariable Long merchantId) {
+  public List<MerchantInvitationSummary> listInvitations(@PathVariable UUID merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     return merchantInvitationRepository.findByMerchantIdOrderByIdDesc(merchantId).stream()
@@ -269,7 +300,7 @@ public class MerchantPortalController {
 
   @PostMapping("/{merchantId}/invitations")
   public MerchantInvitationSummary createInvitation(
-      @PathVariable Long merchantId, @Valid @RequestBody MerchantInvitationCreateRequest request) {
+      @PathVariable UUID merchantId, @Valid @RequestBody MerchantInvitationCreateRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     PlatformUser invitee =
@@ -301,7 +332,7 @@ public class MerchantPortalController {
 
   @PatchMapping("/{merchantId}/invitations/{invitationId}")
   public MerchantInvitationSummary updateInvitation(
-      @PathVariable Long merchantId,
+      @PathVariable UUID merchantId,
       @PathVariable Long invitationId,
       @Valid @RequestBody MerchantInvitationUpdateRequest request) {
     assertMerchantScope(merchantId);
@@ -335,7 +366,7 @@ public class MerchantPortalController {
   }
 
   @PutMapping("/{merchantId}/profile")
-  public MerchantProfileResponse updateProfile(@PathVariable Long merchantId, @RequestBody MerchantProfileResponse request) {
+  public MerchantProfileResponse updateProfile(@PathVariable UUID merchantId, @RequestBody MerchantProfileResponse request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     MerchantProfile profile = profileRepository.findByMerchantId(merchantId).orElseGet(() -> {
@@ -349,6 +380,8 @@ public class MerchantPortalController {
     profile.setPhone(request.phone());
     profile.setEmail(request.email());
     profile.setWebsite(request.website());
+    profile.setStoreCategory(request.storeCategory() == null ? null : request.storeCategory().trim());
+    profile.setLineContactUrl(request.lineContactUrl() == null ? null : request.lineContactUrl().trim());
     MerchantProfile saved = profileRepository.save(profile);
     return new MerchantProfileResponse(
         saved.getDescription(),
@@ -356,7 +389,9 @@ public class MerchantPortalController {
         saved.getAddress(),
         saved.getPhone(),
         saved.getEmail(),
-        saved.getWebsite());
+        saved.getWebsite(),
+        saved.getStoreCategory(),
+        saved.getLineContactUrl());
   }
 
   private String normalizeLogoImageData(String rawLogo) {
@@ -378,7 +413,7 @@ public class MerchantPortalController {
   }
 
   @GetMapping("/{merchantId}/services")
-  public List<ServiceItemSummary> getServices(@PathVariable Long merchantId) {
+  public List<ServiceItemSummary> getServices(@PathVariable UUID merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     return serviceItemRepository.findByMerchantId(merchantId).stream()
@@ -390,12 +425,14 @@ public class MerchantPortalController {
                     s.getDurationMinutes(),
                     s.getPrice(),
                     s.getCategory(),
-                    s.getImageUrl()))
+                    s.getImageUrl(),
+                    Boolean.TRUE.equals(s.getActive()),
+                    countResourcesForService(merchantId, s.getId())))
         .toList();
   }
 
   @PostMapping("/{merchantId}/services")
-  public ServiceItemSummary createService(@PathVariable Long merchantId, @Valid @RequestBody ServiceItemRequest request) {
+  public ServiceItemSummary createService(@PathVariable UUID merchantId, @Valid @RequestBody ServiceItemRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     if (serviceItemRepository.findByMerchantId(merchantId).size() >= merchant.getServiceLimit()) {
@@ -415,12 +452,14 @@ public class MerchantPortalController {
         saved.getDurationMinutes(),
         saved.getPrice(),
         saved.getCategory(),
-        saved.getImageUrl());
+        saved.getImageUrl(),
+        Boolean.TRUE.equals(saved.getActive()),
+        countResourcesForService(merchantId, saved.getId()));
   }
 
   @PutMapping("/{merchantId}/services/{serviceId}")
   public ServiceItemSummary updateService(
-      @PathVariable Long merchantId, @PathVariable Long serviceId, @Valid @RequestBody ServiceItemRequest request) {
+      @PathVariable UUID merchantId, @PathVariable UUID serviceId, @Valid @RequestBody ServiceItemRequest request) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     ServiceItem item = serviceItemRepository.findByIdAndMerchantId(serviceId, merchantId)
@@ -437,20 +476,112 @@ public class MerchantPortalController {
         saved.getDurationMinutes(),
         saved.getPrice(),
         saved.getCategory(),
-        saved.getImageUrl());
+        saved.getImageUrl(),
+        Boolean.TRUE.equals(saved.getActive()),
+        countResourcesForService(merchantId, saved.getId()));
+  }
+
+  @PatchMapping("/{merchantId}/services/{serviceId}/active")
+  public ServiceItemSummary toggleServiceActive(
+      @PathVariable UUID merchantId, @PathVariable UUID serviceId, @RequestParam boolean active) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    ServiceItem item =
+        serviceItemRepository
+            .findByIdAndMerchantId(serviceId, merchantId)
+            .orElseThrow(() -> new ApiException("Service not found", HttpStatus.NOT_FOUND));
+    item.setActive(active);
+    ServiceItem saved = serviceItemRepository.save(item);
+    return new ServiceItemSummary(
+        saved.getId(),
+        saved.getName(),
+        saved.getDurationMinutes(),
+        saved.getPrice(),
+        saved.getCategory(),
+        saved.getImageUrl(),
+        Boolean.TRUE.equals(saved.getActive()),
+        countResourcesForService(merchantId, saved.getId()));
+  }
+
+  @PostMapping("/{merchantId}/services/{serviceId}/clone")
+  public ServiceItemSummary cloneService(
+      @PathVariable UUID merchantId,
+      @PathVariable UUID serviceId,
+      @Valid @RequestBody(required = false) ServiceCloneRequest request) {
+    assertMerchantScope(merchantId);
+    Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
+    ServiceItem source =
+        serviceItemRepository
+            .findByIdAndMerchantId(serviceId, merchantId)
+            .orElseThrow(() -> new ApiException("Service not found", HttpStatus.NOT_FOUND));
+    String suffix = request == null || request.nameSuffix() == null || request.nameSuffix().isBlank()
+        ? " (Copy)"
+        : " " + request.nameSuffix().trim();
+    ServiceItem clone = new ServiceItem();
+    clone.setMerchant(merchant);
+    clone.setName(source.getName() + suffix);
+    clone.setCategory(source.getCategory());
+    clone.setDurationMinutes(source.getDurationMinutes());
+    clone.setPrice(source.getPrice());
+    clone.setImageUrl(source.getImageUrl());
+    clone.setActive(source.getActive());
+    ServiceItem saved = serviceItemRepository.save(clone);
+    return new ServiceItemSummary(
+        saved.getId(),
+        saved.getName(),
+        saved.getDurationMinutes(),
+        saved.getPrice(),
+        saved.getCategory(),
+        saved.getImageUrl(),
+        Boolean.TRUE.equals(saved.getActive()),
+        0L);
   }
 
   @DeleteMapping("/{merchantId}/services/{serviceId}")
-  public void deleteService(@PathVariable Long merchantId, @PathVariable Long serviceId) {
+  public void deleteService(@PathVariable UUID merchantId, @PathVariable UUID serviceId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
-    ServiceItem item = serviceItemRepository.findByIdAndMerchantId(serviceId, merchantId)
-        .orElseThrow(() -> new ApiException("Service not found"));
-    serviceItemRepository.delete(item);
+    ServiceItem item = serviceItemRepository.findByIdAndMerchantId(serviceId, merchantId).orElse(null);
+    if (item == null) {
+      // Idempotent delete: if the row is already removed/archived in this scope, treat as success.
+      return;
+    }
+    long bookingHistoryCount = bookingRepository.countByMerchantIdAndServiceItemId(merchantId, serviceId);
+    if (bookingHistoryCount == 0) {
+      serviceItemRepository.delete(item);
+      return;
+    }
+
+    // Keep FK integrity for booking history while allowing operators to "remove" the service from active management.
+    String currentName = item.getName() == null ? "" : item.getName().trim();
+    String baseName = currentName.isEmpty() ? "Service" : currentName;
+    item.setName(toArchivedServiceName(baseName));
+    item.setCategory("archived");
+    item.setDurationMinutes(Math.max(1, item.getDurationMinutes() == null ? 1 : item.getDurationMinutes()));
+    item.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
+    item.setImageUrl(null);
+    serviceItemRepository.save(item);
+  }
+
+  private String toArchivedServiceName(String baseName) {
+    final String prefix = "[REMOVED] ";
+    final int maxLength = 120;
+    String normalized = baseName == null ? "Service" : baseName.trim();
+    if (normalized.isEmpty()) {
+      normalized = "Service";
+    }
+    if (normalized.startsWith(prefix)) {
+      return normalized.length() > maxLength ? normalized.substring(0, maxLength) : normalized;
+    }
+    int allowedBaseLength = maxLength - prefix.length();
+    if (normalized.length() > allowedBaseLength) {
+      normalized = normalized.substring(0, allowedBaseLength);
+    }
+    return prefix + normalized;
   }
 
   @GetMapping("/{merchantId}/business-hours")
-  public List<BusinessHoursSummary> getBusinessHours(@PathVariable Long merchantId) {
+  public List<BusinessHoursSummary> getBusinessHours(@PathVariable UUID merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     return businessHoursRepository.findByMerchantId(merchantId).stream()
@@ -459,15 +590,19 @@ public class MerchantPortalController {
   }
 
   @PutMapping("/{merchantId}/business-hours")
+  @Transactional
   public List<BusinessHoursSummary> replaceBusinessHours(
-      @PathVariable Long merchantId, @RequestBody @NotEmpty List<@Valid BusinessHoursRequest> request) {
+      @PathVariable UUID merchantId, @RequestBody(required = false) List<@Valid BusinessHoursRequest> request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
-    businessHoursRepository.deleteByMerchantId(merchantId);
-    List<BusinessHours> rows = request.stream().map(item -> {
+    List<BusinessHoursRequest> incoming = request == null ? List.of() : request;
+    for (BusinessHoursRequest item : incoming) {
       if (!item.endTime().isAfter(item.startTime())) {
         throw new ApiException("endTime must be after startTime");
       }
+    }
+    businessHoursRepository.deleteByMerchantId(merchantId);
+    List<BusinessHours> rows = incoming.stream().map(item -> {
       BusinessHours h = new BusinessHours();
       h.setMerchant(merchant);
       h.setDayOfWeek(item.dayOfWeek());
@@ -482,7 +617,7 @@ public class MerchantPortalController {
 
   @GetMapping("/{merchantId}/bookings")
   public List<MerchantBookingSummary> getBookings(
-      @PathVariable Long merchantId,
+      @PathVariable UUID merchantId,
       @RequestParam(required = false) BookingStatus status) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
@@ -511,7 +646,7 @@ public class MerchantPortalController {
   }
 
   @GetMapping("/{merchantId}/customization")
-  public MerchantCustomizationResponse getCustomization(@PathVariable Long merchantId) {
+  public MerchantCustomizationResponse getCustomization(@PathVariable UUID merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     CustomizationConfig config = customizationConfigRepository.findByMerchantId(merchantId)
@@ -524,7 +659,7 @@ public class MerchantPortalController {
   }
 
   @PutMapping("/{merchantId}/customization")
-  public MerchantCustomizationResponse updateCustomization(@PathVariable Long merchantId, @Valid @RequestBody CustomizationRequest request) {
+  public MerchantCustomizationResponse updateCustomization(@PathVariable UUID merchantId, @Valid @RequestBody CustomizationRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     CustomizationConfig config = customizationConfigRepository.findByMerchantId(merchantId)
@@ -544,11 +679,14 @@ public class MerchantPortalController {
     config.setBufferMinutes(request.bufferMinutes());
     config.setHomepageSectionsJson(request.homepageSectionsJson());
     config.setCategoryOrderJson(request.categoryOrderJson());
+    config.setNotificationNewBooking(request.notificationNewBooking());
+    config.setNotificationCancellation(request.notificationCancellation());
+    config.setNotificationDailySummary(request.notificationDailySummary());
     return toCustomizationResponse(customizationConfigRepository.save(config));
   }
 
   @GetMapping("/{merchantId}/dynamic-fields")
-  public List<DynamicFieldSummary> getDynamicFields(@PathVariable Long merchantId) {
+  public List<DynamicFieldSummary> getDynamicFields(@PathVariable UUID merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     return dynamicFieldConfigRepository.findByMerchantId(merchantId).stream()
@@ -557,7 +695,7 @@ public class MerchantPortalController {
   }
 
   @PostMapping("/{merchantId}/dynamic-fields")
-  public DynamicFieldSummary createDynamicField(@PathVariable Long merchantId, @Valid @RequestBody DynamicFieldRequest request) {
+  public DynamicFieldSummary createDynamicField(@PathVariable UUID merchantId, @Valid @RequestBody DynamicFieldRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     DynamicFieldConfig config = new DynamicFieldConfig();
@@ -571,7 +709,7 @@ public class MerchantPortalController {
   }
 
   @DeleteMapping("/{merchantId}/dynamic-fields/{fieldId}")
-  public void deleteDynamicField(@PathVariable Long merchantId, @PathVariable Long fieldId) {
+  public void deleteDynamicField(@PathVariable UUID merchantId, @PathVariable Long fieldId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     DynamicFieldConfig field = dynamicFieldConfigRepository.findByIdAndMerchantId(fieldId, merchantId)
@@ -580,17 +718,48 @@ public class MerchantPortalController {
   }
 
   @GetMapping("/{merchantId}/resources")
-  public List<ResourceItemSummary> getResources(@PathVariable Long merchantId) {
+  public MerchantResourceListResponse getResources(
+      @PathVariable UUID merchantId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) ResourceOperationalStatus status) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
+    Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(Math.max(size, 1), 200));
+    Page<ResourceItem> resourcePage =
+        status == ResourceOperationalStatus.MAINTENANCE
+            ? resourceItemRepository.findByMerchantIdAndMaintenance(merchantId, true, pageable)
+            : resourceItemRepository.findByMerchantId(merchantId, pageable);
     var serviceById = resourceItemMediaResolver.indexById(serviceItemRepository.findByMerchantId(merchantId));
-    return resourceItemRepository.findByMerchantId(merchantId).stream()
-        .map(r -> resourceItemMediaResolver.toSummary(r, merchantId, serviceById))
-        .toList();
+    List<ResourceItemSummary> items =
+        resourcePage.getContent().stream()
+            .map(
+                r -> {
+                  ResourceOperationalStatus computedStatus = resolveResourceStatus(merchantId, r);
+                  if (status != null && computedStatus != status) {
+                    return null;
+                  }
+                  return resourceItemMediaResolver.toSummary(r, merchantId, serviceById, computedStatus);
+                })
+            .filter(java.util.Objects::nonNull)
+            .toList();
+    long effectiveTotal;
+    if (status == null) {
+      effectiveTotal = resourcePage.getTotalElements();
+    } else if (status == ResourceOperationalStatus.MAINTENANCE) {
+      effectiveTotal = resourcePage.getTotalElements();
+    } else {
+      effectiveTotal =
+          resourceItemRepository.findByMerchantId(merchantId).stream()
+              .map(resource -> resolveResourceStatus(merchantId, resource))
+              .filter(computed -> computed == status)
+              .count();
+    }
+    return new MerchantResourceListResponse(items, page, size, effectiveTotal);
   }
 
   @PostMapping("/{merchantId}/resources")
-  public ResourceItemSummary createResource(@PathVariable Long merchantId, @Valid @RequestBody ResourceRequest request) {
+  public ResourceItemSummary createResource(@PathVariable UUID merchantId, @Valid @RequestBody ResourceRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     ResourceItem item = new ResourceItem();
@@ -601,23 +770,247 @@ public class MerchantPortalController {
     item.setCapacity(request.capacity() == null ? 1 : request.capacity());
     item.setActive(request.active() == null ? Boolean.TRUE : request.active());
     item.setServiceItemsJson(request.serviceItemsJson());
+    item.setAssignedStaffIdsJson(encodeAssignedStaffIds(merchantId, request.assignedStaffIds()));
     item.setPrice(request.price());
     ResourceItem saved = resourceItemRepository.save(item);
     var serviceById = resourceItemMediaResolver.indexById(serviceItemRepository.findByMerchantId(merchantId));
-    return resourceItemMediaResolver.toSummary(saved, merchantId, serviceById);
+    return resourceItemMediaResolver.toSummary(
+        saved, merchantId, serviceById, resolveResourceStatus(merchantId, saved));
+  }
+
+  @PatchMapping("/{merchantId}/resources/{resourceId}")
+  public ResourceItemSummary updateResource(
+      @PathVariable UUID merchantId,
+      @PathVariable UUID resourceId,
+      @Valid @RequestBody ResourceUpdateRequest request) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    ResourceItem item =
+        resourceItemRepository
+            .findByIdAndMerchantId(resourceId, merchantId)
+            .orElseThrow(() -> new ApiException("Resource not found", HttpStatus.NOT_FOUND));
+    if (request.name() != null) {
+      String name = request.name().trim();
+      if (name.isEmpty()) {
+        throw new ApiException("Resource name must not be blank", HttpStatus.BAD_REQUEST);
+      }
+      item.setName(name);
+    }
+    if (request.type() != null) {
+      String type = request.type().trim();
+      if (type.isEmpty()) {
+        throw new ApiException("Resource type must not be blank", HttpStatus.BAD_REQUEST);
+      }
+      item.setType(type.toUpperCase(Locale.ROOT));
+    }
+    if (request.category() != null) {
+      String category = request.category().trim();
+      item.setCategory(category.isEmpty() ? "GENERAL" : category.toUpperCase(Locale.ROOT));
+    }
+    if (request.capacity() != null) {
+      item.setCapacity(request.capacity());
+    }
+    if (request.active() != null) {
+      item.setActive(request.active());
+    }
+    if (request.serviceItemsJson() != null) {
+      item.setServiceItemsJson(request.serviceItemsJson().trim().isEmpty() ? "[]" : request.serviceItemsJson());
+    }
+    if (request.assignedStaffIds() != null) {
+      item.setAssignedStaffIdsJson(encodeAssignedStaffIds(merchantId, request.assignedStaffIds()));
+    }
+    if (request.price() != null) {
+      item.setPrice(request.price());
+    }
+    ResourceItem saved = resourceItemRepository.save(item);
+    var serviceById = resourceItemMediaResolver.indexById(serviceItemRepository.findByMerchantId(merchantId));
+    return resourceItemMediaResolver.toSummary(
+        saved, merchantId, serviceById, resolveResourceStatus(merchantId, saved));
+  }
+
+  @PatchMapping("/{merchantId}/resources/batch/price")
+  @Transactional
+  public MerchantResourceListResponse batchUpdateResourcePrice(
+      @PathVariable UUID merchantId, @Valid @RequestBody ResourceBatchPriceRequest request) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    List<ResourceItem> resources =
+        resourceItemRepository.findAllById(request.resourceIds()).stream()
+            .filter(item -> item.getMerchant().getId().equals(merchantId))
+            .toList();
+    if (resources.size() != request.resourceIds().size()) {
+      throw new ApiException("Some resources are out of merchant scope", HttpStatus.FORBIDDEN);
+    }
+    resources.forEach(item -> item.setPrice(request.price()));
+    resourceItemRepository.saveAll(resources);
+    var serviceById = resourceItemMediaResolver.indexById(serviceItemRepository.findByMerchantId(merchantId));
+    List<ResourceItemSummary> items =
+        resources.stream()
+            .map(r -> resourceItemMediaResolver.toSummary(r, merchantId, serviceById, resolveResourceStatus(merchantId, r)))
+            .toList();
+    return new MerchantResourceListResponse(items, 0, items.size(), items.size());
+  }
+
+  @PatchMapping("/{merchantId}/resources/batch/status")
+  @Transactional
+  public MerchantResourceListResponse batchUpdateResourceStatus(
+      @PathVariable UUID merchantId, @Valid @RequestBody ResourceBatchStatusRequest request) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    if (request.status() == ResourceOperationalStatus.FULLY_BOOKED) {
+      throw new ApiException("FULLY_BOOKED is derived and cannot be set manually", HttpStatus.CONFLICT);
+    }
+    List<ResourceItem> resources =
+        resourceItemRepository.findAllById(request.resourceIds()).stream()
+            .filter(item -> item.getMerchant().getId().equals(merchantId))
+            .toList();
+    if (resources.size() != request.resourceIds().size()) {
+      throw new ApiException("Some resources are out of merchant scope", HttpStatus.FORBIDDEN);
+    }
+    resources.forEach(
+        item -> {
+          boolean maintenance = request.status() == ResourceOperationalStatus.MAINTENANCE;
+          item.setMaintenance(maintenance);
+          item.setActive(!maintenance);
+        });
+    resourceItemRepository.saveAll(resources);
+    var serviceById = resourceItemMediaResolver.indexById(serviceItemRepository.findByMerchantId(merchantId));
+    List<ResourceItemSummary> items =
+        resources.stream()
+            .map(r -> resourceItemMediaResolver.toSummary(r, merchantId, serviceById, resolveResourceStatus(merchantId, r)))
+            .toList();
+    return new MerchantResourceListResponse(items, 0, items.size(), items.size());
+  }
+
+  @PutMapping("/{merchantId}/resources/batch/business-hours")
+  @Transactional
+  public MerchantResourceListResponse batchUpdateResourceBusinessHours(
+      @PathVariable UUID merchantId, @Valid @RequestBody ResourceBatchBusinessHoursRequest request) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    List<ResourceItem> resources =
+        resourceItemRepository.findAllById(request.resourceIds()).stream()
+            .filter(item -> item.getMerchant().getId().equals(merchantId))
+            .toList();
+    if (resources.size() != request.resourceIds().size()) {
+      throw new ApiException("Some resources are out of merchant scope", HttpStatus.FORBIDDEN);
+    }
+    resources.forEach(item -> item.setBusinessHoursJson(request.businessHoursJson()));
+    resourceItemRepository.saveAll(resources);
+    var serviceById = resourceItemMediaResolver.indexById(serviceItemRepository.findByMerchantId(merchantId));
+    List<ResourceItemSummary> items =
+        resources.stream()
+            .map(r -> resourceItemMediaResolver.toSummary(r, merchantId, serviceById, resolveResourceStatus(merchantId, r)))
+            .toList();
+    return new MerchantResourceListResponse(items, 0, items.size(), items.size());
   }
 
   @DeleteMapping("/{merchantId}/resources/{resourceId}")
-  public void deleteResource(@PathVariable Long merchantId, @PathVariable Long resourceId) {
+  public void deleteResource(@PathVariable UUID merchantId, @PathVariable UUID resourceId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     ResourceItem item = resourceItemRepository.findByIdAndMerchantId(resourceId, merchantId)
         .orElseThrow(() -> new ApiException("Resource not found"));
+    List<UUID> scopedServiceIds = parseServiceItemIds(item.getServiceItemsJson());
+    if (!scopedServiceIds.isEmpty()) {
+      long blockingCount =
+          bookingRepository.countByMerchantIdAndServiceItemIdInAndStatusIn(
+              merchantId, scopedServiceIds, listBlockingStatuses());
+      if (blockingCount > 0) {
+        throw new ApiException(
+            "Resource has unfinished bookings and cannot be deleted", HttpStatus.CONFLICT);
+      }
+    }
     resourceItemRepository.delete(item);
   }
 
+  private List<UUID> parseServiceItemIds(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return List.of();
+    }
+    try {
+      List<UUID> parsed = objectMapper.readValue(raw, new TypeReference<List<UUID>>() {});
+      return parsed.stream().filter(id -> id != null).distinct().toList();
+    } catch (Exception ex) {
+      return List.of();
+    }
+  }
+
+  private String encodeAssignedStaffIds(UUID merchantId, List<UUID> rawStaffIds) {
+    if (rawStaffIds == null || rawStaffIds.isEmpty()) {
+      return "[]";
+    }
+    List<UUID> normalized =
+        rawStaffIds.stream()
+            .filter(id -> id != null)
+            .collect(
+                java.util.stream.Collectors.collectingAndThen(
+                    java.util.stream.Collectors.toCollection(LinkedHashSet::new), List::copyOf));
+    if (normalized.isEmpty()) {
+      return "[]";
+    }
+
+    List<TeamMember> activeMembers =
+        teamMemberRepository.findByMerchantIdAndPlatformUserIdInAndStatus(
+            merchantId, normalized, TeamMemberStatus.ACTIVE);
+    Set<UUID> activeUserIds =
+        activeMembers.stream().map(member -> member.getPlatformUser().getId()).collect(java.util.stream.Collectors.toSet());
+    List<UUID> invalidIds =
+        normalized.stream().filter(id -> !activeUserIds.contains(id)).toList();
+    if (!invalidIds.isEmpty()) {
+      throw new ApiException(
+          "assignedStaffIds must be active team members in this merchant: " + invalidIds,
+          HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      return objectMapper.writeValueAsString(normalized);
+    } catch (Exception ex) {
+      throw new ApiException("Failed to encode assignedStaffIds", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  private List<BookingStatus> listBlockingStatuses() {
+    Set<BookingStatus> terminalStatuses =
+        EnumSet.of(
+            BookingStatus.CANCELLED,
+            BookingStatus.COMPLETED,
+            BookingStatus.EXPIRED,
+            BookingStatus.REFUNDED,
+            BookingStatus.NO_SHOW);
+    return java.util.Arrays.stream(BookingStatus.values())
+        .filter(status -> !terminalStatuses.contains(status))
+        .toList();
+  }
+
+  private long countResourcesForService(UUID merchantId, UUID serviceId) {
+    return resourceItemRepository.findByMerchantId(merchantId).stream()
+        .filter(item -> parseServiceItemIds(item.getServiceItemsJson()).contains(serviceId))
+        .count();
+  }
+
+  private ResourceOperationalStatus resolveResourceStatus(UUID merchantId, ResourceItem resource) {
+    if (Boolean.TRUE.equals(resource.getMaintenance())) {
+      return ResourceOperationalStatus.MAINTENANCE;
+    }
+    List<UUID> scopedServiceIds = parseServiceItemIds(resource.getServiceItemsJson());
+    if (!scopedServiceIds.isEmpty()) {
+      List<Booking> activeBookings =
+          bookingRepository.findByMerchantIdAndServiceItemIdInAndStatusNotAndStartAtLessThanAndEndAtGreaterThan(
+              merchantId,
+              scopedServiceIds,
+              BookingStatus.CANCELLED,
+              LocalDateTime.now(),
+              LocalDateTime.now());
+      if ((long) activeBookings.size() >= Math.max(1, resource.getCapacity() == null ? 1 : resource.getCapacity())) {
+        return ResourceOperationalStatus.FULLY_BOOKED;
+      }
+    }
+    return ResourceOperationalStatus.ACTIVE;
+  }
+
   @GetMapping("/{merchantId}/availability-exceptions")
-  public List<AvailabilityExceptionSummary> getAvailabilityExceptions(@PathVariable Long merchantId) {
+  public List<AvailabilityExceptionSummary> getAvailabilityExceptions(@PathVariable UUID merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     return availabilityExceptionRepository.findByMerchantId(merchantId).stream()
@@ -627,7 +1020,7 @@ public class MerchantPortalController {
 
   @PostMapping("/{merchantId}/availability-exceptions")
   public AvailabilityExceptionSummary createAvailabilityException(
-      @PathVariable Long merchantId, @Valid @RequestBody AvailabilityExceptionRequest request) {
+      @PathVariable UUID merchantId, @Valid @RequestBody AvailabilityExceptionRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     AvailabilityException ex = new AvailabilityException();
@@ -641,7 +1034,7 @@ public class MerchantPortalController {
   }
 
   @DeleteMapping("/{merchantId}/availability-exceptions/{exceptionId}")
-  public void deleteAvailabilityException(@PathVariable Long merchantId, @PathVariable Long exceptionId) {
+  public void deleteAvailabilityException(@PathVariable UUID merchantId, @PathVariable Long exceptionId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     AvailabilityException ex = availabilityExceptionRepository.findById(exceptionId)
@@ -654,8 +1047,8 @@ public class MerchantPortalController {
 
   @PutMapping("/{merchantId}/bookings/{bookingId}/status")
   public MerchantBookingSummary updateBookingStatus(
-      @PathVariable Long merchantId,
-      @PathVariable Long bookingId,
+      @PathVariable UUID merchantId,
+      @PathVariable UUID bookingId,
       @Valid @RequestBody MerchantBookingStatusUpdateRequest request) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
@@ -672,7 +1065,7 @@ public class MerchantPortalController {
   }
 
   @PostMapping("/{merchantId}/bookings")
-  public MerchantBookingSummary createManualBooking(@PathVariable Long merchantId, @Valid @RequestBody ManualBookingRequest request) {
+  public MerchantBookingSummary createManualBooking(@PathVariable UUID merchantId, @Valid @RequestBody ManualBookingRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     ServiceItem service = serviceItemRepository.findByIdAndMerchantId(request.serviceItemId(), merchant.getId())
@@ -688,8 +1081,49 @@ public class MerchantPortalController {
         booking.getStatus());
   }
 
+  @PostMapping("/{merchantId}/bookings/{bookingId}/assign")
+  public BookingAssignmentSummary assignBooking(
+      @PathVariable UUID merchantId,
+      @PathVariable UUID bookingId,
+      @Valid @RequestBody BookingAssignmentCommandRequest request) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    return merchantBookingAssignmentService.assign(merchantId, bookingId, request);
+  }
+
+  @PostMapping("/{merchantId}/bookings/{bookingId}/reassign")
+  public BookingAssignmentSummary reassignBooking(
+      @PathVariable UUID merchantId,
+      @PathVariable UUID bookingId,
+      @Valid @RequestBody BookingAssignmentCommandRequest request) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    return merchantBookingAssignmentService.reassign(merchantId, bookingId, request);
+  }
+
+  @PostMapping("/{merchantId}/bookings/{bookingId}/release")
+  public BookingAssignmentSummary releaseBooking(
+      @PathVariable UUID merchantId,
+      @PathVariable UUID bookingId,
+      @Valid @RequestBody BookingAssignmentCommandRequest request) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    return merchantBookingAssignmentService.release(merchantId, bookingId, request);
+  }
+
+  @GetMapping("/{merchantId}/resources/{resourceId}/staff-candidates")
+  public List<StaffCandidateSummary> listStaffCandidates(
+      @PathVariable UUID merchantId,
+      @PathVariable UUID resourceId,
+      @RequestParam LocalDateTime startAt,
+      @RequestParam LocalDateTime endAt) {
+    assertMerchantScope(merchantId);
+    bookingCommandService.ensureMerchant(merchantId);
+    return merchantBookingAssignmentService.listStaffCandidates(merchantId, resourceId, startAt, endAt);
+  }
+
   @GetMapping("/{merchantId}/teams")
-  public List<TeamSummary> listTeams(@PathVariable Long merchantId) {
+  public List<TeamSummary> listTeams(@PathVariable UUID merchantId) {
     assertMerchantScope(merchantId);
     bookingCommandService.ensureMerchant(merchantId);
     return serviceTeamRepository.findByMerchantIdOrderByIdDesc(merchantId).stream()
@@ -699,7 +1133,7 @@ public class MerchantPortalController {
 
   @PostMapping("/{merchantId}/teams")
   public TeamSummary createTeam(
-      @PathVariable Long merchantId, @Valid @RequestBody TeamCreateRequest request) {
+      @PathVariable UUID merchantId, @Valid @RequestBody TeamCreateRequest request) {
     assertMerchantScope(merchantId);
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     serviceTeamRepository
@@ -719,7 +1153,7 @@ public class MerchantPortalController {
 
   @PutMapping("/{merchantId}/teams/{teamId}")
   public TeamSummary updateTeam(
-      @PathVariable Long merchantId,
+      @PathVariable UUID merchantId,
       @PathVariable Long teamId,
       @Valid @RequestBody TeamUpdateRequest request) {
     assertMerchantScope(merchantId);
@@ -733,7 +1167,7 @@ public class MerchantPortalController {
 
   @GetMapping("/{merchantId}/teams/{teamId}/members")
   public List<TeamMemberSummary> listTeamMembers(
-      @PathVariable Long merchantId, @PathVariable Long teamId) {
+      @PathVariable UUID merchantId, @PathVariable Long teamId) {
     assertMerchantScope(merchantId);
     requireTeamInMerchant(merchantId, teamId);
     return teamMemberRepository.findByMerchantIdAndTeamIdOrderByIdAsc(merchantId, teamId).stream()
@@ -743,7 +1177,7 @@ public class MerchantPortalController {
 
   @PostMapping("/{merchantId}/teams/{teamId}/members")
   public TeamMemberSummary assignTeamMember(
-      @PathVariable Long merchantId,
+      @PathVariable UUID merchantId,
       @PathVariable Long teamId,
       @Valid @RequestBody TeamMemberAssignRequest request) {
     assertMerchantScope(merchantId);
@@ -770,7 +1204,7 @@ public class MerchantPortalController {
 
   @DeleteMapping("/{merchantId}/teams/{teamId}/members/{memberId}")
   public void removeTeamMember(
-      @PathVariable Long merchantId, @PathVariable Long teamId, @PathVariable Long memberId) {
+      @PathVariable UUID merchantId, @PathVariable Long teamId, @PathVariable Long memberId) {
     assertMerchantScope(merchantId);
     ServiceTeam team = requireTeamInMerchant(merchantId, teamId);
     TeamMember member =
@@ -783,7 +1217,7 @@ public class MerchantPortalController {
     teamMemberRepository.delete(member);
   }
 
-  private ServiceTeam requireTeamInMerchant(Long merchantId, Long teamId) {
+  private ServiceTeam requireTeamInMerchant(UUID merchantId, Long teamId) {
     ServiceTeam team =
         serviceTeamRepository
             .findById(teamId)
@@ -827,7 +1261,10 @@ public class MerchantPortalController {
         config.getFaqJson(),
         config.getBufferMinutes(),
         config.getHomepageSectionsJson(),
-        config.getCategoryOrderJson());
+        config.getCategoryOrderJson(),
+        Boolean.TRUE.equals(config.getNotificationNewBooking()),
+        Boolean.TRUE.equals(config.getNotificationCancellation()),
+        Boolean.TRUE.equals(config.getNotificationDailySummary()));
   }
 
   private BookingTransitionEvent toTransitionEvent(BookingStatus status) {

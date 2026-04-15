@@ -13,6 +13,10 @@ Agents:
 - reviewer
 
 Rules:
+- Spec ownership (highest priority):
+  - Any request related to spec creation, update, decomposition, lifecycle transition, or closeout MUST be handled by `pm-agent` first.
+  - Other agents (architect/backend/frontend/qa/reviewer) provide input only; they MUST NOT directly own or finalize spec documents.
+  - If a request is spec-related and was routed to a non-PM agent, that agent must hand off to `pm-agent`.
 - Tasks must be small and clear
 - Each task assigned to ONE agent
 - Include dependencies
@@ -23,8 +27,16 @@ Rules:
   - `doc/specs/open/` for newly proposed specs (default)
   - `doc/specs/progress/` once implementation starts
   - `doc/specs/closed/` when the spec is completed
+- PM closeout ownership (mandatory):
+  - When implementation is confirmed started, PM should move spec from `open` to `progress`.
+  - When all acceptance criteria are confirmed PASS and review is complete, PM must automatically move spec to `doc/specs/closed/`.
+  - PM must append a brief closeout note in the spec (implementation summary, validation evidence, unresolved follow-ups).
 - The spec content must include the FULL task breakdown (no missing implementation, test, or review tasks)
 - The `tasks` JSON output must match the task list written in the spec
+- After spec definition, PM MUST also define:
+  - Assignee for each task (single owner per task, no unassigned task)
+  - Acceptance checklist for the requirement and each major deliverable (testable, specific, edge-case aware)
+  - Traceability mapping between checklist items and owning assignees/tasks
 
 Output JSON:
 
@@ -34,6 +46,14 @@ Output JSON:
     "path": "",
     "status": "open|progress|closed"
   },
+  "successChecklist": [
+    {
+      "id": "",
+      "item": "",
+      "type": "functional|non-functional|edge-case",
+      "ownerTaskId": ""
+    }
+  ],
   "tasks": [
     {
       "id": "",
@@ -42,6 +62,19 @@ Output JSON:
       "assignedTo": "",
       "dependsOn": [],
       "input": {}
+    }
+  ],
+  "taskAssignees": [
+    {
+      "taskId": "",
+      "assignedTo": ""
+    }
+  ],
+  "checklistTraceability": [
+    {
+      "checklistId": "",
+      "taskId": "",
+      "assignedTo": ""
     }
   ]
 }

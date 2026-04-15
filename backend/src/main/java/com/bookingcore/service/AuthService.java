@@ -1,5 +1,6 @@
 package com.bookingcore.service;
 
+import java.util.UUID;
 import com.bookingcore.api.ApiDtos.AuthContextOption;
 import com.bookingcore.api.ApiDtos.CreateMerchantRequest;
 import com.bookingcore.api.ApiDtos.AuthMeResponse;
@@ -66,7 +67,7 @@ public class AuthService {
 
   private static final Comparator<ActiveAuthContext> ACTIVE_CONTEXT_ORDER =
       Comparator.comparingInt((ActiveAuthContext c) -> safeRoleOrdinal(c.roleCode()))
-          .thenComparing(c -> c.merchantId() == null ? Long.MIN_VALUE : c.merchantId());
+          .thenComparing(ActiveAuthContext::merchantId, Comparator.nullsLast(Comparator.naturalOrder()));
 
   public AuthService(
       BookingPlatformProperties properties,
@@ -118,7 +119,7 @@ public class AuthService {
         resetLoginFailureState(dbUser);
         ActiveAuthContext initial = resolveInitialContext(dbUser);
         PlatformUserRole role = parseRoleCode(initial.roleCode()).orElse(dbUser.getRole());
-        Long merchantId = initial.merchantId();
+        UUID merchantId = initial.merchantId();
         String token =
             jwtService.createAccessToken(
                 dbUser.getUsername(), role, merchantId, dbUser.getCredentialVersion());
@@ -311,7 +312,7 @@ public class AuthService {
     List<ActiveAuthContext> raw = platformUserRbacBindingRepository.findActiveAuthContexts(user.getId());
     List<AuthContextOption> fromBindings;
     if (raw.isEmpty()) {
-      Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+      UUID mid = user.getMerchant() == null ? null : user.getMerchant().getId();
       fromBindings = List.of(authOptionForRoleAndMerchant(user.getRole(), mid));
     } else {
       fromBindings =
@@ -325,7 +326,7 @@ public class AuthService {
               .map(c -> authOptionForRoleAndMerchant(parseRoleCode(c.roleCode()).orElseThrow(), c.merchantId()))
               .toList();
       if (fromBindings.isEmpty()) {
-        Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+        UUID mid = user.getMerchant() == null ? null : user.getMerchant().getId();
         fromBindings = List.of(authOptionForRoleAndMerchant(user.getRole(), mid));
       }
     }
@@ -394,7 +395,7 @@ public class AuthService {
     return appendAdminMerchantPreview(single, principal);
   }
 
-  private static AuthContextOption authOptionForRoleAndMerchant(PlatformUserRole role, Long merchantId) {
+  private static AuthContextOption authOptionForRoleAndMerchant(PlatformUserRole role, UUID merchantId) {
     boolean scoped =
         (role == PlatformUserRole.MERCHANT || role == PlatformUserRole.SUB_MERCHANT)
             && merchantId != null;
@@ -411,7 +412,7 @@ public class AuthService {
         .findFirstByOrderByIdAsc()
         .map(
             m -> {
-              long mId = m.getId();
+              UUID mId = m.getId();
               boolean already =
                   base.stream()
                       .anyMatch(
@@ -444,22 +445,22 @@ public class AuthService {
 
   private ActiveAuthContext resolveInitialContext(PlatformUser user) {
     if (rbacRoleRepository.count() == 0L) {
-      Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+      UUID mid = user.getMerchant() == null ? null : user.getMerchant().getId();
       return new ActiveAuthContext(user.getRole().name(), mid);
     }
     List<ActiveAuthContext> raw = platformUserRbacBindingRepository.findActiveAuthContexts(user.getId());
     if (raw.isEmpty()) {
-      Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+      UUID mid = user.getMerchant() == null ? null : user.getMerchant().getId();
       return new ActiveAuthContext(user.getRole().name(), mid);
     }
     List<ActiveAuthContext> deduped = dedupeActiveContexts(raw);
     List<ActiveAuthContext> supported =
         deduped.stream().filter(c -> parseRoleCode(c.roleCode()).isPresent()).toList();
     if (supported.isEmpty()) {
-      Long mid = user.getMerchant() == null ? null : user.getMerchant().getId();
+      UUID mid = user.getMerchant() == null ? null : user.getMerchant().getId();
       return new ActiveAuthContext(user.getRole().name(), mid);
     }
-    Long userMid = user.getMerchant() == null ? null : user.getMerchant().getId();
+    UUID userMid = user.getMerchant() == null ? null : user.getMerchant().getId();
     String primaryRole = user.getRole().name();
     for (ActiveAuthContext c : supported) {
       if (primaryRole.equals(c.roleCode()) && Objects.equals(userMid, c.merchantId())) {
@@ -579,7 +580,7 @@ public class AuthService {
   }
 
   private void assertContextMembershipAllowed(
-      String username, PlatformUserRole requestedRole, Long merchantId) {
+      String username, PlatformUserRole requestedRole, UUID merchantId) {
     PlatformUser user = platformUserRepository.findByUsername(username).orElse(null);
     if (user == null) {
       return;
@@ -590,7 +591,7 @@ public class AuthService {
   }
 
   private boolean isContextAllowedByMembership(
-      PlatformUser user, PlatformUserRole requestedRole, Long merchantId) {
+      PlatformUser user, PlatformUserRole requestedRole, UUID merchantId) {
     if (user.getRole() == PlatformUserRole.SYSTEM_ADMIN) {
       return true;
     }

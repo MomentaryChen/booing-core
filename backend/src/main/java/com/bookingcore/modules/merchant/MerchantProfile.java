@@ -43,6 +43,12 @@ public class MerchantProfile {
   @Column(length = 500)
   private String website;
 
+  @Column(length = 120)
+  private String storeCategory;
+
+  @Column(length = 500)
+  private String lineContactUrl;
+
   public Long getId() {
     return id;
   }
@@ -101,5 +107,21 @@ public class MerchantProfile {
 
   public void setWebsite(String website) {
     this.website = website;
+  }
+
+  public String getStoreCategory() {
+    return storeCategory;
+  }
+
+  public void setStoreCategory(String storeCategory) {
+    this.storeCategory = storeCategory;
+  }
+
+  public String getLineContactUrl() {
+    return lineContactUrl;
+  }
+
+  public void setLineContactUrl(String lineContactUrl) {
+    this.lineContactUrl = lineContactUrl;
   }
 }

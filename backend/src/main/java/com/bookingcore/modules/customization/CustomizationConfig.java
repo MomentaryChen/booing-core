@@ -61,6 +61,15 @@ public class CustomizationConfig {
   @Column(nullable = false)
   private String categoryOrderJson = "[]";
 
+  @Column(name = "notification_new_booking", nullable = false)
+  private Boolean notificationNewBooking = true;
+
+  @Column(name = "notification_cancellation", nullable = false)
+  private Boolean notificationCancellation = true;
+
+  @Column(name = "notification_daily_summary", nullable = false)
+  private Boolean notificationDailySummary = false;
+
   public Long getId() {
     return id;
   }
@@ -159,5 +168,29 @@ public class CustomizationConfig {
 
   public void setCategoryOrderJson(String categoryOrderJson) {
     this.categoryOrderJson = categoryOrderJson;
+  }
+
+  public Boolean getNotificationNewBooking() {
+    return notificationNewBooking;
+  }
+
+  public void setNotificationNewBooking(Boolean notificationNewBooking) {
+    this.notificationNewBooking = notificationNewBooking;
+  }
+
+  public Boolean getNotificationCancellation() {
+    return notificationCancellation;
+  }
+
+  public void setNotificationCancellation(Boolean notificationCancellation) {
+    this.notificationCancellation = notificationCancellation;
+  }
+
+  public Boolean getNotificationDailySummary() {
+    return notificationDailySummary;
+  }
+
+  public void setNotificationDailySummary(Boolean notificationDailySummary) {
+    this.notificationDailySummary = notificationDailySummary;
   }
 }

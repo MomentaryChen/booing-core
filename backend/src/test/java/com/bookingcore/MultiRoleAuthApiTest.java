@@ -60,7 +60,7 @@ class MultiRoleAuthApiTest {
     merchant.setServiceLimit(5);
     entityManager.persist(merchant);
 
-    String username = "multi-role-user-" + System.nanoTime();
+    String username = "multi-role-user-" + System.nanoTime() + "@example.com";
     String password = "secret-pass";
     PlatformUser user = new PlatformUser();
     user.setUsername(username);

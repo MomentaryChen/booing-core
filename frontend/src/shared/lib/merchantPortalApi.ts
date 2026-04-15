@@ -49,8 +49,12 @@ export interface MerchantResourceDto {
   capacity: number
   active: boolean
   price: number
+  assignedStaffIds: number[]
+  serviceItemsJson: string
   /** Derived cover image from linked services, when available. */
   imageUrl: string | null
+  status: 'ACTIVE' | 'MAINTENANCE' | 'FULLY_BOOKED'
+  businessHoursJson: string
 }
 
 export interface MerchantBusinessHourDto {
@@ -82,6 +86,9 @@ export interface MerchantProfileDto {
   phone: string | null
   email: string | null
   website: string | null
+  /** Present when backend supports merchant profile V21+. */
+  storeCategory?: string | null
+  lineContactUrl?: string | null
 }
 
 export interface MerchantCustomizationDto {
@@ -96,6 +103,9 @@ export interface MerchantCustomizationDto {
   bufferMinutes: number | null
   homepageSectionsJson: string | null
   categoryOrderJson: string | null
+  notificationNewBooking?: boolean | null
+  notificationCancellation?: boolean | null
+  notificationDailySummary?: boolean | null
 }
 
 export interface MerchantServiceDto {
@@ -105,10 +115,27 @@ export interface MerchantServiceDto {
   price: number
   category: string
   imageUrl: string | null
+  active: boolean
+  resourceCount: number
 }
 
-export function fetchMerchantResources(merchantId: number): Promise<MerchantResourceDto[]> {
-  return requestJson(`/api/merchant/${merchantId}/resources`)
+export interface MerchantResourceListDto {
+  items: MerchantResourceDto[]
+  page: number
+  size: number
+  total: number
+}
+
+export function fetchMerchantResources(
+  merchantId: number,
+  query?: { page?: number; size?: number; status?: 'ACTIVE' | 'MAINTENANCE' | 'FULLY_BOOKED' },
+): Promise<MerchantResourceListDto> {
+  const params = new URLSearchParams()
+  if (query?.page != null) params.set('page', String(query.page))
+  if (query?.size != null) params.set('size', String(query.size))
+  if (query?.status) params.set('status', query.status)
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+  return requestJson(`/api/merchant/${merchantId}/resources${suffix}`)
 }
 
 export function fetchMerchantServices(merchantId: number): Promise<MerchantServiceDto[]> {
@@ -137,6 +164,45 @@ export function deleteMerchantService(merchantId: number, serviceId: number): Pr
   })
 }
 
+export function updateMerchantService(
+  merchantId: number,
+  serviceId: number,
+  payload: {
+    name: string
+    durationMinutes: number
+    price: number
+    category: string
+    imageUrl?: string | null
+  },
+): Promise<MerchantServiceDto> {
+  return requestJson(`/api/merchant/${merchantId}/services/${serviceId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function toggleMerchantServiceActive(
+  merchantId: number,
+  serviceId: number,
+  active: boolean,
+): Promise<MerchantServiceDto> {
+  const params = new URLSearchParams({ active: String(active) })
+  return requestJson(`/api/merchant/${merchantId}/services/${serviceId}/active?${params.toString()}`, {
+    method: 'PATCH',
+  })
+}
+
+export function cloneMerchantService(
+  merchantId: number,
+  serviceId: number,
+  payload?: { nameSuffix?: string },
+): Promise<MerchantServiceDto> {
+  return requestJson(`/api/merchant/${merchantId}/services/${serviceId}/clone`, {
+    method: 'POST',
+    body: JSON.stringify(payload ?? {}),
+  })
+}
+
 export function createMerchantResource(
   merchantId: number,
   payload: {
@@ -146,6 +212,7 @@ export function createMerchantResource(
     capacity: number
     active: boolean
     serviceItemsJson: string
+    assignedStaffIds?: number[]
     price: number
   },
 ): Promise<MerchantResourceDto> {
@@ -158,6 +225,56 @@ export function createMerchantResource(
 export function deleteMerchantResource(merchantId: number, resourceId: number): Promise<void> {
   return requestJson(`/api/merchant/${merchantId}/resources/${resourceId}`, {
     method: 'DELETE',
+  })
+}
+
+export function updateMerchantResource(
+  merchantId: number,
+  resourceId: number,
+  payload: Partial<{
+    name: string
+    type: string
+    category: string
+    capacity: number
+    active: boolean
+    serviceItemsJson: string
+    assignedStaffIds: number[]
+    price: number
+  }>,
+): Promise<MerchantResourceDto> {
+  return requestJson(`/api/merchant/${merchantId}/resources/${resourceId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function batchUpdateMerchantResourcePrice(
+  merchantId: number,
+  payload: { resourceIds: number[]; price: number },
+): Promise<MerchantResourceListDto> {
+  return requestJson(`/api/merchant/${merchantId}/resources/batch/price`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function batchUpdateMerchantResourceStatus(
+  merchantId: number,
+  payload: { resourceIds: number[]; status: 'ACTIVE' | 'MAINTENANCE' | 'FULLY_BOOKED' },
+): Promise<MerchantResourceListDto> {
+  return requestJson(`/api/merchant/${merchantId}/resources/batch/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function batchUpdateMerchantResourceBusinessHours(
+  merchantId: number,
+  payload: { resourceIds: number[]; businessHoursJson: string },
+): Promise<MerchantResourceListDto> {
+  return requestJson(`/api/merchant/${merchantId}/resources/batch/business-hours`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
   })
 }
 

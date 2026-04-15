@@ -1,10 +1,10 @@
 package com.bookingcore.config;
 
+import com.bookingcore.api.ApiDtos;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -39,6 +39,7 @@ public class BookingAccessDeniedHandler implements AccessDeniedHandler {
     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
     response.setCharacterEncoding("UTF-8");
     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-    objectMapper.writeValue(response.getOutputStream(), Map.of("message", "Forbidden"));
+    objectMapper.writeValue(
+        response.getOutputStream(), new ApiDtos.ApiEnvelope<>(-1, "Forbidden", java.util.Map.of("errorCode", "FORBIDDEN")));
   }
 }

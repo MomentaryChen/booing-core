@@ -1,6 +1,7 @@
 package com.bookingcore;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -20,6 +21,7 @@ import jakarta.persistence.PersistenceContext;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -57,11 +59,13 @@ class ClientBookingCreateApiTest {
                             "startAt", startAt,
                             "notes", "book now"))))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.id").isNumber())
-        .andExpect(jsonPath("$.bookingNo").isString())
-        .andExpect(jsonPath("$.status").value("PENDING"))
-        .andExpect(jsonPath("$.resourceId").value(fixture.resource.getId()))
-        .andExpect(jsonPath("$.tenantId").value(fixture.merchant.getId()));
+        .andExpect(jsonPath("$.code").value(0))
+        .andExpect(jsonPath("$.message").value("success"))
+        .andExpect(jsonPath("$.data.id").isString())
+        .andExpect(jsonPath("$.data.bookingNo").isString())
+        .andExpect(jsonPath("$.data.status").value("PENDING"))
+        .andExpect(jsonPath("$.data.resourceId").value(fixture.resource.getId().toString()))
+        .andExpect(jsonPath("$.data.tenantId").value(fixture.merchant.getId().toString()));
   }
 
   @Test
@@ -126,7 +130,7 @@ class ClientBookingCreateApiTest {
     resourceA.setType("ROOM");
     resourceA.setCategory("GENERAL");
     resourceA.setCapacity(1);
-    resourceA.setServiceItemsJson("[" + serviceA.getId() + "]");
+    resourceA.setServiceItemsJson("[\"" + serviceA.getId() + "\"]");
     resourceA.setPrice(BigDecimal.TEN);
     resourceA.setActive(true);
     entityManager.persist(resourceA);
@@ -137,7 +141,7 @@ class ClientBookingCreateApiTest {
     resourceB.setType("ROOM");
     resourceB.setCategory("GENERAL");
     resourceB.setCapacity(1);
-    resourceB.setServiceItemsJson("[" + serviceB.getId() + "]");
+    resourceB.setServiceItemsJson("[\"" + serviceB.getId() + "\"]");
     resourceB.setPrice(BigDecimal.TEN);
     resourceB.setActive(true);
     entityManager.persist(resourceB);
@@ -165,8 +169,9 @@ class ClientBookingCreateApiTest {
                     objectMapper.writeValueAsString(
                         Map.of("resourceId", resourceB.getId(), "startAt", startAt))))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.status").value("PENDING"))
-        .andExpect(jsonPath("$.resourceId").value(resourceB.getId()));
+        .andExpect(jsonPath("$.code").value(0))
+        .andExpect(jsonPath("$.data.status").value("PENDING"))
+        .andExpect(jsonPath("$.data.resourceId", is(resourceB.getId().toString())));
   }
 
   @Test
@@ -219,7 +224,11 @@ class ClientBookingCreateApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
                     objectMapper.writeValueAsString(
-                        Map.of("resourceId", 99999999L, "startAt", startAt))))
+                        Map.of(
+                            "resourceId",
+                            UUID.fromString("01234567-89ab-7def-0123-456789abcdef"),
+                            "startAt",
+                            startAt))))
         .andExpect(status().isNotFound());
   }
 
@@ -309,7 +318,7 @@ class ClientBookingCreateApiTest {
     resource.setType(resourceType);
     resource.setCategory("GENERAL");
     resource.setCapacity(1);
-    resource.setServiceItemsJson("[" + serviceItem.getId() + "]");
+    resource.setServiceItemsJson("[\"" + serviceItem.getId() + "\"]");
     resource.setPrice(BigDecimal.TEN);
     resource.setActive(true);
     entityManager.persist(resource);
@@ -320,7 +329,7 @@ class ClientBookingCreateApiTest {
 
   private String loginClient() throws Exception {
     PlatformUser user = new PlatformUser();
-    user.setUsername("client-" + System.nanoTime());
+    user.setUsername("client-" + System.nanoTime() + "@example.com");
     user.setPasswordHash(passwordEncoder.encode("secret-pass"));
     user.setRole(PlatformUserRole.CLIENT);
     user.setEnabled(true);
@@ -337,7 +346,7 @@ class ClientBookingCreateApiTest {
     entityManager.persist(merchant);
 
     PlatformUser user = new PlatformUser();
-    user.setUsername("merchant-" + System.nanoTime());
+    user.setUsername("merchant-" + System.nanoTime() + "@example.com");
     user.setPasswordHash(passwordEncoder.encode("secret-pass"));
     user.setRole(PlatformUserRole.MERCHANT);
     user.setMerchant(merchant);

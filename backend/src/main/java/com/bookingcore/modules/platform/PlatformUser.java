@@ -1,5 +1,7 @@
 package com.bookingcore.modules.platform;
 
+import java.util.UUID;
+import com.bookingcore.common.BaseEntity;
 import com.bookingcore.modules.merchant.Merchant;
 import com.bookingcore.security.PlatformUserRole;
 import jakarta.persistence.Column;
@@ -7,9 +9,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
@@ -19,11 +18,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "platform_users")
-public class PlatformUser {
-
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+public class PlatformUser extends BaseEntity {
 
   @Column(nullable = false, unique = true, length = 120)
   private String username;
@@ -36,7 +31,7 @@ public class PlatformUser {
   private PlatformUserRole role;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "merchant_id")
+  @JoinColumn(name = "merchant_id", columnDefinition = "UUID")
   private Merchant merchant;
 
   @Column(nullable = false)
@@ -63,6 +58,12 @@ public class PlatformUser {
   @Column(name = "last_login_at")
   private LocalDateTime lastLoginAt;
 
+  @Column(name = "password_updated_at")
+  private LocalDateTime passwordUpdatedAt;
+
+  @Column(name = "password_change_required", nullable = false)
+  private Boolean passwordChangeRequired = false;
+
   @PrePersist
   public void prePersist() {
     LocalDateTime n = LocalDateTime.now();
@@ -77,10 +78,6 @@ public class PlatformUser {
   @PreUpdate
   public void preUpdate() {
     updatedAt = LocalDateTime.now();
-  }
-
-  public Long getId() {
-    return id;
   }
 
   public String getUsername() {
@@ -177,6 +174,22 @@ public class PlatformUser {
 
   public void setLastLoginAt(LocalDateTime lastLoginAt) {
     this.lastLoginAt = lastLoginAt;
+  }
+
+  public LocalDateTime getPasswordUpdatedAt() {
+    return passwordUpdatedAt;
+  }
+
+  public void setPasswordUpdatedAt(LocalDateTime passwordUpdatedAt) {
+    this.passwordUpdatedAt = passwordUpdatedAt;
+  }
+
+  public Boolean getPasswordChangeRequired() {
+    return passwordChangeRequired;
+  }
+
+  public void setPasswordChangeRequired(Boolean passwordChangeRequired) {
+    this.passwordChangeRequired = passwordChangeRequired;
   }
 }
 

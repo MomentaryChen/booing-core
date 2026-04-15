@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -47,7 +48,7 @@ class MerchantVisibilityInvitationApiTest {
     merchant.setVisibility(MerchantVisibility.INVITE_ONLY);
     entityManager.persist(merchant);
 
-    String username = "client-join-" + System.nanoTime();
+    String username = "client-join-" + System.nanoTime() + "@example.com";
     String password = "secret-pass";
     PlatformUser client = new PlatformUser();
     client.setUsername(username);
@@ -78,7 +79,7 @@ class MerchantVisibilityInvitationApiTest {
     JsonNode cards = objectMapper.readTree(merchantsJson);
     boolean containsInviteOnly = false;
     for (JsonNode card : cards) {
-      if (card.get("merchantId").asLong() == merchant.getId()) {
+      if (java.util.UUID.fromString(card.get("merchantId").asText()).equals(merchant.getId())) {
         containsInviteOnly = "INVITE_ONLY".equals(card.get("visibility").asText());
         break;
       }
@@ -92,13 +93,13 @@ class MerchantVisibilityInvitationApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"inviteCode\":\"" + invitation.getInviteCode() + "\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.merchantId").value(merchant.getId()))
+        .andExpect(jsonPath("$.merchantId").value(merchant.getId().toString()))
         .andExpect(jsonPath("$.membershipStatus").value("ACTIVE"));
 
     mockMvc
         .perform(get("/api/client/merchants/joined").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].merchantId").value(merchant.getId()));
+        .andExpect(jsonPath("$[0].merchantId").value(merchant.getId().toString()));
   }
 
   @Test
@@ -127,16 +128,23 @@ class MerchantVisibilityInvitationApiTest {
                 .param("date", java.time.LocalDate.now().plusDays(1).toString()))
         .andExpect(status().isForbidden());
 
+    LocalDateTime slotStart =
+        java.time.LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
     mockMvc
         .perform(
             post("/api/client/public/" + merchant.getSlug() + "/bookings")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    "{\"serviceItemId\":"
-                        + service.getId()
-                        + ",\"startAt\":\""
-                        + java.time.LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0)
-                        + "\",\"customerName\":\"Anon\",\"customerContact\":\"0900\"}"))
+                    objectMapper.writeValueAsString(
+                        Map.of(
+                            "serviceItemId",
+                            service.getId(),
+                            "startAt",
+                            slotStart,
+                            "customerName",
+                            "Anon",
+                            "customerContact",
+                            "0900"))))
         .andExpect(status().isForbidden());
 
     mockMvc
@@ -144,13 +152,14 @@ class MerchantVisibilityInvitationApiTest {
             post("/api/client/booking/lock")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    "{\"merchantId\":"
-                        + merchant.getId()
-                        + ",\"serviceItemId\":"
-                        + service.getId()
-                        + ",\"startAt\":\""
-                        + java.time.LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0)
-                        + "\"}"))
+                    objectMapper.writeValueAsString(
+                        Map.of(
+                            "merchantId",
+                            merchant.getId(),
+                            "serviceItemId",
+                            service.getId(),
+                            "startAt",
+                            slotStart))))
         .andExpect(status().isForbidden());
   }
 
@@ -163,7 +172,7 @@ class MerchantVisibilityInvitationApiTest {
     merchant.setVisibility(MerchantVisibility.INVITE_ONLY);
     entityManager.persist(merchant);
 
-    String merchantUsername = "merchant-owner-" + System.nanoTime();
+    String merchantUsername = "merchant-owner-" + System.nanoTime() + "@example.com";
     PlatformUser merchantUser = new PlatformUser();
     merchantUser.setUsername(merchantUsername);
     merchantUser.setPasswordHash(passwordEncoder.encode("secret-pass"));
@@ -179,7 +188,7 @@ class MerchantVisibilityInvitationApiTest {
     entityManager.persist(ownerMembership);
 
     PlatformUser invitee = new PlatformUser();
-    invitee.setUsername("invitee-" + System.nanoTime());
+    invitee.setUsername("invitee-" + System.nanoTime() + "@example.com");
     invitee.setPasswordHash(passwordEncoder.encode("secret-pass"));
     invitee.setRole(PlatformUserRole.CLIENT);
     invitee.setEnabled(true);

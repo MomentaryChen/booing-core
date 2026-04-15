@@ -1,7 +1,7 @@
 import { useAuthStore } from '@/shared/stores/authStore'
 
 export interface ClientMerchantCardDto {
-  merchantId: number
+  merchantId: string
   name: string
   slug: string
   visibility: string
@@ -9,7 +9,7 @@ export interface ClientMerchantCardDto {
 }
 
 export interface ServiceItemSummaryDto {
-  id: number
+  id: string
   name: string
   durationMinutes: number
   price: number
@@ -18,7 +18,7 @@ export interface ServiceItemSummaryDto {
 }
 
 export interface ResourceItemSummaryDto {
-  id: number
+  id: string
   name: string
   type: string
   category: string
@@ -29,8 +29,49 @@ export interface ResourceItemSummaryDto {
   imageUrl: string | null
 }
 
+export interface ClientCatalogResourceDto {
+  id: string
+  name: string
+  category: string
+  price: number
+  durationMinutes: number
+  rating: number
+  imageUrl: string | null
+  merchantName: string
+  resourceType?: string | null
+  availabilityLabel?: 'available' | 'limited' | 'unavailable' | 'stale' | null
+  remainingUnits?: number | null
+  seatsLeft?: number | null
+  nextAvailableAt?: string | null
+}
+
+export interface ClientCategoryDto {
+  key: string
+  label: string
+  count: number
+}
+
+export interface ClientResourcesResponseDto {
+  items: ClientCatalogResourceDto[]
+  page: number
+  size: number
+  total: number
+}
+
+export interface ClientResourceDetailDto {
+  id: string
+  name: string
+  description: string
+  category: string
+  price: number
+  durationMinutes: number
+  rating: number
+  merchant: MerchantSummaryDto
+  imageUrl: string | null
+}
+
 export interface MerchantSummaryDto {
-  id: number
+  id: string
   name: string
   slug: string
   active: boolean
@@ -90,4 +131,35 @@ export async function fetchVisibleMerchants(): Promise<ClientMerchantCardDto[]> 
 
 export async function fetchMerchantStorefront(slug: string): Promise<ClientMerchantStorefrontDto> {
   return requestJson<ClientMerchantStorefrontDto>(`/api/client/merchant/${encodeURIComponent(slug)}`)
+}
+
+export async function fetchFeaturedResources(limit = 6): Promise<ClientCatalogResourceDto[]> {
+  const q = new URLSearchParams({ limit: String(limit) })
+  return requestJson<ClientCatalogResourceDto[]>(`/api/client/resources/featured?${q.toString()}`)
+}
+
+export async function fetchClientCategories(): Promise<ClientCategoryDto[]> {
+  return requestJson<ClientCategoryDto[]>('/api/client/categories')
+}
+
+export async function fetchClientResources(params: {
+  q?: string
+  category?: string
+  resourceType?: string
+  sort?: 'relevance' | 'priceAsc' | 'priceDesc' | 'rating'
+  page?: number
+  size?: number
+}): Promise<ClientResourcesResponseDto> {
+  const q = new URLSearchParams()
+  if (params.q) q.set('q', params.q)
+  if (params.category) q.set('category', params.category)
+  if (params.resourceType && params.resourceType !== 'all') q.set('resourceType', params.resourceType)
+  if (params.sort) q.set('sort', params.sort)
+  q.set('page', String(params.page ?? 0))
+  q.set('size', String(params.size ?? 20))
+  return requestJson<ClientResourcesResponseDto>(`/api/client/resources?${q.toString()}`)
+}
+
+export async function fetchClientResourceDetail(resourceId: string): Promise<ClientResourceDetailDto> {
+  return requestJson<ClientResourceDetailDto>(`/api/client/resources/${encodeURIComponent(resourceId)}`)
 }

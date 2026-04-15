@@ -13,6 +13,8 @@ spring:
       ddl-auto: create-drop
 
 booking:
+  homepage:
+    tracking-test-buffer: true
   platform:
     time-zone: UTC
     system-admin-token: ""
@@ -21,7 +23,9 @@ booking:
         rate-limit-enabled: false
         lockout-enabled: false
       internal-system-admin:
-        auto-provision: false
+        auto-provision: true
+        username: admin
+        password: admin
     jwt:
       secret: "0123456789abcdef0123456789abcdef"
       expiration-seconds: 86400

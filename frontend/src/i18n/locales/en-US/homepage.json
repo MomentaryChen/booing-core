@@ -1,0 +1,120 @@
+{
+  "sections": {
+    "nav": {
+      "brand": "Booking Core",
+      "linkFeatures": "Capabilities",
+      "linkSolutions": "Flow",
+      "linkFaq": "FAQ",
+      "linkContact": "Contact",
+      "ctaLogin": "Login",
+      "ctaStart": "Get started",
+      "tenantLabel": "Tenant"
+    },
+    "hero": {
+      "title": "Spec-driven scheduling for multi-tenant booking",
+      "subtitle": "Configure resources, slots, and policies once—serve many industries without hard-coding a single workflow.",
+      "primaryCta": "Get started free",
+      "secondaryCta": "Watch demo",
+      "statusNote": "Automation handles the workflow; final confirmation authority is always defined by each merchant’s configuration.",
+      "mockDisclaimer": "Slots are computed from rules and exceptions—this card is a static illustration only.",
+      "previewTitle": "Resource / Slot — preview",
+      "mockTenantKeyLabel": "tenant_id",
+      "tnt_a": {
+        "title": "Tenant A — Resource & slot scheduling",
+        "subtitle": "Same platform primitives, tenant-specific story for demos and QA.",
+        "primaryCta": "Get started free",
+        "secondaryCta": "Watch demo",
+        "statusNote": "Automation handles the workflow; final confirmation authority is always defined by each merchant’s configuration.",
+        "mockDisclaimer": "Slots are computed from rules and exceptions—this card is a static illustration only.",
+        "previewTitle": "Resource / Slot — preview",
+        "mockTenantKeyLabel": "tenant_id"
+      },
+      "tnt_b": {
+        "title": "Tenant B — Neutral booking pipeline",
+        "subtitle": "Demonstrates tenant-isolated homepage content and SEO.",
+        "primaryCta": "Get started free",
+        "secondaryCta": "Watch demo",
+        "statusNote": "Automation handles the workflow; final confirmation authority is always defined by each merchant’s configuration.",
+        "mockDisclaimer": "Slots are computed from rules and exceptions—this card is a static illustration only.",
+        "previewTitle": "Resource / Slot — preview",
+        "mockTenantKeyLabel": "tenant_id"
+      }
+    },
+    "features": {
+      "title": "Core capabilities",
+      "intro": "Composable rules, strategies, slot computation, and collaboration—described with shared vocabulary.",
+      "c1t": "Configurable rules",
+      "c1b": "Express policies as data and strategies instead of one-off conditionals.",
+      "c2t": "Extensible strategies",
+      "c2b": "Attach validation and pricing behaviors per resource type.",
+      "c3t": "Slot engine",
+      "c3b": "Compute availability from hours and exceptions rather than pre-materializing every minute.",
+      "c4t": "Multi-role workflows",
+      "c4b": "Clients, merchants, and operators share the same booking lifecycle with clear transitions."
+    },
+    "process": {
+      "title": "How it works",
+      "notice": "Actual booking states follow tenant rules and resource policies.",
+      "s1t": "Register merchant",
+      "s1b": "Create your tenant space and invite operators.",
+      "s2t": "Define resources & rules",
+      "s2b": "Model bookable entities, hours, exceptions, and strategy hooks.",
+      "s3t": "Publish booking links",
+      "s3b": "Share storefront or embed flows—clients pick slots that respect your policies.",
+      "s4t": "Automate operations",
+      "s4b": "Monitor utilization and evolve rules without rewriting the core pipeline."
+    },
+    "use_cases": {
+      "title": "Resource types you can model",
+      "intro": "Examples use different domains but the same Resource/Slot pipeline.",
+      "tab1": "Courses",
+      "tab2": "Spaces",
+      "tab3": "Consultants",
+      "tab4": "Equipment",
+      "u1t": "Classes & sessions",
+      "u1b": "Recurring cohorts, seat caps, and instructor or room metadata per slot.",
+      "u2t": "Venues & rooms",
+      "u2b": "Spatial allocation, equipment manifests, and blackout windows.",
+      "u3t": "Consultants",
+      "u3b": "1:1 availability, skills metadata, and policy-aware slot offers.",
+      "u4t": "Equipment",
+      "u4b": "Inventory, checkout/return, and maintenance-driven exceptions."
+    },
+    "faq": {
+      "title": "FAQ",
+      "q1": "How long does onboarding take?",
+      "a1": "Depends on catalog size and rule complexity; start with defaults and iterate.",
+      "q2": "How is tenant data isolated technically?",
+      "a2": "Configuration, SEO, and client caches are keyed by tenant + locale + variant. The API rejects cross-tenant fallbacks—content never bleeds across tenants.",
+      "q3": "Is pricing included?",
+      "a3": "This page describes capabilities; commercial terms are agreed per deployment.",
+      "q4": "Are bookings auto-confirmed by the platform?",
+      "a4": "No universal guarantee. Confirmation is a state transition governed by each tenant’s rules, strategies, and manual overrides—exactly like production booking engines."
+    },
+    "cta": {
+      "title": "Ready to run your booking business on spec?",
+      "body": "Open the merchant console to configure resources, or browse the client experience.",
+      "primary": "Browse client app",
+      "secondary": "Merchant login"
+    },
+    "footer": {
+      "col1Title": "Product",
+      "col1a": "Capabilities",
+      "col1b": "Security & isolation",
+      "col1c": "Roadmap",
+      "col2Title": "Developers",
+      "col2a": "API overview",
+      "col2b": "Resource / Slot model",
+      "col2c": "Webhooks (planned)",
+      "col3Title": "Legal",
+      "col3a": "Privacy",
+      "col3b": "Terms",
+      "col3c": "DPA (contact)",
+      "col4Title": "Company",
+      "col4a": "Contact",
+      "col4b": "Status",
+      "col4c": "Careers",
+      "rights": "All rights reserved."
+    }
+  }
+}

@@ -1,5 +1,7 @@
 # 角色能力與商戶服務隊定義（前後端整合基線）
 
+> Closeout Note (2026-04-14): 本規格交付範圍（角色能力邊界、tenant scope guard、booking transition 入口、ServiceTeam/TeamMember API、resource staff assignment 與 merchant 前端整合）已完成並驗證通過；規格已結案並歸檔至 `doc/specs/closed/2026-04-10_role-capability-and-merchant-team-definition.md`。
+
 ## 1. 目的
 
 - 釐清目前產品中的角色邊界與可執行操作，作為前後端整合共同契約。
@@ -153,8 +155,34 @@
   Evidence: architecture constraints documented in section 11.2.
 - [x] Backend data/API plan completed (migration/index/rollback included).  
   Evidence: round-2 backend implemented role canonical mapping compatibility baseline and auth payload alias support.
-- [ ] Implementation delivered (backend + frontend).  
-  Evidence: backend role baseline delivered; frontend/team API integration pending.
+- [x] Implementation delivered (backend + frontend).  
+  Evidence: merchant team API + resource assignedStaffIds backend delivered; frontend ResourcesPage 已串接 team/member assignment UI。
 - [x] Reviewer gate passed (no unresolved high+ findings).  
   Evidence: reviewer-agent result = no critical/high findings for round-2 backend scope.
+
+## 12. PM Closeout（2026-04-14）
+
+### 12.1 Delivery summary
+
+- Backend：
+  - `ServiceTeam` / `TeamMember` CRUD 與指派 API 已落地（merchant tenant-scoped）。
+  - `resource_items.assigned_staff_ids_json` migration 與 API DTO 已落地。
+  - client booking create/list/cancel 與 merchant booking transition 入口維持單一合法轉移路徑。
+- Frontend：
+  - merchant `ResourcesPage` 已整合 team/member 載入與 resource staff assignment（新增與編輯流程）。
+  - `/admin` 對應後端 `/api/system/*` 契約方向維持一致（未新增 `/api/admin/*`）。
+
+### 12.2 Validation evidence
+
+- Backend tests PASS：`mvn "-Dtest=ClientBookingCreateApiTest,ClientBookingListApiTest,ClientResourceAvailabilityApiTest,MerchantResourceCrudApiTest" test`
+- Frontend build PASS：`pnpm build`
+- 驗收重點覆蓋：
+  - booking 建立/衝突/列表分頁/取消；
+  - resource assignment 正常與無效 staff 驗證；
+  - tenant scope 與角色邊界在 API 層生效。
+
+### 12.3 Residual follow-ups
+
+- Merchant team 管理頁面完整 UX（非 resources 內嵌編輯）可在下一份 open spec 持續優化。
+- staff 權限細分（`MERCHANT_STAFF` 更細粒度 capability）仍建議獨立規格追蹤。
 

@@ -1,4 +1,12 @@
 -- Manual demo seed (MySQL)
+--
+-- IMPORTANT (UUID / JPA alignment):
+--   The Java domain model uses UUID primary keys. This manual seed keeps compatibility with the current legacy
+--   BIGINT Flyway baseline schema (numeric ids and CONCAT-based JSON arrays of bare numbers).
+--
+--   If your database schema has already migrated to UUID/CHAR(36), this script is not suitable as-is and should
+--   be adapted before execution.
+--
 -- Purpose:
 --   1) Optional demo data: merchant + merchant/client platform users (not internal SYSTEM_ADMIN).
 --   2) Internal SYSTEM_ADMIN is created by the application on first boot when configured

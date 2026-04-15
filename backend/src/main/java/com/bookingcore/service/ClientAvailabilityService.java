@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -66,7 +67,7 @@ public class ClientAvailabilityService {
     this.objectMapper = objectMapper;
   }
 
-  public AvailabilityResponse getAvailability(Long merchantId, Long serviceItemId, Long resourceId, LocalDate date) {
+  public AvailabilityResponse getAvailability(UUID merchantId, UUID serviceItemId, UUID resourceId, LocalDate date) {
     Merchant merchant = bookingCommandService.ensureMerchant(merchantId);
     ServiceItem service = serviceItemRepository.findByIdAndMerchantId(serviceItemId, merchantId)
         .orElseThrow(() -> new ApiException("Service not found"));
@@ -114,7 +115,7 @@ public class ClientAvailabilityService {
     return new AvailabilityResponse(date, slots);
   }
 
-  public ClientResourceAvailabilityResponse getResourceAvailability(Long resourceId, LocalDate date) {
+  public ClientResourceAvailabilityResponse getResourceAvailability(UUID resourceId, LocalDate date) {
     ResourceItem resource =
         resourceItemRepository
             .findById(resourceId)
@@ -147,7 +148,7 @@ public class ClientAvailabilityService {
         availabilityExceptionRepository.findByMerchantIdAndStartAtLessThanAndEndAtGreaterThan(
             merchant.getId(), date.plusDays(1).atStartOfDay(), date.atStartOfDay());
 
-    Set<Long> scopedServiceItemIds = resolveScopedServiceItemIds(resource);
+    Set<UUID> scopedServiceItemIds = resolveScopedServiceItemIds(resource);
     List<ClientResourceAvailabilitySlot> slots = new ArrayList<>();
     LocalDateTime now = LocalDateTime.now();
     for (BusinessHours h : businessHours) {
@@ -207,20 +208,20 @@ public class ClientAvailabilityService {
     return 30;
   }
 
-  private Set<Long> resolveScopedServiceItemIds(ResourceItem resource) {
+  private Set<UUID> resolveScopedServiceItemIds(ResourceItem resource) {
     String raw = resource.getServiceItemsJson();
     if (raw == null || raw.isBlank()) {
       return Set.of();
     }
     try {
-      List<Long> ids = objectMapper.readValue(raw, new TypeReference<List<Long>>() {});
+      List<UUID> ids = objectMapper.readValue(raw, new TypeReference<List<UUID>>() {});
       return new HashSet<>(ids);
     } catch (Exception ignored) {
       return Set.of();
     }
   }
 
-  private void assertTenantScopedPrincipalCanReadResource(Long merchantId) {
+  private void assertTenantScopedPrincipalCanReadResource(UUID merchantId) {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof PlatformPrincipal p)) {
       return;

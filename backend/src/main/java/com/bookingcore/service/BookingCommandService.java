@@ -61,7 +61,7 @@ public class BookingCommandService {
     this.bookingStateMachineService = bookingStateMachineService;
   }
 
-  public Merchant ensureMerchant(Long merchantId) {
+  public Merchant ensureMerchant(UUID merchantId) {
     return merchantRepository.findById(merchantId).orElseThrow(() -> new ApiException("Merchant not found"));
   }
 
@@ -142,14 +142,14 @@ public class BookingCommandService {
   }
 
   @Transactional
-  public Booking transitionBooking(Long merchantId, Long bookingId, BookingTransitionEvent event) {
+  public Booking transitionBooking(UUID merchantId, UUID bookingId, BookingTransitionEvent event) {
     Booking booking = bookingRepository.findByIdAndMerchantId(bookingId, merchantId)
         .orElseThrow(() -> new ApiException("Booking not found"));
     bookingStateMachineService.transition(booking, event);
     return bookingRepository.save(booking);
   }
 
-  private String toLockKey(Long merchantId, Long serviceItemId, Long resourceId, LocalDateTime startAt) {
+  private String toLockKey(UUID merchantId, UUID serviceItemId, UUID resourceId, LocalDateTime startAt) {
     String resourcePart = resourceId == null ? "auto" : String.valueOf(resourceId);
     return merchantId + ":" + serviceItemId + ":" + resourcePart + ":" + startAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
   }

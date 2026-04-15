@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { format, parseISO } from 'date-fns'
 import { Clock, Star, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react'
@@ -11,9 +11,8 @@ import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  fetchMerchantStorefront,
+  fetchClientResourceDetail,
   isClientCatalogApiError,
-  type ResourceItemSummaryDto,
 } from '@/shared/lib/clientCatalogApi'
 import { resolveDemoImageUrl } from '@/shared/lib/demoMedia'
 import {
@@ -23,17 +22,30 @@ import {
   type ClientResourceAvailabilitySlotDto,
 } from '@/shared/lib/clientBookingApi'
 
-type LocationState = { merchantSlug?: string }
+type BookingMode = 'time' | 'resource_time' | 'session'
+
+const CLIENT_RESOURCE_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function isClientResourceIdParam(value: string | undefined): value is string {
+  return !!value && CLIENT_RESOURCE_ID_RE.test(value)
+}
 
 export function BookingPage() {
   const { resourceId: resourceIdParam } = useParams()
   const navigate = useNavigate()
-  const location = useLocation()
   const { t } = useTranslation(['client', 'common'])
-  const merchantSlug = (location.state as LocationState | null)?.merchantSlug
 
-  const resourceId = Number(resourceIdParam)
-  const [resource, setResource] = useState<ResourceItemSummaryDto | null>(null)
+  const [resource, setResource] = useState<{
+    id: string
+    name: string
+    category: string
+    price: number
+    durationMinutes: number
+    rating: number
+    merchantName: string
+    imageUrl: string | null
+  } | null>(null)
   const [merchantName, setMerchantName] = useState<string>('')
   const [headerError, setHeaderError] = useState('')
   const [headerLoading, setHeaderLoading] = useState(true)
@@ -43,31 +55,36 @@ export function BookingPage() {
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [slotsError, setSlotsError] = useState('')
   const [selectedStartAt, setSelectedStartAt] = useState<string | null>(null)
+  const [bookingMode, setBookingMode] = useState<BookingMode>('time')
+  const [guestEnabled, setGuestEnabled] = useState(false)
+  const [guestName, setGuestName] = useState('')
+  const [guestPhone, setGuestPhone] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [isBooked, setIsBooked] = useState(false)
+  /** Bumped after slot conflict so availability is re-fetched (stale slot list). */
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0)
 
   useEffect(() => {
-    if (!resourceIdParam || Number.isNaN(resourceId) || resourceId <= 0) {
+    setIsBooked(false)
+    setSelectedDate(undefined)
+    setSlots([])
+    setSelectedStartAt(null)
+    setSlotsError('')
+    setSubmitError('')
+    setNotes('')
+    setGuestEnabled(false)
+    setGuestName('')
+    setGuestPhone('')
+    setGuestEmail('')
+  }, [resourceIdParam])
+
+  useEffect(() => {
+    if (!isClientResourceIdParam(resourceIdParam)) {
       setHeaderError(t('booking.invalidResource'))
       setHeaderLoading(false)
-      return
-    }
-
-    if (!merchantSlug) {
-      setHeaderLoading(false)
-      setResource({
-        id: resourceId,
-        name: t('booking.resourceFallbackName', { id: resourceId }),
-        type: 'GENERAL',
-        category: 'GENERAL',
-        capacity: 1,
-        active: true,
-        price: 0,
-        imageUrl: null,
-      })
-      setMerchantName('')
       return
     }
 
@@ -76,16 +93,19 @@ export function BookingPage() {
       setHeaderLoading(true)
       setHeaderError('')
       try {
-        const detail = await fetchMerchantStorefront(merchantSlug)
-        const found = detail.resources.find((r) => r.id === resourceId)
+        const detail = await fetchClientResourceDetail(resourceIdParam)
         if (!cancelled) {
-          if (!found) {
-            setHeaderError(t('booking.resourceNotFound'))
-            setResource(null)
-          } else {
-            setResource(found)
-            setMerchantName(detail.merchant.name)
-          }
+          setResource({
+            id: detail.id,
+            name: detail.name,
+            category: detail.category,
+            price: detail.price,
+            durationMinutes: detail.durationMinutes,
+            rating: detail.rating,
+            merchantName: detail.merchant.name,
+            imageUrl: detail.imageUrl,
+          })
+          setMerchantName(detail.merchant.name)
         }
       } catch (e) {
         if (!cancelled) {
@@ -100,10 +120,10 @@ export function BookingPage() {
     return () => {
       cancelled = true
     }
-  }, [merchantSlug, resourceId, resourceIdParam, t])
+  }, [resourceIdParam, t])
 
   useEffect(() => {
-    if (!selectedDate || !resourceId) {
+    if (!selectedDate || !isClientResourceIdParam(resourceIdParam)) {
       setSlots([])
       setSelectedStartAt(null)
       return
@@ -115,7 +135,7 @@ export function BookingPage() {
       setSlotsError('')
       setSelectedStartAt(null)
       try {
-        const res = await fetchResourceAvailability(resourceId, dateStr)
+        const res = await fetchResourceAvailability(resourceIdParam, dateStr)
         if (!cancelled) {
           setSlots(res.slots.filter((s) => s.isAvailable))
         }
@@ -132,10 +152,14 @@ export function BookingPage() {
     return () => {
       cancelled = true
     }
-  }, [selectedDate, resourceId, t])
+  }, [selectedDate, resourceIdParam, t, availabilityRefreshKey])
 
   const handleBooking = async () => {
     if (!resource || !selectedStartAt) return
+    if (guestEnabled && (!guestName.trim() || !guestPhone.trim())) {
+      setSubmitError(t('booking.guest.required'))
+      return
+    }
     setSubmitting(true)
     setSubmitError('')
     try {
@@ -143,10 +167,29 @@ export function BookingPage() {
         resourceId: resource.id,
         startAt: selectedStartAt,
         notes: notes.trim() || undefined,
+        mode: bookingMode,
+        guest: guestEnabled
+          ? {
+              name: guestName.trim(),
+              phone: guestPhone.trim(),
+              email: guestEmail.trim() || undefined,
+            }
+          : undefined,
       })
       setIsBooked(true)
     } catch (e) {
-      const msg = isClientBookingApiError(e) ? e.message : t('common:errors.generic')
+      let msg = t('common:errors.generic')
+      if (isClientBookingApiError(e)) {
+        const slotConflict =
+          e.errorCode === 'BOOKING_SLOT_CONFLICT' ||
+          (e.status === 409 && !e.errorCode)
+        if (slotConflict) {
+          msg = t('booking.conflict')
+          setAvailabilityRefreshKey((k) => k + 1)
+        } else {
+          msg = e.message
+        }
+      }
       setSubmitError(msg)
     } finally {
       setSubmitting(false)
@@ -178,8 +221,8 @@ export function BookingPage() {
     description: resource.category,
     category: resource.category,
     price: Number(resource.price),
-    duration: 60,
-    rating: 4.5,
+    duration: resource.durationMinutes,
+    rating: resource.rating,
     provider: merchantName || t('booking.unknownMerchant'),
   }
 
@@ -312,6 +355,20 @@ export function BookingPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
+                  <Label htmlFor="booking-mode">{t('booking.mode.label')}</Label>
+                  <select
+                    id="booking-mode"
+                    value={bookingMode}
+                    onChange={(e) => setBookingMode(e.target.value as BookingMode)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="time">{t('booking.mode.time')}</option>
+                    <option value="resource_time">{t('booking.mode.resourceTime')}</option>
+                    <option value="session">{t('booking.mode.session')}</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">{t(`booking.mode.hint.${bookingMode}`)}</p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="notes">{t('booking.notes')}</Label>
                   <Input
                     id="notes"
@@ -319,6 +376,35 @@ export function BookingPage() {
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
+                </div>
+                <div className="space-y-3 rounded-md border p-3">
+                  <label className="flex items-center gap-2 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={guestEnabled}
+                      onChange={(e) => setGuestEnabled(e.target.checked)}
+                    />
+                    {t('booking.guest.enable')}
+                  </label>
+                  {guestEnabled ? (
+                    <div className="grid gap-2">
+                      <Input
+                        value={guestName}
+                        onChange={(e) => setGuestName(e.target.value)}
+                        placeholder={t('booking.guest.name')}
+                      />
+                      <Input
+                        value={guestPhone}
+                        onChange={(e) => setGuestPhone(e.target.value)}
+                        placeholder={t('booking.guest.phone')}
+                      />
+                      <Input
+                        value={guestEmail}
+                        onChange={(e) => setGuestEmail(e.target.value)}
+                        placeholder={t('booking.guest.email')}
+                      />
+                    </div>
+                  ) : null}
                 </div>
                 <Separator />
                 <div className="flex items-center justify-between">

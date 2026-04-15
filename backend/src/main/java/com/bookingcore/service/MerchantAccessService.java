@@ -87,7 +87,7 @@ public class MerchantAccessService {
     return auth.getAuthorities().stream().anyMatch(a -> "ROLE_SYSTEM_ADMIN".equals(a.getAuthority()));
   }
 
-  public boolean isMerchantScopedTo(Long merchantId) {
+  public boolean isMerchantScopedTo(UUID merchantId) {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null || !auth.isAuthenticated()) {
       return false;
@@ -100,7 +100,7 @@ public class MerchantAccessService {
         && merchantId.equals(p.merchantId());
   }
 
-  public boolean hasActiveMembershipForCurrentUser(Long merchantId) {
+  public boolean hasActiveMembershipForCurrentUser(UUID merchantId) {
     PlatformUser user = currentPlatformUserOrNull();
     if (user == null || merchantId == null) {
       return false;
@@ -111,7 +111,7 @@ public class MerchantAccessService {
         && membership.get().getMembershipStatus() == MerchantMembershipStatus.ACTIVE;
   }
 
-  public boolean hasActiveMembership(Long merchantId, Long platformUserId) {
+  public boolean hasActiveMembership(UUID merchantId, UUID platformUserId) {
     if (merchantId == null || platformUserId == null) {
       return false;
     }
@@ -126,7 +126,7 @@ public class MerchantAccessService {
         .orElse(false);
   }
 
-  public boolean hasStrictActiveMembership(Long merchantId, Long platformUserId) {
+  public boolean hasStrictActiveMembership(UUID merchantId, UUID platformUserId) {
     if (merchantId == null || platformUserId == null) {
       return false;
     }

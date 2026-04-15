@@ -1,5 +1,7 @@
 package com.bookingcore.modules.booking;
 
+import java.util.UUID;
+import com.bookingcore.common.BaseEntity;
 import com.bookingcore.modules.merchant.Merchant;
 import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.modules.service.ServiceItem;
@@ -9,9 +11,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -19,22 +18,19 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bookings")
-public class Booking {
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+public class Booking extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "merchant_id", nullable = false)
+  @JoinColumn(name = "merchant_id", nullable = false, columnDefinition = "UUID")
   @JsonIgnore
   private Merchant merchant;
 
   @ManyToOne(fetch = FetchType.LAZY, optional = false)
-  @JoinColumn(name = "service_item_id", nullable = false)
+  @JoinColumn(name = "service_item_id", nullable = false, columnDefinition = "UUID")
   private ServiceItem serviceItem;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "platform_user_id")
+  @JoinColumn(name = "platform_user_id", columnDefinition = "UUID")
   @JsonIgnore
   private PlatformUser platformUser;
 
@@ -53,10 +49,6 @@ public class Booking {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private BookingStatus status = BookingStatus.PENDING;
-
-  public Long getId() {
-    return id;
-  }
 
   public Merchant getMerchant() {
     return merchant;

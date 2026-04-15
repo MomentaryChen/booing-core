@@ -105,7 +105,7 @@ class MerchantProfileLogoStorageApiTest {
 
   private PlatformUser createMerchantUser(String key, Merchant merchant) {
     PlatformUser user = new PlatformUser();
-    user.setUsername(key + "-" + System.nanoTime());
+    user.setUsername(key + "-" + System.nanoTime() + "@example.com");
     user.setPasswordHash(passwordEncoder.encode("secret-pass"));
     user.setRole(PlatformUserRole.MERCHANT);
     user.setMerchant(merchant);

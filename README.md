@@ -138,7 +138,7 @@ When `booking.platform.jwt.secret` is set (256+ bit key recommended), JWT auth i
 
 1. Ensure Flyway migrations are applied and the backend has started at least once if you rely on app-provisioned internal admin.
 2. Open `backend/src/main/resources/db/manual/seed_manual_baseline.sql`.
-3. Replace `__REPLACE_WITH_BCRYPT_HASH__` placeholders with real bcrypt password hashes.
+3. (Optional) Update the `INPUTS` section (merchant names/slugs/usernames and password hashes) to fit your local setup.
 4. Execute the script in MySQL.
 5. Run the verification queries at the end of the script.
 

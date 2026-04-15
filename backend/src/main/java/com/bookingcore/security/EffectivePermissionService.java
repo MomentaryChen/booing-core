@@ -1,10 +1,12 @@
 package com.bookingcore.security;
 
+import java.util.UUID;
 import com.bookingcore.modules.platform.PlatformUser;
 import com.bookingcore.modules.platform.PlatformUserRepository;
 import com.bookingcore.modules.platform.rbac.PlatformUserRbacBindingRepository;
 import com.bookingcore.modules.platform.rbac.RbacRoleRepository;
 import java.util.HashSet;
+import java.util.UUID;
 import java.util.List;
 import java.util.Set;
 import org.springframework.core.env.Environment;
@@ -50,7 +52,7 @@ public class EffectivePermissionService {
         // RBAC bindings are optional for operators; treat catalog permissions as authoritative.
         return new HashSet<>(catalogPermissionsForOperator(principal.role()));
       }
-      Long userId = dbUser.get().getId();
+      UUID userId = dbUser.get().getId();
       if (rbacRoleRepository.count() == 0L) {
         return new HashSet<>(rolePermissionCatalog.permissionsFor(principal.role()));
       }

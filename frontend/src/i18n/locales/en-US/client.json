@@ -12,6 +12,27 @@
     "categories": {
       "title": "Browse by Category"
     },
+    "discovery": {
+      "title": "Discover by Booking Style",
+      "types": {
+        "service": {
+          "title": "Service Booking",
+          "subtitle": "Book by specialist and duration"
+        },
+        "space": {
+          "title": "Space Booking",
+          "subtitle": "Book courts, rooms, and seats"
+        },
+        "class": {
+          "title": "Session Booking",
+          "subtitle": "Reserve fixed class sessions"
+        },
+        "nearby": {
+          "title": "Nearby Available",
+          "subtitle": "Find merchants available today"
+        }
+      }
+    },
     "dynamic": {
       "merchantsCount": "{{count}} merchants",
       "categories": {
@@ -60,6 +81,38 @@
   },
   "search": {
     "title": "Find Services",
+    "filterBar": {
+      "title": "Smart Filter Bar",
+      "clear": "Clear all"
+    },
+    "resourceType": {
+      "all": "All types",
+      "service": "Service",
+      "space": "Space",
+      "class": "Class"
+    },
+    "availability": {
+      "all": "All availability",
+      "today": "Available today"
+    },
+    "availabilityLabels": {
+      "available": "Available today",
+      "limited": "Limited slots",
+      "unavailable": "No slots today",
+      "stale": "Availability updating"
+    },
+    "feed": {
+      "fastestSlot": "Fastest available slot",
+      "remainingSpaces": "{{count}} spaces left",
+      "remainingSeats": "{{count}} seats left"
+    },
+    "mapHint": "Map mode can be enabled for location-first merchants.",
+    "discoveryMode": "Universal discovery mode",
+    "pagination": {
+      "prev": "Previous",
+      "next": "Next",
+      "page": "Page {{page}}"
+    },
     "placeholder": "Search for services...",
     "filters": {
       "category": "Category",
@@ -90,6 +143,24 @@
     }
   },
   "booking": {
+    "mode": {
+      "label": "Booking Mode",
+      "time": "Time only",
+      "resourceTime": "Resource + time",
+      "session": "Fixed session",
+      "hint": {
+        "time": "Choose a slot directly.",
+        "resource_time": "Choose slot with specific resource preference.",
+        "session": "Book a predefined activity session."
+      }
+    },
+    "guest": {
+      "enable": "Book for guest",
+      "name": "Guest full name",
+      "phone": "Guest phone number",
+      "email": "Guest email (optional)",
+      "required": "Guest name and phone are required."
+    },
     "title": "Book Service",
     "invalidResource": "Invalid resource link.",
     "resourceNotFound": "This resource is not available for booking.",
@@ -104,6 +175,7 @@
     "confirm": "Confirm Booking",
     "success": "Booking confirmed!",
     "noSlots": "No available slots for this date",
+    "conflict": "That time slot is no longer available. Please choose another time.",
     "resourceFallbackName": "Resource #{{id}}",
     "serviceImage": "Service Image",
     "durationMinutes": "{{count}} minutes"
@@ -120,6 +192,7 @@
       "subtitle": "Start exploring and book your first service",
       "cta": "Find Services"
     },
+    "emptyPage": "No bookings on this page. Use the pager or jump to another page.",
     "actions": {
       "view": "View Details",
       "cancel": "Cancel Booking",
@@ -129,7 +202,9 @@
     "errors": {
       "signInRequired": "Please sign in to view your bookings.",
       "forbidden": "You do not have access to this page.",
-      "loadFailed": "Could not load bookings."
+      "loadFailed": "Could not load bookings.",
+      "cancelFailed": "Unable to cancel the booking. Please try again later.",
+      "cancelConflict": "This booking cannot be cancelled right now. Please refresh and try again."
     }
   },
   "profile": {
@@ -184,7 +259,9 @@
       "newPasswordPlaceholder": "Enter new password",
       "confirmPassword": "Confirm New Password",
       "confirmPasswordPlaceholder": "Confirm new password",
-      "updatePassword": "Update Password"
+      "updatePassword": "Update Password",
+      "passwordMismatch": "New password and confirmation do not match.",
+      "passwordUpdated": "Password updated successfully."
     }
   }
 }

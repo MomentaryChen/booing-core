@@ -1,5 +1,6 @@
 package com.bookingcore.service;
 
+import java.util.UUID;
 import com.bookingcore.api.ApiDtos.CreateMerchantRequest;
 import com.bookingcore.api.ApiDtos.PublicRegisterRequest;
 import com.bookingcore.api.ApiDtos.PublicRegisterResponse;
@@ -157,7 +158,7 @@ public class PublicRegistrationService {
                 () ->
                     new IllegalStateException(
                         "Public registration: RBAC role missing for code '" + role.name() + "'"));
-    Long merchantId = merchant == null ? null : merchant.getId();
+    UUID merchantId = merchant == null ? null : merchant.getId();
     var existing =
         platformUserRbacBindingRepository.findBindingsForUserContext(user.getId(), role.name(), merchantId);
     if (existing.stream().anyMatch(b -> b.getStatus() == PlatformRbacBindingStatus.ACTIVE)) {

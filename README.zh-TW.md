@@ -125,7 +125,7 @@ pnpm preview   # 可選：本機預覽建置結果
 
 1. 先確認 Flyway migration 已完成；若依賴應用程式建立內部 admin，請至少讓後端成功啟動過一次。
 2. 開啟 `backend/src/main/resources/db/manual/seed_manual_baseline.sql`。
-3. 將 `__REPLACE_WITH_BCRYPT_HASH__` 置換成實際 bcrypt 密碼雜湊。
+3. （可選）依本機需求調整 `INPUTS` 區段（商家名稱／slug／帳號與密碼雜湊）。
 4. 在 MySQL 手動執行腳本。
 5. 執行腳本末段的驗證查詢確認結果。
 

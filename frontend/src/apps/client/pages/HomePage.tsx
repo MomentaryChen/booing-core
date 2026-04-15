@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Search, ArrowRight } from 'lucide-react'
+import { Search, ArrowRight, Scissors, Volleyball, GraduationCap, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input'
 import { enableMerchant, fetchAuthMe, isApiError } from '@/shared/lib/authContextApi'
 import { isCanonicalMerchantRole } from '@/shared/lib/roleCompat'
 import {
-  fetchVisibleMerchants,
+  fetchClientCategories,
+  fetchFeaturedResources,
   isClientCatalogApiError,
-  type ClientMerchantCardDto,
+  type ClientCategoryDto,
+  type ClientCatalogResourceDto,
 } from '@/shared/lib/clientCatalogApi'
 
 export function HomePage() {
@@ -22,7 +24,8 @@ export function HomePage() {
   const [createError, setCreateError] = useState('')
   const [merchantName, setMerchantName] = useState('')
   const [merchantSlug, setMerchantSlug] = useState('')
-  const [merchants, setMerchants] = useState<ClientMerchantCardDto[]>([])
+  const [featuredResources, setFeaturedResources] = useState<ClientCatalogResourceDto[]>([])
+  const [categories, setCategories] = useState<ClientCategoryDto[]>([])
   const [catalogError, setCatalogError] = useState('')
 
   useEffect(() => {
@@ -57,9 +60,10 @@ export function HomePage() {
     const loadMerchants = async () => {
       setCatalogError('')
       try {
-        const data = await fetchVisibleMerchants()
+        const [featured, categoryList] = await Promise.all([fetchFeaturedResources(6), fetchClientCategories()])
         if (!mounted) return
-        setMerchants(data)
+        setFeaturedResources(featured)
+        setCategories(categoryList)
       } catch (err) {
         if (!mounted) return
         setCatalogError(
@@ -72,24 +76,6 @@ export function HomePage() {
       mounted = false
     }
   }, [t])
-
-  const categories = useMemo(() => {
-    const grouped = merchants.reduce(
-      (acc, merchant) => {
-        const key = merchant.visibility.toLowerCase()
-        acc[key] = (acc[key] ?? 0) + 1
-        return acc
-      },
-      {} as Record<string, number>,
-    )
-    return [
-      { key: 'public', count: grouped.public ?? 0 },
-      { key: 'private', count: grouped.private ?? 0 },
-      { key: 'unlisted', count: grouped.unlisted ?? 0 },
-    ]
-  }, [merchants])
-
-  const featuredMerchants = useMemo(() => merchants.slice(0, 4), [merchants])
 
   const canSubmit = useMemo(
     () => merchantName.trim().length > 0 && merchantSlug.trim().length > 0 && !creating,
@@ -132,6 +118,40 @@ export function HomePage() {
         </Link>
       </section>
 
+      <section className="mb-12">
+        <h2 className="mb-4 text-2xl font-semibold">{t('home.discovery.title')}</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Link to="/search?resourceType=service" className="rounded-lg border p-4 hover:border-primary/50">
+            <div className="mb-2 inline-flex rounded-md bg-muted p-2">
+              <Scissors className="h-4 w-4" />
+            </div>
+            <p className="font-medium">{t('home.discovery.types.service.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('home.discovery.types.service.subtitle')}</p>
+          </Link>
+          <Link to="/search?resourceType=space" className="rounded-lg border p-4 hover:border-primary/50">
+            <div className="mb-2 inline-flex rounded-md bg-muted p-2">
+              <Volleyball className="h-4 w-4" />
+            </div>
+            <p className="font-medium">{t('home.discovery.types.space.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('home.discovery.types.space.subtitle')}</p>
+          </Link>
+          <Link to="/search?resourceType=class" className="rounded-lg border p-4 hover:border-primary/50">
+            <div className="mb-2 inline-flex rounded-md bg-muted p-2">
+              <GraduationCap className="h-4 w-4" />
+            </div>
+            <p className="font-medium">{t('home.discovery.types.class.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('home.discovery.types.class.subtitle')}</p>
+          </Link>
+          <Link to="/search?availability=today" className="rounded-lg border p-4 hover:border-primary/50">
+            <div className="mb-2 inline-flex rounded-md bg-muted p-2">
+              <MapPin className="h-4 w-4" />
+            </div>
+            <p className="font-medium">{t('home.discovery.types.nearby.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('home.discovery.types.nearby.subtitle')}</p>
+          </Link>
+        </div>
+      </section>
+
       {/* Categories */}
       <section className="mb-12">
         <h2 className="text-2xl font-semibold mb-6">{t('home.categories.title')}</h2>
@@ -163,23 +183,21 @@ export function HomePage() {
           </Link>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredMerchants.map((merchant) => (
-            <Link key={merchant.merchantId} to={`/search?q=${encodeURIComponent(merchant.name)}`}>
+          {featuredResources.map((resource) => (
+            <Link key={resource.id} to={`/booking/${resource.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
                 <CardHeader className="p-0">
                   <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
-                    <span className="text-muted-foreground text-sm">{merchant.slug}</span>
+                    <span className="text-muted-foreground text-sm">{resource.merchantName}</span>
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
                   <Badge variant="secondary" className="mb-2">
-                    {t(`home.dynamic.categories.${merchant.visibility.toLowerCase()}`)}
+                    {resource.category}
                   </Badge>
-                  <CardTitle className="text-lg mb-2">{merchant.name}</CardTitle>
+                  <CardTitle className="text-lg mb-2">{resource.name}</CardTitle>
                   <div className="text-sm text-muted-foreground">
-                    {t(`home.dynamic.joinState.${merchant.joinState.toLowerCase()}`, {
-                      defaultValue: merchant.joinState,
-                    })}
+                    ${resource.price}
                   </div>
                 </CardContent>
               </Card>

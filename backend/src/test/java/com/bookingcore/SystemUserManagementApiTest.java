@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,7 +130,7 @@ class SystemUserManagementApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"bindings\":[{\"roleCode\":\"CLIENT\",\"active\":true}]}"))
         .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.code").value("LAST_SYSTEM_ADMIN_REQUIRED"));
+        .andExpect(jsonPath("$.data.errorCode").value("LAST_SYSTEM_ADMIN_REQUIRED"));
   }
 
   @Test
@@ -191,7 +193,7 @@ class SystemUserManagementApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"enabled\":true}"))
         .andExpect(status().isConflict())
-        .andExpect(jsonPath("$.code").value("USER_STATUS_NOOP"));
+        .andExpect(jsonPath("$.data.errorCode").value("USER_STATUS_NOOP"));
   }
 
   @Test
@@ -233,9 +235,20 @@ class SystemUserManagementApiTest {
             put("/api/system/users/" + target.getId() + "/rbac-bindings")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"bindings\":[{\"roleCode\":\"CLIENT\",\"merchantId\":1,\"active\":true}]}"))
+                .content(
+                    objectMapper.writeValueAsString(
+                        Map.of(
+                            "bindings",
+                            List.of(
+                                Map.of(
+                                    "roleCode",
+                                    "CLIENT",
+                                    "merchantId",
+                                    UUID.fromString("019e0000-0000-7000-8000-000000000001"),
+                                    "active",
+                                    true))))))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("MERCHANT_ID_NOT_ALLOWED"));
+        .andExpect(jsonPath("$.data.errorCode").value("MERCHANT_ID_NOT_ALLOWED"));
   }
 
   @Test
@@ -286,7 +299,7 @@ class SystemUserManagementApiTest {
             .filter(
                 l ->
                     "system.user.status.updated".equals(l.getAction())
-                        && target.getId().equals(l.getTargetId()))
+                        && target.getId().toString().equals(l.getTargetId()))
             .findFirst()
             .orElseThrow();
     Assertions.assertThat(statusLog.getCorrelationId()).isEqualTo(requestId);
@@ -487,10 +500,15 @@ class SystemUserManagementApiTest {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    "{\"bindings\":[{\"roleCode\":\"MERCHANT\",\"merchantId\":"
-                        + m2.getId()
-                        + ",\"active\":true}]}"))
+                    objectMapper.writeValueAsString(
+                        Map.of(
+                            "bindings",
+                            List.of(
+                                Map.of(
+                                    "roleCode", "MERCHANT",
+                                    "merchantId", m2.getId(),
+                                    "active", true))))))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("RBAC_TENANT_MISMATCH"));
+        .andExpect(jsonPath("$.data.errorCode").value("RBAC_TENANT_MISMATCH"));
   }
 }

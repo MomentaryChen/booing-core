@@ -43,7 +43,7 @@ class MerchantTenantIsolationGuardApiTest {
     entityManager.persist(merchant);
 
     PlatformUser user = new PlatformUser();
-    user.setUsername("iso-user-" + System.nanoTime());
+    user.setUsername("iso-user-" + System.nanoTime() + "@example.com");
     user.setPasswordHash(passwordEncoder.encode("secret-pass"));
     user.setRole(PlatformUserRole.MERCHANT);
     user.setMerchant(homeMerchant);
@@ -68,7 +68,7 @@ class MerchantTenantIsolationGuardApiTest {
     entityManager.persist(merchant);
 
     PlatformUser user = new PlatformUser();
-    user.setUsername("suspended-user-" + System.nanoTime());
+    user.setUsername("suspended-user-" + System.nanoTime() + "@example.com");
     user.setPasswordHash(passwordEncoder.encode("secret-pass"));
     user.setRole(PlatformUserRole.MERCHANT);
     user.setMerchant(merchant);

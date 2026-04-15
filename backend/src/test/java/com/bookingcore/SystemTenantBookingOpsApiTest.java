@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.LocalDateTime;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -70,7 +71,15 @@ class SystemTenantBookingOpsApiTest {
             post("/api/system/tenants/" + merchant.getId() + "/bookings/" + booking.getId() + "/transitions")
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"merchantId\":" + merchant.getId() + ",\"event\":\"CHECK_IN\",\"reason\":\"support\"}"))
+                .content(
+                    objectMapper.writeValueAsString(
+                        Map.of(
+                            "merchantId",
+                            merchant.getId(),
+                            "event",
+                            "CHECK_IN",
+                            "reason",
+                            "support"))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("CHECKED_IN"));
   }
@@ -108,7 +117,7 @@ class SystemTenantBookingOpsApiTest {
     entityManager.persist(booking);
 
     PlatformUser client = new PlatformUser();
-    client.setUsername("tenant-client-" + System.nanoTime());
+    client.setUsername("tenant-client-" + System.nanoTime() + "@example.com");
     client.setPasswordHash(passwordEncoder.encode("secret-pass"));
     client.setRole(PlatformUserRole.CLIENT);
     client.setEnabled(true);
@@ -121,7 +130,9 @@ class SystemTenantBookingOpsApiTest {
             post("/api/system/tenants/" + merchant.getId() + "/bookings/" + booking.getId() + "/transitions")
                 .header("Authorization", "Bearer " + clientToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"merchantId\":" + merchant.getId() + ",\"event\":\"CHECK_IN\"}"))
+                .content(
+                    objectMapper.writeValueAsString(
+                        Map.of("merchantId", merchant.getId(), "event", "CHECK_IN"))))
         .andExpect(status().isForbidden());
   }
 }

@@ -17,6 +17,8 @@ import com.bookingcore.security.PlatformUserRole;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.util.Map;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -53,7 +55,7 @@ class MerchantTeamApiTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Front Desk\",\"code\":\"FRONT_DESK\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.merchantId").value(merchant.getId()))
+        .andExpect(jsonPath("$.merchantId", Matchers.is(merchant.getId().toString())))
         .andExpect(jsonPath("$.name").value("Front Desk"))
         .andExpect(jsonPath("$.code").value("FRONT_DESK"))
         .andExpect(jsonPath("$.status").value("ACTIVE"));
@@ -63,7 +65,7 @@ class MerchantTeamApiTest {
             get("/api/merchant/" + merchant.getId() + "/teams")
                 .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].merchantId").value(merchant.getId()))
+        .andExpect(jsonPath("$[0].merchantId", Matchers.is(merchant.getId().toString())))
         .andExpect(jsonPath("$[0].code").value("FRONT_DESK"));
   }
 
@@ -124,12 +126,17 @@ class MerchantTeamApiTest {
                     .header("Authorization", "Bearer " + token)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
-                        "{\"userId\":"
-                            + memberUser.getId()
-                            + ",\"role\":\"SCHEDULER\",\"status\":\"ACTIVE\"}"))
+                        objectMapper.writeValueAsString(
+                            Map.of(
+                                "userId",
+                                memberUser.getId(),
+                                "role",
+                                "SCHEDULER",
+                                "status",
+                                "ACTIVE"))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.teamId").value(teamId))
-            .andExpect(jsonPath("$.userId").value(memberUser.getId()))
+            .andExpect(jsonPath("$.userId", Matchers.is(memberUser.getId().toString())))
             .andReturn();
     Long memberId =
         objectMapper.readTree(assignResult.getResponse().getContentAsString()).path("id").asLong();
@@ -139,7 +146,7 @@ class MerchantTeamApiTest {
             get("/api/merchant/" + merchant.getId() + "/teams/" + teamId + "/members")
                 .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].userId").value(memberUser.getId()))
+        .andExpect(jsonPath("$[0].userId", Matchers.is(memberUser.getId().toString())))
         .andExpect(jsonPath("$[0].role").value("SCHEDULER"));
 
     mockMvc
@@ -187,9 +194,14 @@ class MerchantTeamApiTest {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    "{\"userId\":"
-                        + nonMember.getId()
-                        + ",\"role\":\"SCHEDULER\",\"status\":\"ACTIVE\"}"))
+                    objectMapper.writeValueAsString(
+                        Map.of(
+                            "userId",
+                            nonMember.getId(),
+                            "role",
+                            "SCHEDULER",
+                            "status",
+                            "ACTIVE"))))
         .andExpect(status().isForbidden());
   }
 
@@ -229,7 +241,9 @@ class MerchantTeamApiTest {
             post("/api/merchant/" + merchantA.getId() + "/teams/" + teamId + "/members")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"userId\":" + memberB.getId() + ",\"role\":\"SCHEDULER\"}"))
+                .content(
+                    objectMapper.writeValueAsString(
+                        Map.of("userId", memberB.getId(), "role", "SCHEDULER"))))
         .andExpect(status().isForbidden());
 
     mockMvc
@@ -237,7 +251,9 @@ class MerchantTeamApiTest {
             post("/api/merchant/" + merchantA.getId() + "/teams/" + teamId + "/members")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"userId\":" + memberNoMembership.getId() + ",\"role\":\"SCHEDULER\"}"))
+                .content(
+                    objectMapper.writeValueAsString(
+                        Map.of("userId", memberNoMembership.getId(), "role", "SCHEDULER"))))
         .andExpect(status().isForbidden());
 
     mockMvc
@@ -245,7 +261,9 @@ class MerchantTeamApiTest {
             post("/api/merchant/" + merchantA.getId() + "/teams/" + teamId + "/members")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"userId\":" + memberSuspended.getId() + ",\"role\":\"SCHEDULER\"}"))
+                .content(
+                    objectMapper.writeValueAsString(
+                        Map.of("userId", memberSuspended.getId(), "role", "SCHEDULER"))))
         .andExpect(status().isForbidden());
   }
 
@@ -283,7 +301,7 @@ class MerchantTeamApiTest {
 
   private PlatformUser createMerchantUser(String key, Merchant merchant) {
     PlatformUser user = new PlatformUser();
-    user.setUsername(key + "-" + System.nanoTime());
+    user.setUsername(key + "-" + System.nanoTime() + "@example.com");
     user.setPasswordHash(passwordEncoder.encode("secret-pass"));
     user.setRole(PlatformUserRole.MERCHANT);
     user.setMerchant(merchant);

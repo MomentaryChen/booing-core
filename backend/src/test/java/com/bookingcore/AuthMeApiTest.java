@@ -16,6 +16,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -35,6 +37,25 @@ class AuthMeApiTest {
   @Autowired private PasswordEncoder passwordEncoder;
   @PersistenceContext private EntityManager entityManager;
 
+  private void ensureAdminUser() {
+    Long existing =
+        entityManager
+            .createQuery(
+                "select count(u) from PlatformUser u where u.username = :username", Long.class)
+            .setParameter("username", "admin")
+            .getSingleResult();
+    if (existing != null && existing > 0) {
+      return;
+    }
+    PlatformUser admin = new PlatformUser();
+    admin.setUsername("admin");
+    admin.setPasswordHash(passwordEncoder.encode("admin"));
+    admin.setRole(com.bookingcore.security.PlatformUserRole.SYSTEM_ADMIN);
+    admin.setEnabled(true);
+    entityManager.persist(admin);
+    entityManager.flush();
+  }
+
   @Test
   void authMeWithoutTokenReturnsUnauthorized() throws Exception {
     mockMvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
@@ -42,6 +63,7 @@ class AuthMeApiTest {
 
   @Test
   void authMeReturnsPrincipalForAdmin() throws Exception {
+    ensureAdminUser();
     String token = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
     mockMvc
         .perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
@@ -59,6 +81,7 @@ class AuthMeApiTest {
 
   @Test
   void refreshReturnsNewAccessToken() throws Exception {
+    ensureAdminUser();
     String token = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
     mockMvc
         .perform(post("/api/auth/refresh").header("Authorization", "Bearer " + token))
@@ -69,6 +92,7 @@ class AuthMeApiTest {
 
   @Test
   void logoutReturnsNoContent() throws Exception {
+    ensureAdminUser();
     String token = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
     mockMvc
         .perform(post("/api/auth/logout").header("Authorization", "Bearer " + token))
@@ -77,6 +101,7 @@ class AuthMeApiTest {
 
   @Test
   void contextSelectWithoutRoleBehavesAsRefresh() throws Exception {
+    ensureAdminUser();
     String token = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
     mockMvc
         .perform(post("/api/auth/context/select").header("Authorization", "Bearer " + token))
@@ -87,18 +112,21 @@ class AuthMeApiTest {
 
   @Test
   void contextSelectForbiddenWhenContextNotAllowed() throws Exception {
+    ensureAdminUser();
     String token = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
     mockMvc
         .perform(
             post("/api/auth/context/select")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"role\":\"MERCHANT\",\"merchantId\":999999}"))
+                .content(
+                    "{\"role\":\"MERCHANT\",\"merchantId\":\"019e0000-0000-7000-8000-000000009999\"}"))
         .andExpect(status().isForbidden());
   }
 
   @Test
   void contextSelectReturnsMerchantTokenWhenMerchantOptionExists() throws Exception {
+    ensureAdminUser();
     String token = TestJwtHelper.login(mockMvc, objectMapper, "admin", "admin");
     String body =
         mockMvc
@@ -112,10 +140,10 @@ class AuthMeApiTest {
     if (contexts.size() < 2) {
       return;
     }
-    Long merchantId = null;
+    UUID merchantId = null;
     for (JsonNode c : contexts) {
-      if ("MERCHANT".equals(c.path("role").asText()) && c.path("merchantId").isNumber()) {
-        merchantId = c.path("merchantId").asLong();
+      if ("MERCHANT".equals(c.path("role").asText()) && c.path("merchantId").isTextual()) {
+        merchantId = UUID.fromString(c.path("merchantId").asText());
         break;
       }
     }
@@ -127,10 +155,7 @@ class AuthMeApiTest {
             post("/api/auth/context/select")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"role\":\"MERCHANT\",\"merchantId\":"
-                        + merchantId
-                        + "}"))
+                .content(objectMapper.writeValueAsString(Map.of("role", "MERCHANT", "merchantId", merchantId))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.role").value("MERCHANT"))
         .andExpect(jsonPath("$.accessToken").isString());
@@ -145,7 +170,7 @@ class AuthMeApiTest {
     entityManager.persist(merchant);
 
     PlatformUser user = new PlatformUser();
-    user.setUsername("ctx-user-" + System.nanoTime());
+    user.setUsername("ctx-user-" + System.nanoTime() + "@test.local");
     user.setPasswordHash(passwordEncoder.encode("secret-pass"));
     user.setRole(com.bookingcore.security.PlatformUserRole.CLIENT);
     user.setEnabled(true);
@@ -178,7 +203,9 @@ class AuthMeApiTest {
             post("/api/auth/context/switch")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"role\":\"MERCHANT\",\"merchantId\":" + merchant.getId() + "}"))
+                .content(
+                    objectMapper.writeValueAsString(
+                        Map.of("role", "MERCHANT", "merchantId", merchant.getId()))))
         .andExpect(status().isForbidden());
 
     MerchantMembership membership = new MerchantMembership();
@@ -193,7 +220,9 @@ class AuthMeApiTest {
             post("/api/auth/context/switch")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"role\":\"MERCHANT\",\"merchantId\":" + merchant.getId() + "}"))
+                .content(
+                    objectMapper.writeValueAsString(
+                        Map.of("role", "MERCHANT", "merchantId", merchant.getId()))))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.role").value("MERCHANT"));
   }

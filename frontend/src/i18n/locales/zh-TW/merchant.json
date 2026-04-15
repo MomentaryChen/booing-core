@@ -18,9 +18,15 @@
     "vsLastMonth": "較上月"
   },
   "resources": {
-    "title": "資源管理",
+    "title": "Service & Resource",
     "create": "新增資源",
     "search": "搜尋資源...",
+    "resourceToggle": {
+      "label": "啟用資源管理",
+      "needService": "請先建立至少一個服務，才可管理資源。",
+      "enabledDescription": "資源管理已啟用，可建立與維護可預約資源。",
+      "disabledDescription": "資源管理目前關閉。開啟後才會顯示資源清單。"
+    },
     "filters": {
       "status": "狀態",
       "category": "類別"
@@ -132,11 +138,91 @@
     "business": {
       "name": "商家名稱",
       "description": "描述",
+      "logo": "商家 Logo",
+      "uploadLogo": "上傳 Logo",
+      "removeLogo": "移除 Logo",
+      "logoHint": "請上傳圖片，系統會自動轉成可儲存的格式。",
+      "logoPreviewAlt": "商家 Logo 預覽",
+      "logoOnlyImage": "請選擇圖片檔案。",
+      "logoUploadFailed": "Logo 上傳失敗，請再試一次。",
       "address": "地址",
       "phone": "電話",
       "email": "電子郵件",
       "website": "網站",
       "descriptionText": "管理對客戶顯示的商家資訊"
+    },
+    "layout": {
+      "subtitle": "依維度整理設定，右側可即時預覽顧客端呈現。",
+      "dimA": "基礎帳號",
+      "dimB": "金流與營運",
+      "dimC": "權限與通知",
+      "dimD": "個人化與高級",
+      "storeProfile": "商戶檔案",
+      "contactInfo": "聯繫資訊",
+      "businessHours": "營業時間",
+      "payments": "收款設定",
+      "tax": "稅務與發票",
+      "delivery": "配送設定",
+      "staff": "員工權限",
+      "notifications": "通知中心",
+      "theme": "店鋪裝修",
+      "integrations": "API 串接",
+      "stickyHint": "變更後請儲存；營業時間需至少啟用一天才會寫入後端。",
+      "livePreview": "即時預覽",
+      "logoPlaceholder": "Logo",
+      "previewStoreFallback": "您的店名",
+      "previewDescriptionFallback": "顧客將在此看到商店描述。"
+    },
+    "storeProfile": {
+      "description": "店名、Logo、描述與分類會影響顧客端第一印象。",
+      "category": "商店分類",
+      "categoryPlaceholder": "例：美容美髮、身心療癒"
+    },
+    "contact": {
+      "description": "客服聯絡方式與地址；地址可開啟地圖連結。",
+      "line": "官方 LINE／訊息連結",
+      "website": "官方網站",
+      "openMaps": "在地圖中開啟",
+      "mapsHint": "填寫地址後可產生地圖連結。"
+    },
+    "hours": {
+      "description": "設定每週營業時段與特殊休假日。",
+      "exceptionsTitle": "特殊休假／例外",
+      "addException": "新增例外日",
+      "saveHint": "例外日新增／刪除會立即寫入後端；每週營業時段請按下方「儲存」一併同步（可全部關閉以清空）。"
+    },
+    "financials": {
+      "connectDisabled": "金流串接尚未開放，此按鈕僅供預覽。",
+      "paymentsEmptyTitle": "尚未完成收款綁定",
+      "paymentsEmptyBody": "請先連接金流服務或綁定收款帳戶，顧客才能完成付款。",
+      "taxDescription": "統編、發票與稅率相關設定。",
+      "taxEmptyTitle": "尚未設定稅務與發票",
+      "taxEmptyBody": "此功能將於後續版本開放，請先保留您的統編與發票需求紀錄。",
+      "deliveryDescription": "外送範圍、運費與自取規則。",
+      "deliveryEmptyTitle": "尚未設定配送",
+      "deliveryEmptyBody": "若您提供到府或外送服務，可在此建立運費模板與範圍（即將推出）。"
+    },
+    "security": {
+      "staffDescription": "管理員與店員的角色與權限。",
+      "staffEmptyTitle": "前往團隊管理",
+      "staffEmptyBody": "在團隊頁面新增成員、指派角色並維護權限。",
+      "goTeams": "開啟團隊管理"
+    },
+    "advanced": {
+      "themeDescription": "前端主色與版型預設，搭配公告文字作為顧客端 Banner。",
+      "presets": {
+        "minimal": "極簡（minimal）",
+        "ocean": "海洋（ocean）",
+        "warm": "暖色（warm）",
+        "contrast": "高對比（contrast）"
+      },
+      "themePreset": "版型預設",
+      "themeColor": "主題色",
+      "banner": "公告／Banner 文字",
+      "integrationsDescription": "Webhook 與第三方平台串接。",
+      "integrationsEmptyTitle": "尚未設定 API 串接",
+      "integrationsEmptyBody": "Webhook 與整合設定將於後續版本提供。",
+      "webhookUrl": "Webhook URL（預覽）"
     },
     "payment": {
       "description": "設定付款方式與帳務參數",
@@ -153,6 +239,7 @@
       }
     },
     "notifications": {
+      "localHint": "以下開關與商店客製化一併儲存至後端；實際推播／寄信仍依系統通知管線啟用情形而定。",
       "description": "設定通知偏好",
       "newBooking": {
         "title": "新預約通知",
@@ -177,7 +264,30 @@
     "description": "管理商家團隊與成員配置。",
     "actions": {
       "createTeam": "新增團隊",
-      "addMember": "新增成員"
+      "addMember": "新增成員",
+      "ownerOnly": "僅商家擁有者可建立團隊或指派成員。"
+    },
+    "dialog": {
+      "create": {
+        "title": "建立團隊",
+        "description": "團隊用於排班與人力分組。請設定簡短且不重複的代碼（英數、連字號等）。",
+        "name": "團隊名稱",
+        "code": "團隊代碼",
+        "submit": "建立",
+        "validation": "請填寫名稱與代碼。",
+        "genericError": "建立團隊失敗。"
+      },
+      "add": {
+        "title": "新增團隊成員",
+        "description": "使用者須已存在，且對本商家為有效會籍（例如已接受邀請）。請輸入其平台使用者編號（user id）。",
+        "team": "團隊",
+        "userId": "平台使用者編號",
+        "userIdPlaceholder": "例如：12",
+        "role": "角色標籤",
+        "submit": "加入成員",
+        "noTeam": "請先建立團隊，再加入成員。",
+        "genericError": "新增成員失敗。"
+      }
     },
     "guard": {
       "owner": "擁有者權限",

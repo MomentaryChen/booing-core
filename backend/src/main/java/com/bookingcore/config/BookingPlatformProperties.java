@@ -1,5 +1,6 @@
 package com.bookingcore.config;
 
+import java.util.UUID;
 import com.bookingcore.security.PlatformUserRole;
 import java.util.ArrayList;
 import java.util.List;
@@ -236,7 +237,7 @@ public class BookingPlatformProperties {
      * Optional merchant scope for MERCHANT/SUB_MERCHANT tokens.
      * When null, backend may auto-resolve a default merchant for local dev.
      */
-    private Long merchantId;
+    private UUID merchantId;
 
     public String getUsername() {
       return username;
@@ -262,11 +263,11 @@ public class BookingPlatformProperties {
       this.role = role;
     }
 
-    public Long getMerchantId() {
+    public UUID getMerchantId() {
       return merchantId;
     }
 
-    public void setMerchantId(Long merchantId) {
+    public void setMerchantId(UUID merchantId) {
       this.merchantId = merchantId;
     }
   }

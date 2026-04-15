@@ -22,14 +22,14 @@ public class PlatformAuditService {
   }
 
   /** Uses the current security context actor when present; otherwise {@code fallbackActor}. */
-  public void record(String action, String targetType, Long targetId, String detail, String fallbackActor) {
+  public void record(String action, String targetType, Object targetId, String detail, String fallbackActor) {
     record(action, targetType, targetId, null, null, detail, fallbackActor);
   }
 
   public void record(
       String action,
       String targetType,
-      Long targetId,
+      Object targetId,
       String beforeState,
       String afterState,
       String detail,
@@ -40,7 +40,7 @@ public class PlatformAuditService {
     log.setActor(actor);
     log.setAction(action);
     log.setTargetType(targetType);
-    log.setTargetId(targetId);
+    log.setTargetId(targetId == null ? "" : String.valueOf(targetId));
     log.setCorrelationId(resolveCorrelationId());
     log.setDetail(detail);
     log.setBeforeState(beforeState);
@@ -49,14 +49,14 @@ public class PlatformAuditService {
     auditLogRepository.save(log);
   }
 
-  public void recordForCurrentUser(String action, String targetType, Long targetId, String detail) {
+  public void recordForCurrentUser(String action, String targetType, Object targetId, String detail) {
     record(action, targetType, targetId, detail, "system");
   }
 
   public void recordForCurrentUser(
       String action,
       String targetType,
-      Long targetId,
+      Object targetId,
       String beforeState,
       String afterState,
       String detail) {
