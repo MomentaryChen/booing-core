@@ -1,11 +1,9 @@
 -- Manual demo seed (MySQL)
 --
 -- IMPORTANT (UUID / JPA alignment):
---   The Java domain model uses UUID primary keys. This manual seed keeps compatibility with the current legacy
---   BIGINT Flyway baseline schema (numeric ids and CONCAT-based JSON arrays of bare numbers).
---
---   If your database schema has already migrated to UUID/CHAR(36), this script is not suitable as-is and should
---   be adapted before execution.
+--   The Java domain model uses UUID primary keys. This manual seed supports both:
+--   - legacy BIGINT auto-increment ids
+--   - UUID/BINARY(16) ids introduced by newer migrations
 --
 -- Purpose:
 --   1) Optional demo data: merchant + merchant/client platform users (not internal SYSTEM_ADMIN).
@@ -20,6 +18,15 @@
 --   3) Re-running is safe (idempotent).
 
 START TRANSACTION;
+
+SET @uses_binary_uuid_ids = (
+  SELECT CASE WHEN DATA_TYPE = 'binary' THEN 1 ELSE 0 END
+  FROM INFORMATION_SCHEMA.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'merchants'
+    AND COLUMN_NAME = 'id'
+  LIMIT 1
+);
 
 -- =========================
 -- INPUTS (edit before run)
@@ -85,22 +92,25 @@ SET @client_password_hash = '$2a$10$8zufREAXtI3t9cNeE1Xizupn2LN5vwDkr4pjJd5SGQ4L
 -- =========================
 -- Seed merchant
 -- =========================
-INSERT INTO merchants (name, slug, active, service_limit, visibility)
-SELECT @merchant_name, @merchant_slug, b'1', @merchant_service_limit, 'PUBLIC'
+INSERT INTO merchants (id, name, slug, active, service_limit, visibility)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant_name, @merchant_slug, b'1', @merchant_service_limit, 'PUBLIC'
 WHERE NOT EXISTS (
   SELECT 1 FROM merchants WHERE slug = @merchant_slug
 );
 
 SET @merchant_id = (SELECT id FROM merchants WHERE slug = @merchant_slug LIMIT 1);
 -- Optional extra merchants for richer storefront/UI demo
-INSERT INTO merchants (name, slug, active, service_limit, visibility)
-SELECT @merchant2_name, @merchant2_slug, b'1', 20, 'PUBLIC'
+INSERT INTO merchants (id, name, slug, active, service_limit, visibility)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant2_name, @merchant2_slug, b'1', 20, 'PUBLIC'
 WHERE NOT EXISTS (
   SELECT 1 FROM merchants WHERE slug = @merchant2_slug
 );
 
-INSERT INTO merchants (name, slug, active, service_limit, visibility)
-SELECT @merchant3_name, @merchant3_slug, b'1', 20, 'PUBLIC'
+INSERT INTO merchants (id, name, slug, active, service_limit, visibility)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant3_name, @merchant3_slug, b'1', 20, 'PUBLIC'
 WHERE NOT EXISTS (
   SELECT 1 FROM merchants WHERE slug = @merchant3_slug
 );
@@ -112,6 +122,7 @@ SET @merchant3_id = (SELECT id FROM merchants WHERE slug = @merchant3_slug LIMIT
 -- Seed platform users (demo roles only)
 -- =========================
 INSERT INTO platform_users (
+  id,
   username,
   password_hash,
   platform_role,
@@ -120,12 +131,14 @@ INSERT INTO platform_users (
   credential_version,
   failed_login_count
 )
-SELECT @merchant_username, @merchant_password_hash, 'MERCHANT', @merchant_id, b'1', 0, 0
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant_username, @merchant_password_hash, 'MERCHANT', @merchant_id, b'1', 0, 0
 WHERE NOT EXISTS (
   SELECT 1 FROM platform_users WHERE username = @merchant_username
 );
 
 INSERT INTO platform_users (
+  id,
   username,
   password_hash,
   platform_role,
@@ -134,12 +147,14 @@ INSERT INTO platform_users (
   credential_version,
   failed_login_count
 )
-SELECT @merchant2_username, @merchant2_password_hash, 'MERCHANT', @merchant2_id, b'1', 0, 0
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant2_username, @merchant2_password_hash, 'MERCHANT', @merchant2_id, b'1', 0, 0
 WHERE NOT EXISTS (
   SELECT 1 FROM platform_users WHERE username = @merchant2_username
 );
 
 INSERT INTO platform_users (
+  id,
   username,
   password_hash,
   platform_role,
@@ -148,12 +163,14 @@ INSERT INTO platform_users (
   credential_version,
   failed_login_count
 )
-SELECT @merchant3_username, @merchant3_password_hash, 'MERCHANT', @merchant3_id, b'1', 0, 0
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant3_username, @merchant3_password_hash, 'MERCHANT', @merchant3_id, b'1', 0, 0
 WHERE NOT EXISTS (
   SELECT 1 FROM platform_users WHERE username = @merchant3_username
 );
 
 INSERT INTO platform_users (
+  id,
   username,
   password_hash,
   platform_role,
@@ -162,7 +179,8 @@ INSERT INTO platform_users (
   credential_version,
   failed_login_count
 )
-SELECT @client_username, @client_password_hash, 'CLIENT', NULL, b'1', 0, 0
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @client_username, @client_password_hash, 'CLIENT', NULL, b'1', 0, 0
 WHERE NOT EXISTS (
   SELECT 1 FROM platform_users WHERE username = @client_username
 );
@@ -249,62 +267,71 @@ WHERE @role_client_id IS NOT NULL
     FROM platform_user_rbac_bindings
     WHERE platform_user_id = @client_user_id
       AND rbac_role_id = @role_client_id
-      AND merchant_scope_id = 0
+      AND merchant_scope_id = IF(@uses_binary_uuid_ids = 1, UNHEX('00000000000000000000000000000000'), 0)
   );
 
 -- =========================
 -- Seed service catalog (multi-merchant diversity for UI)
 -- =========================
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant_id, 'Classic Haircut', 30, 450.00, 'Hair'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant_id, 'Classic Haircut', 30, 450.00, 'Hair'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant_id AND name = 'Classic Haircut'
 );
 
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant_id, 'Haircut + Wash', 45, 650.00, 'Hair'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant_id, 'Haircut + Wash', 45, 650.00, 'Hair'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant_id AND name = 'Haircut + Wash'
 );
 
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant_id, 'Beard Trim', 20, 300.00, 'Grooming'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant_id, 'Beard Trim', 20, 300.00, 'Grooming'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant_id AND name = 'Beard Trim'
 );
 
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant2_id, 'Skin Fade', 40, 700.00, 'Hair'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant2_id, 'Skin Fade', 40, 700.00, 'Hair'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant2_id AND name = 'Skin Fade'
 );
 
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant2_id, 'Kids Cut', 25, 380.00, 'Family'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant2_id, 'Kids Cut', 25, 380.00, 'Family'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant2_id AND name = 'Kids Cut'
 );
 
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant2_id, 'Scalp Detox', 35, 520.00, 'Care'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant2_id, 'Scalp Detox', 35, 520.00, 'Care'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant2_id AND name = 'Scalp Detox'
 );
 
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant3_id, 'Aromatherapy Massage', 60, 1200.00, 'Relax'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant3_id, 'Aromatherapy Massage', 60, 1200.00, 'Relax'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant3_id AND name = 'Aromatherapy Massage'
 );
 
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant3_id, 'Facial Deep Clean', 50, 980.00, 'Skincare'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant3_id, 'Facial Deep Clean', 50, 980.00, 'Skincare'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant3_id AND name = 'Facial Deep Clean'
 );
 
-INSERT INTO service_items (merchant_id, name, duration_minutes, price, category)
-SELECT @merchant3_id, 'Shoulder Release', 30, 680.00, 'Therapy'
+INSERT INTO service_items (id, merchant_id, name, duration_minutes, price, category)
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant3_id, 'Shoulder Release', 30, 680.00, 'Therapy'
 WHERE NOT EXISTS (
   SELECT 1 FROM service_items WHERE merchant_id = @merchant3_id AND name = 'Shoulder Release'
 );
@@ -341,30 +368,39 @@ SET @svc_shoulder = (
 -- Seed resources mapped to services (for richer slot/booking UI)
 -- =========================
 INSERT INTO resource_items (
-  merchant_id, name, type, category, capacity, service_items_json, price, active
+  id, merchant_id, name, type, category, capacity, service_items_json, price, active
 )
-SELECT @merchant_id, 'Chair A', 'ROOM', 'Barber Chair', 1,
-       CONCAT('[', @svc_haircut, ',', @svc_haircut_wash, ',', @svc_beard, ']'),
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant_id, 'Chair A', 'ROOM', 'Barber Chair', 1,
+       IF(@uses_binary_uuid_ids = 1,
+          CONCAT('["', BIN_TO_UUID(@svc_haircut, 1), '","', BIN_TO_UUID(@svc_haircut_wash, 1), '","', BIN_TO_UUID(@svc_beard, 1), '"]'),
+          CONCAT('[', @svc_haircut, ',', @svc_haircut_wash, ',', @svc_beard, ']')),
        0.00, b'1'
 WHERE NOT EXISTS (
   SELECT 1 FROM resource_items WHERE merchant_id = @merchant_id AND name = 'Chair A'
 );
 
 INSERT INTO resource_items (
-  merchant_id, name, type, category, capacity, service_items_json, price, active
+  id, merchant_id, name, type, category, capacity, service_items_json, price, active
 )
-SELECT @merchant2_id, 'Fade Station 1', 'ROOM', 'Premium Station', 1,
-       CONCAT('[', @svc_skin_fade, ',', @svc_kids, ',', @svc_scalp, ']'),
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant2_id, 'Fade Station 1', 'ROOM', 'Premium Station', 1,
+       IF(@uses_binary_uuid_ids = 1,
+          CONCAT('["', BIN_TO_UUID(@svc_skin_fade, 1), '","', BIN_TO_UUID(@svc_kids, 1), '","', BIN_TO_UUID(@svc_scalp, 1), '"]'),
+          CONCAT('[', @svc_skin_fade, ',', @svc_kids, ',', @svc_scalp, ']')),
        0.00, b'1'
 WHERE NOT EXISTS (
   SELECT 1 FROM resource_items WHERE merchant_id = @merchant2_id AND name = 'Fade Station 1'
 );
 
 INSERT INTO resource_items (
-  merchant_id, name, type, category, capacity, service_items_json, price, active
+  id, merchant_id, name, type, category, capacity, service_items_json, price, active
 )
-SELECT @merchant3_id, 'Aroma Room', 'ROOM', 'Spa Suite', 1,
-       CONCAT('[', @svc_aroma, ',', @svc_facial, ',', @svc_shoulder, ']'),
+SELECT IF(@uses_binary_uuid_ids = 1, UUID_TO_BIN(UUID(), 1), NULL),
+       @merchant3_id, 'Aroma Room', 'ROOM', 'Spa Suite', 1,
+       IF(@uses_binary_uuid_ids = 1,
+          CONCAT('["', BIN_TO_UUID(@svc_aroma, 1), '","', BIN_TO_UUID(@svc_facial, 1), '","', BIN_TO_UUID(@svc_shoulder, 1), '"]'),
+          CONCAT('[', @svc_aroma, ',', @svc_facial, ',', @svc_shoulder, ']')),
        0.00, b'1'
 WHERE NOT EXISTS (
   SELECT 1 FROM resource_items WHERE merchant_id = @merchant3_id AND name = 'Aroma Room'
