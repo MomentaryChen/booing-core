@@ -1,0 +1,25 @@
+---
+description: Prefer Sonnet 4.6 for subagents with model verification
+alwaysApply: true
+---
+
+# Subagent Model Preference
+
+- When launching any subagent, explicitly set:
+  - `model: claude-4.6-sonnet-medium-thinking`
+- Do not rely on implicit/default model selection for subagents.
+
+# Verification Requirement
+
+- Immediately after launching a subagent, require it to report the exact model slug it is using.
+- If the returned model is not `claude-4.6-sonnet-medium-thinking`, relaunch the subagent with the explicit model and re-check.
+
+# Response Transparency
+
+- When relevant, include a short line in the response indicating:
+  - requested subagent model
+  - reported runtime model
+
+# Exception Handling
+
+- If the target model is unavailable, state that explicitly and list available allowed models instead of silently substituting.

@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/shared/components/ProtectedRoute'
 import { ClientLayout } from './layouts/ClientLayout'
-import { HomePage } from './pages/HomePage'
+import { BookingHomePage } from './pages/BookingHomePage'
 import { SearchPage } from './pages/SearchPage'
 import { BookingPage } from './pages/BookingPage'
 import { MyBookingsPage } from './pages/MyBookingsPage'
@@ -18,7 +18,7 @@ export function ClientApp() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<HomePage />} />
+          <Route index element={<BookingHomePage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="booking/:resourceId" element={<BookingPage />} />
           <Route path="my-bookings" element={<MyBookingsPage />} />

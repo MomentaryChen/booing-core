@@ -40,11 +40,35 @@ public class ClientProfile {
   @Column(name = "currency", length = 16)
   private String currency;
 
+  @Column(name = "location", length = 160)
+  private String location;
+
+  @Column(name = "bio", length = 1000)
+  private String bio;
+
+  @Column(name = "theme", length = 16)
+  private String theme;
+
   @Column(name = "email_notifications")
   private Boolean emailNotifications;
 
   @Column(name = "sms_notifications")
   private Boolean smsNotifications;
+
+  @Column(name = "push_notifications")
+  private Boolean pushNotifications;
+
+  @Column(name = "marketing_emails")
+  private Boolean marketingEmails;
+
+  @Column(name = "security_alerts")
+  private Boolean securityAlerts;
+
+  @Column(name = "product_updates")
+  private Boolean productUpdates;
+
+  @Column(name = "two_factor_enabled")
+  private Boolean twoFactorEnabled;
 
   @Column(name = "created_at", nullable = false)
   private LocalDateTime createdAt;
@@ -132,5 +156,69 @@ public class ClientProfile {
 
   public void setSmsNotifications(Boolean smsNotifications) {
     this.smsNotifications = smsNotifications;
+  }
+
+  public String getLocation() {
+    return location;
+  }
+
+  public void setLocation(String location) {
+    this.location = location;
+  }
+
+  public String getBio() {
+    return bio;
+  }
+
+  public void setBio(String bio) {
+    this.bio = bio;
+  }
+
+  public String getTheme() {
+    return theme;
+  }
+
+  public void setTheme(String theme) {
+    this.theme = theme;
+  }
+
+  public Boolean getPushNotifications() {
+    return pushNotifications;
+  }
+
+  public void setPushNotifications(Boolean pushNotifications) {
+    this.pushNotifications = pushNotifications;
+  }
+
+  public Boolean getMarketingEmails() {
+    return marketingEmails;
+  }
+
+  public void setMarketingEmails(Boolean marketingEmails) {
+    this.marketingEmails = marketingEmails;
+  }
+
+  public Boolean getSecurityAlerts() {
+    return securityAlerts;
+  }
+
+  public void setSecurityAlerts(Boolean securityAlerts) {
+    this.securityAlerts = securityAlerts;
+  }
+
+  public Boolean getProductUpdates() {
+    return productUpdates;
+  }
+
+  public void setProductUpdates(Boolean productUpdates) {
+    this.productUpdates = productUpdates;
+  }
+
+  public Boolean getTwoFactorEnabled() {
+    return twoFactorEnabled;
+  }
+
+  public void setTwoFactorEnabled(Boolean twoFactorEnabled) {
+    this.twoFactorEnabled = twoFactorEnabled;
   }
 }

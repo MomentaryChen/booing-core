@@ -8,3 +8,9 @@
 ```bash
 ./start -Rebuild
 ```
+
+若要直接使用 `docker build`，請加上資源限制：
+
+```bash
+docker build --memory=10GB --cpus=12 -t <image-name> <build-context>
+```

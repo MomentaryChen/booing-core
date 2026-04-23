@@ -298,10 +298,11 @@ public class ClientBookingController {
   public ClientCatalogResourcesPage listClientResources(
       @RequestParam(required = false) String q,
       @RequestParam(required = false) String category,
+      @RequestParam(required = false) String resourceType,
       @RequestParam(defaultValue = "relevance") String sort,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return clientBookingService.listClientResources(q, category, sort, page, size);
+    return clientBookingService.listClientResources(q, category, resourceType, sort, page, size);
   }
 
   @GetMapping("/resources/{resourceId}")
@@ -359,13 +360,30 @@ public class ClientBookingController {
     return ApiDtos.success(clientBookingService.rescheduleMyBooking(bookingId, request));
   }
 
+  @GetMapping("/bookings/{bookingId}/availability")
+  @PreAuthorize("hasAnyRole('CLIENT','CLIENT_USER')")
+  public ApiEnvelope<AvailabilityResponse> getMyBookingRescheduleAvailability(
+      @PathVariable UUID bookingId, @RequestParam String date) {
+    if (!date.matches("\\d{4}-\\d{2}-\\d{2}")) {
+      throw new ApiException("Invalid date format, expected YYYY-MM-DD", HttpStatus.BAD_REQUEST);
+    }
+    LocalDate parsedDate;
+    try {
+      parsedDate = LocalDate.parse(date);
+    } catch (DateTimeParseException ex) {
+      throw new ApiException("Invalid date format, expected YYYY-MM-DD", HttpStatus.BAD_REQUEST);
+    }
+    return ApiDtos.success(clientBookingService.getMyBookingRescheduleAvailability(bookingId, parsedDate));
+  }
+
   @GetMapping("/profile")
   public ClientProfileResponse clientProfile() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     if (auth == null
         || !auth.isAuthenticated()
         || "anonymousUser".equals(String.valueOf(auth.getPrincipal()))) {
-      return new ClientProfileResponse(false, null, null, null, null, null, null, null, null);
+      return new ClientProfileResponse(
+          false, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
     String role = auth.getAuthorities().stream()
         .map(GrantedAuthority::getAuthority)
@@ -375,7 +393,24 @@ public class ClientBookingController {
         .orElse(null);
     var platformUser = merchantAccessService.currentPlatformUserOrNull();
     if (platformUser == null) {
-      return new ClientProfileResponse(true, role, String.valueOf(auth.getPrincipal()), null, null, null, null, null, null);
+      return new ClientProfileResponse(
+          true,
+          role,
+          String.valueOf(auth.getPrincipal()),
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null);
     }
     var profile = clientProfileRepository.findByPlatformUserId(platformUser.getId()).orElse(null);
     String suggestedName =
@@ -388,11 +423,19 @@ public class ClientBookingController {
         role,
         suggestedName,
         suggestedContact,
+        profile == null ? null : profile.getLocation(),
+        profile == null ? null : profile.getBio(),
         profile == null ? null : profile.getLanguage(),
         profile == null ? null : profile.getTimezone(),
         profile == null ? null : profile.getCurrency(),
+        profile == null ? null : profile.getTheme(),
         profile == null ? null : profile.getEmailNotifications(),
-        profile == null ? null : profile.getSmsNotifications());
+        profile == null ? null : profile.getSmsNotifications(),
+        profile == null ? null : profile.getPushNotifications(),
+        profile == null ? null : profile.getMarketingEmails(),
+        profile == null ? null : profile.getSecurityAlerts(),
+        profile == null ? null : profile.getProductUpdates(),
+        profile == null ? null : profile.getTwoFactorEnabled());
   }
 
   @PutMapping("/profile")
@@ -411,24 +454,70 @@ public class ClientBookingController {
                   created.setPlatformUser(platformUser);
                   return created;
                 });
-    profile.setDisplayName(trimToNull(request.suggestedName()));
-    profile.setContactPhone(trimToNull(request.suggestedContact()));
-    profile.setLanguage(trimToNull(request.language()));
-    profile.setTimezone(trimToNull(request.timezone()));
-    profile.setCurrency(trimToNull(request.currency()));
-    profile.setEmailNotifications(request.emailNotifications());
-    profile.setSmsNotifications(request.smsNotifications());
+    if (request.suggestedName() != null) {
+      profile.setDisplayName(trimToNull(request.suggestedName()));
+    }
+    if (request.suggestedContact() != null) {
+      profile.setContactPhone(trimToNull(request.suggestedContact()));
+    }
+    if (request.location() != null) {
+      profile.setLocation(trimToNull(request.location()));
+    }
+    if (request.bio() != null) {
+      profile.setBio(trimToNull(request.bio()));
+    }
+    if (request.language() != null) {
+      profile.setLanguage(trimToNull(request.language()));
+    }
+    if (request.timezone() != null) {
+      profile.setTimezone(trimToNull(request.timezone()));
+    }
+    if (request.currency() != null) {
+      profile.setCurrency(trimToNull(request.currency()));
+    }
+    if (request.theme() != null) {
+      profile.setTheme(trimToNull(request.theme()));
+    }
+    if (request.emailNotifications() != null) {
+      profile.setEmailNotifications(request.emailNotifications());
+    }
+    if (request.smsNotifications() != null) {
+      profile.setSmsNotifications(request.smsNotifications());
+    }
+    if (request.pushNotifications() != null) {
+      profile.setPushNotifications(request.pushNotifications());
+    }
+    if (request.marketingEmails() != null) {
+      profile.setMarketingEmails(request.marketingEmails());
+    }
+    if (request.securityAlerts() != null) {
+      profile.setSecurityAlerts(request.securityAlerts());
+    }
+    if (request.productUpdates() != null) {
+      profile.setProductUpdates(request.productUpdates());
+    }
+    if (request.twoFactorEnabled() != null) {
+      profile.setTwoFactorEnabled(request.twoFactorEnabled());
+    }
     ClientProfile saved = clientProfileRepository.save(profile);
     return new ClientProfileResponse(
         true,
         platformUser.getRole().name(),
         saved.getDisplayName() == null ? platformUser.getUsername() : saved.getDisplayName(),
         saved.getContactPhone(),
+        saved.getLocation(),
+        saved.getBio(),
         saved.getLanguage(),
         saved.getTimezone(),
         saved.getCurrency(),
+        saved.getTheme(),
         saved.getEmailNotifications(),
-        saved.getSmsNotifications());
+        saved.getSmsNotifications(),
+        saved.getPushNotifications(),
+        saved.getMarketingEmails(),
+        saved.getSecurityAlerts(),
+        saved.getProductUpdates(),
+        saved.getTwoFactorEnabled());
   }
 
   @PatchMapping("/profile/password")

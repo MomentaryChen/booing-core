@@ -1,304 +1,625 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
+import { format, parseISO } from 'date-fns'
 import { Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { Calendar, Clock, Search } from 'lucide-react'
+import { cn } from '@/shared/lib/utils'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import {
   cancelClientBooking,
+  fetchBookingRescheduleAvailability,
   fetchClientBookings,
   isClientBookingApiError,
   rescheduleClientBooking,
   type ClientBookingListItemDto,
+  type ClientBookingRescheduleAvailabilitySlotDto,
   type ClientBookingTab,
 } from '@/shared/lib/clientBookingApi'
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react'
 
-const statusColors: Record<string, string> = {
-  confirmed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-}
-
-interface BookingCardModel {
+interface Booking {
   id: string
-  serviceName: string
-  provider: string
+  title: string
   date: string
   time: string
-  duration: number
-  status: string
+  location: string
+  host: string
+  status: 'upcoming' | 'completed' | 'cancelled'
   price: number
+  image?: string
 }
 
-function mapDto(dto: ClientBookingListItemDto): BookingCardModel {
+interface Tab {
+  id: string
+  label: string
+  count: number
+}
+
+const TAB_KEYS: ClientBookingTab[] = ['upcoming', 'past', 'cancelled']
+type UiBookingTab = 'all' | 'upcoming' | 'completed' | 'cancelled'
+
+function normalizeStatus(status: string): Booking['status'] {
+  const lower = status.toLowerCase()
+  if (lower === 'cancelled') return 'cancelled'
+  if (lower === 'completed') return 'completed'
+  return 'upcoming'
+}
+
+function mapDto(dto: ClientBookingListItemDto): Booking {
   return {
     id: String(dto.id),
-    serviceName: dto.serviceName,
-    provider: dto.providerName,
+    title: dto.serviceName,
     date: dto.date,
     time: dto.time,
-    duration: dto.durationMinutes,
-    status: dto.status.toLowerCase(),
+    location: 'N/A',
+    host: dto.providerName,
+    status: normalizeStatus(dto.status),
     price: typeof dto.price === 'number' ? dto.price : Number(dto.price),
   }
 }
 
-function EmptyState() {
-  const { t } = useTranslation(['client', 'common'])
+function StatusBadge({ status }: { status: Booking['status'] }) {
+  const variants = {
+    upcoming: { icon: Clock, label: 'Upcoming', className: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
+    completed: { icon: CheckCircle2, label: 'Completed', className: 'bg-green-500/10 text-green-500 border-green-500/20' },
+    cancelled: { icon: XCircle, label: 'Cancelled', className: 'bg-red-500/10 text-red-500 border-red-500/20' },
+  }
+
+  const { icon: Icon, label, className } = variants[status]
 
   return (
-    <div className="py-12 text-center">
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-        <Calendar className="h-8 w-8 text-muted-foreground" />
+    <Badge variant="outline" className={cn('gap-1', className)}>
+      <Icon className="h-3 w-3" />
+      {label}
+    </Badge>
+  )
+}
+
+function BookingCard({
+  booking,
+  isCancelling,
+  onCancel,
+  onReschedule,
+}: {
+  booking: Booking
+  isCancelling: boolean
+  onCancel: (bookingId: string) => void
+  onReschedule: (booking: Booking) => void
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-lg">
+        <div className="flex flex-col md:flex-row">
+          <div className="relative h-48 w-full bg-muted md:h-auto md:w-48">
+            {booking.image ? (
+              <img src={booking.image} alt={booking.title} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <MapPin className="h-12 w-12 text-muted-foreground" />
+              </div>
+            )}
+            <div className="absolute right-3 top-3">
+              <StatusBadge status={booking.status} />
+            </div>
+          </div>
+
+          <div className="flex flex-1 flex-col">
+            <CardHeader>
+              <CardTitle className="text-xl">{booking.title}</CardTitle>
+              <CardDescription className="flex items-center gap-1">
+                <MapPin className="h-4 w-4" />
+                {booking.location}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="flex-1">
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>{new Date(booking.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="h-4 w-4" />
+                  <span>{booking.time}</span>
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>Host: {booking.host}</span>
+                </div>
+                <div className="pt-2 text-lg font-semibold">${booking.price}</div>
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex-wrap gap-2">
+              {booking.status === 'upcoming' && (
+                <>
+                  <Button variant="default" size="sm">View Details</Button>
+                  <Button variant="outline" size="sm" onClick={() => onReschedule(booking)}>Modify</Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={isCancelling}
+                    onClick={() => onCancel(booking.id)}
+                  >
+                    {isCancelling ? 'Cancelling...' : 'Cancel'}
+                  </Button>
+                </>
+              )}
+              {booking.status === 'completed' && (
+                <>
+                  <Button variant="default" size="sm">View Details</Button>
+                  <Button variant="outline" size="sm">Leave Review</Button>
+                  <Button variant="outline" size="sm">Book Again</Button>
+                </>
+              )}
+              {booking.status === 'cancelled' && (
+                <>
+                  <Button variant="default" size="sm">View Details</Button>
+                  <Button variant="outline" size="sm">Book Again</Button>
+                </>
+              )}
+            </CardFooter>
+          </div>
+        </div>
+      </Card>
+    </motion.div>
+  )
+}
+
+function BookingCardSkeleton() {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-col md:flex-row">
+        <Skeleton className="h-48 w-full md:h-auto md:w-48" />
+        <div className="flex flex-1 flex-col">
+          <CardHeader>
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="mt-2 h-4 w-1/2" />
+          </CardHeader>
+          <CardContent className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardContent>
+          <CardFooter className="gap-2">
+            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-9 w-24" />
+          </CardFooter>
+        </div>
       </div>
-      <h3 className="mb-2 text-lg font-semibold">{t('myBookings.empty.title')}</h3>
-      <p className="mb-6 text-muted-foreground">{t('myBookings.empty.subtitle')}</p>
+    </Card>
+  )
+}
+
+function EmptyState({ status }: { status: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+      <div className="mb-4 rounded-full bg-muted p-6">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+      </div>
+      <h3 className="mb-2 text-xl font-semibold">No {status} bookings</h3>
+      <p className="mb-6 max-w-md text-muted-foreground">
+        {status === 'upcoming' && "You don't have any upcoming bookings. Start exploring and book your next adventure!"}
+        {status === 'completed' && "You haven't completed any bookings yet."}
+        {status === 'cancelled' && "You don't have any cancelled bookings."}
+      </p>
       <Link to="/search">
-        <Button className="gap-2">
-          <Search className="h-4 w-4" />
-          {t('myBookings.empty.cta')}
-        </Button>
+        <Button>Explore Listings</Button>
       </Link>
     </div>
   )
 }
 
+function ErrorState({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-4 py-16 text-center">
+      <div className="mb-4 rounded-full bg-destructive/10 p-6">
+        <XCircle className="h-12 w-12 text-destructive" />
+      </div>
+      <h3 className="mb-2 text-xl font-semibold">Something went wrong</h3>
+      <p className="mb-6 max-w-md text-muted-foreground">
+        We couldn&apos;t load your bookings. Please try again later.
+      </p>
+      <Button variant="outline" onClick={onRetry}>Try Again</Button>
+    </div>
+  )
+}
+
+function PaginationControls({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
+}) {
+  return (
+    <div className="mt-8 flex items-center justify-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Previous
+      </Button>
+
+      <div className="flex items-center gap-1">
+        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+          <Button
+            key={page}
+            variant={page === currentPage ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => onPageChange(page)}
+            className="w-9"
+          >
+            {page}
+          </Button>
+        ))}
+      </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+      >
+        Next
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
+
 export function MyBookingsPage() {
-  const { t } = useTranslation(['client', 'common'])
-  const [tab, setTab] = useState<ClientBookingTab>('upcoming')
-  const [lists, setLists] = useState<Record<ClientBookingTab, BookingCardModel[]>>({ upcoming: [], past: [], cancelled: [] })
+  const [activeTab, setActiveTab] = useState<UiBookingTab>('all')
+  const [lists, setLists] = useState<Record<ClientBookingTab, Booking[]>>({ upcoming: [], past: [], cancelled: [] })
   const [counts, setCounts] = useState<Record<ClientBookingTab, number>>({ upcoming: 0, past: 0, cancelled: 0 })
-  const [pages, setPages] = useState<Record<ClientBookingTab, number>>({ upcoming: 0, past: 0, cancelled: 0 })
   const [loadingByTab, setLoadingByTab] = useState<Record<ClientBookingTab, boolean>>({
     upcoming: true,
     past: true,
     cancelled: true,
   })
-  const [jumpPageByTab, setJumpPageByTab] = useState<Record<ClientBookingTab, string>>({
-    upcoming: '1',
-    past: '1',
-    cancelled: '1',
-  })
   const [error, setError] = useState<string | null>(null)
-  const [pageSize, setPageSize] = useState(10)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 4
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null)
+  const [cancelTargetBookingId, setCancelTargetBookingId] = useState<string | null>(null)
+  const [rescheduleTargetBooking, setRescheduleTargetBooking] = useState<Booking | null>(null)
+  const [rescheduleDate, setRescheduleDate] = useState('')
+  const [rescheduleSlots, setRescheduleSlots] = useState<ClientBookingRescheduleAvailabilitySlotDto[]>([])
+  const [rescheduleSlotsLoading, setRescheduleSlotsLoading] = useState(false)
+  const [rescheduleSlotsError, setRescheduleSlotsError] = useState('')
+  const [rescheduleStartAt, setRescheduleStartAt] = useState<string | null>(null)
 
   const loadTab = useCallback(async (targetTab: ClientBookingTab, targetPage: number) => {
     setLoadingByTab((prev) => ({ ...prev, [targetTab]: true }))
     try {
-      const response = await fetchClientBookings(targetTab, targetPage, pageSize)
+      const response = await fetchClientBookings(targetTab, targetPage, itemsPerPage)
       setLists((prev) => ({ ...prev, [targetTab]: response.items.map(mapDto) }))
       setCounts((prev) => ({ ...prev, [targetTab]: response.total }))
-      setPages((prev) => ({ ...prev, [targetTab]: response.page }))
-      setJumpPageByTab((prev) => ({ ...prev, [targetTab]: String(response.page + 1) }))
+      setError(null)
     } catch (e) {
-      if (isClientBookingApiError(e) && e.status === 401) {
-        setError(t('myBookings.errors.signInRequired'))
-      } else if (isClientBookingApiError(e) && e.status === 403) {
-        setError(t('myBookings.errors.forbidden'))
-      } else {
-        setError(t('myBookings.errors.loadFailed'))
-      }
+      setError(isClientBookingApiError(e) ? e.message : 'Failed to load bookings')
     } finally {
       setLoadingByTab((prev) => ({ ...prev, [targetTab]: false }))
     }
-  }, [pageSize, t])
+  }, [])
 
   const loadAllFirstPages = useCallback(async () => {
-    setError(null)
-    setPages({ upcoming: 0, past: 0, cancelled: 0 })
-    setJumpPageByTab({ upcoming: '1', past: '1', cancelled: '1' })
-    await Promise.all([
-      loadTab('upcoming', 0),
-      loadTab('past', 0),
-      loadTab('cancelled', 0),
-    ])
+    await Promise.all(TAB_KEYS.map((tab) => loadTab(tab, 0)))
   }, [loadTab])
 
   useEffect(() => {
     void loadAllFirstPages()
-  }, [loadAllFirstPages, pageSize])
+  }, [loadAllFirstPages])
 
-  const handleCancel = useCallback(
-    async (bookingId: string) => {
-      const confirmed = window.confirm(t('myBookings.actions.cancel'))
-      if (!confirmed) return
-      setError(null)
-      setCancellingBookingId(bookingId)
+  useEffect(() => {
+    if (!rescheduleTargetBooking || !rescheduleDate) {
+      setRescheduleSlots([])
+      setRescheduleSlotsError('')
+      setRescheduleStartAt(null)
+      return
+    }
+    let cancelled = false
+    const run = async () => {
+      setRescheduleSlotsLoading(true)
+      setRescheduleSlotsError('')
+      setRescheduleStartAt(null)
       try {
-        await cancelClientBooking(bookingId, 'client-request')
-        await loadAllFirstPages()
+        const response = await fetchBookingRescheduleAvailability(rescheduleTargetBooking.id, rescheduleDate)
+        if (cancelled) return
+        setRescheduleSlots(response.slots.filter((slot) => slot.available))
       } catch (e) {
-        if (isClientBookingApiError(e) && e.status === 409) {
-          setError(t('myBookings.errors.cancelConflict'))
-        } else {
-          setError(t('myBookings.errors.cancelFailed'))
-        }
+        if (cancelled) return
+        setRescheduleSlots([])
+        setRescheduleSlotsError(isClientBookingApiError(e) ? e.message : 'Failed to load available slots')
       } finally {
-        setCancellingBookingId(null)
+        if (!cancelled) setRescheduleSlotsLoading(false)
       }
-    },
-    [loadAllFirstPages, t],
-  )
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [rescheduleDate, rescheduleTargetBooking])
 
-  const handleReschedule = useCallback(
-    async (bookingId: string) => {
-      const next = window.prompt('New start time (ISO), e.g. 2026-04-20T10:00:00')
-      if (!next) return
+  const handleCancel = useCallback(async (bookingId: string) => {
+    setCancellingBookingId(bookingId)
+    try {
+      await cancelClientBooking(bookingId, 'client-request')
+      await loadAllFirstPages()
       setError(null)
-      try {
-        await rescheduleClientBooking(bookingId, next, 'client-reschedule')
-        await loadTab(tab, pages[tab])
-      } catch (e) {
-        setError(isClientBookingApiError(e) ? e.message : t('myBookings.errors.loadFailed'))
-      }
-    },
-    [loadTab, pages, tab, t],
+    } catch (e) {
+      setError(isClientBookingApiError(e) ? e.message : 'Failed to cancel booking')
+    } finally {
+      setCancellingBookingId(null)
+      setCancelTargetBookingId(null)
+    }
+  }, [loadAllFirstPages])
+
+  const handleReschedule = useCallback(async (bookingId: string) => {
+    if (!rescheduleStartAt) return
+    try {
+      await rescheduleClientBooking(bookingId, rescheduleStartAt, 'client-reschedule')
+      await loadAllFirstPages()
+      setRescheduleTargetBooking(null)
+      setRescheduleStartAt(null)
+      setRescheduleSlots([])
+      setRescheduleSlotsError('')
+      setError(null)
+    } catch (e) {
+      setError(isClientBookingApiError(e) ? e.message : 'Failed to reschedule booking')
+    }
+  }, [loadAllFirstPages, rescheduleStartAt])
+
+  const allBookings = useMemo(
+    () => [...lists.upcoming, ...lists.past, ...lists.cancelled],
+    [lists.cancelled, lists.past, lists.upcoming],
+  )
+  const completedBookings = useMemo(
+    () => lists.past.filter((booking) => booking.status === 'completed'),
+    [lists.past],
   )
 
-  const handleJumpPage = useCallback(
-    async (key: ClientBookingTab) => {
-      const totalPages = Math.max(1, Math.ceil(counts[key] / pageSize))
-      const parsed = Number(jumpPageByTab[key])
-      if (!Number.isInteger(parsed)) {
-        setJumpPageByTab((prev) => ({ ...prev, [key]: String(pages[key] + 1) }))
-        return
-      }
-      const clamped = Math.min(Math.max(parsed, 1), totalPages)
-      setJumpPageByTab((prev) => ({ ...prev, [key]: String(clamped) }))
-      await loadTab(key, clamped - 1)
-    },
-    [counts, jumpPageByTab, loadTab, pageSize, pages],
-  )
+  const tabs: Tab[] = [
+    { id: 'all', label: 'All Bookings', count: counts.upcoming + counts.past + counts.cancelled },
+    { id: 'upcoming', label: 'Upcoming', count: counts.upcoming },
+    { id: 'completed', label: 'Completed', count: counts.past },
+    { id: 'cancelled', label: 'Cancelled', count: counts.cancelled },
+  ]
+
+  const activeTabBookings = activeTab === 'all'
+    ? allBookings
+    : activeTab === 'upcoming'
+      ? lists.upcoming
+      : activeTab === 'completed'
+        ? completedBookings
+        : lists.cancelled
+
+  const isLoading = activeTab === 'all'
+    ? TAB_KEYS.some((tab) => loadingByTab[tab])
+    : loadingByTab[activeTab === 'completed' ? 'past' : (activeTab as ClientBookingTab)]
+
+  const hasError = !!error
+  const totalPages = activeTab === 'all'
+    ? Math.max(1, Math.ceil(activeTabBookings.length / itemsPerPage))
+    : Math.max(
+      1,
+      Math.ceil(
+        (activeTab === 'upcoming'
+          ? counts.upcoming
+          : activeTab === 'completed'
+            ? counts.past
+            : counts.cancelled) / itemsPerPage,
+      ),
+    )
+
+  const paginatedBookings = activeTab === 'all'
+    ? activeTabBookings.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+    : activeTabBookings
+
+  const handlePageChange = async (page: number) => {
+    const safePage = Math.min(Math.max(page, 1), totalPages)
+    setCurrentPage(safePage)
+    if (activeTab === 'all') return
+    const targetApiTab: ClientBookingTab = activeTab === 'completed' ? 'past' : (activeTab as ClientBookingTab)
+    await loadTab(targetApiTab, safePage - 1)
+  }
+
+  const handleTabChange = (tabId: UiBookingTab) => {
+    setActiveTab(tabId)
+    setCurrentPage(1)
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-8 text-3xl font-bold">{t('myBookings.title')}</h1>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
+        <div className="mb-8">
+          <h1 className="mb-2 text-4xl font-bold">My Bookings</h1>
+          <p className="text-muted-foreground">Manage and track all your reservations</p>
+        </div>
 
-      {error && (
-        <p className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </p>
-      )}
-
-      <Tabs value={tab} onValueChange={(v) => setTab(v as ClientBookingTab)} className="w-full">
-        <TabsList className="mb-6">
-          <TabsTrigger value="upcoming">
-            {t('myBookings.tabs.upcoming')} ({counts.upcoming})
-          </TabsTrigger>
-          <TabsTrigger value="past">
-            {t('myBookings.tabs.past')} ({counts.past})
-          </TabsTrigger>
-          <TabsTrigger value="cancelled">
-            {t('myBookings.tabs.cancelled')} ({counts.cancelled})
-          </TabsTrigger>
-        </TabsList>
-
-        {(['upcoming', 'past', 'cancelled'] as const).map((key) => (
-          <TabsContent key={key} value={key}>
-            {loadingByTab[key] ? (
-              <p className="text-center text-muted-foreground">{t('common:status.loading')}</p>
-            ) : counts[key] > 0 ? (
-              <div className="space-y-4">
-                {lists[key].length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">
-                    {t('myBookings.emptyPage')}
-                  </p>
-                ) : null}
-                {lists[key].map((booking) => (
-                  <Card key={booking.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <h3 className="font-semibold">{booking.serviceName}</h3>
-                          <p className="text-sm text-muted-foreground">{booking.provider}</p>
-                        </div>
-                        <Badge className={statusColors[booking.status] ?? statusColors.pending}>
-                          {t(`common:status.${booking.status}`, { defaultValue: booking.status })}
-                        </Badge>
-                      </div>
-                      <div className="mt-4 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {booking.date}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {booking.time} ({booking.duration} min)
-                        </span>
-                      </div>
-                      <div className="mt-4 flex items-center justify-between">
-                        <span className="font-semibold">${booking.price}</span>
-                        {key === 'upcoming' ? (
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => void handleReschedule(booking.id)}>
-                              {t('myBookings.actions.reschedule')}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-destructive"
-                              disabled={cancellingBookingId === booking.id}
-                              onClick={() => void handleCancel(booking.id)}
-                            >
-                              {t('myBookings.actions.cancel')}
-                            </Button>
-                          </div>
-                        ) : null}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <select
-                    className="h-8 rounded-md border bg-background px-2 text-sm"
-                    value={String(pageSize)}
-                    onChange={(e) => setPageSize(Number(e.target.value))}
-                  >
-                    <option value="10">10 / page</option>
-                    <option value="20">20 / page</option>
-                    <option value="50">50 / page</option>
-                  </select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pages[key] <= 0}
-                    onClick={() => void loadTab(key, Math.max(0, pages[key] - 1))}
-                  >
-                    {t('common:actions.previous', { defaultValue: 'Previous' })}
-                  </Button>
-                  <span className="text-sm text-muted-foreground">
-                    {pages[key] + 1} / {Math.max(1, Math.ceil(counts[key] / pageSize))}
-                  </span>
-                  <input
-                    className="h-8 w-14 rounded-md border bg-background px-2 text-sm"
-                    value={jumpPageByTab[key]}
-                    onChange={(e) =>
-                      setJumpPageByTab((prev) => ({ ...prev, [key]: e.target.value }))
-                    }
+        <div className="mb-8">
+          <div className="inline-flex flex-wrap gap-2 rounded-lg bg-muted/50 p-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id as UiBookingTab)}
+                className={cn(
+                  'relative rounded-md px-4 py-2 text-sm font-medium transition-colors',
+                  'hover:bg-background/80',
+                  activeTab === tab.id && 'bg-background shadow-sm',
+                )}
+              >
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="active-tab"
+                    className="absolute inset-0 rounded-md bg-background shadow-sm"
+                    transition={{ type: 'spring', duration: 0.5 }}
                   />
-                  <Button variant="outline" size="sm" onClick={() => void handleJumpPage(key)}>
-                    {t('common:actions.go', { defaultValue: 'Go' })}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={pages[key] + 1 >= Math.max(1, Math.ceil(counts[key] / pageSize))}
-                    onClick={() => void loadTab(key, pages[key] + 1)}
-                  >
-                    {t('common:actions.next', { defaultValue: 'Next' })}
-                  </Button>
-                </div>
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  {tab.label}
+                  <Badge variant="secondary" className="ml-1">
+                    {tab.count}
+                  </Badge>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {error && (
+          <p className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
+        <div>
+          {isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <BookingCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : hasError ? (
+            <ErrorState onRetry={() => void loadAllFirstPages()} />
+          ) : paginatedBookings.length === 0 ? (
+            <EmptyState status={activeTab === 'all' ? 'bookings' : activeTab} />
+          ) : (
+            <>
+              <div className="space-y-4">
+                {paginatedBookings.map((booking) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    isCancelling={cancellingBookingId === booking.id}
+                    onCancel={setCancelTargetBookingId}
+                    onReschedule={(targetBooking) => {
+                      setRescheduleTargetBooking(targetBooking)
+                      setRescheduleDate(targetBooking.date)
+                      setRescheduleStartAt(null)
+                      setRescheduleSlots([])
+                      setRescheduleSlotsError('')
+                    }}
+                  />
+                ))}
               </div>
+
+              {totalPages > 1 && (
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={(page) => void handlePageChange(page)}
+                />
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      <AlertDialog open={!!cancelTargetBookingId} onOpenChange={(open) => !open && setCancelTargetBookingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel booking</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure you want to cancel this booking?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Back</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => cancelTargetBookingId && void handleCancel(cancelTargetBookingId)}
+            >
+              Confirm cancel
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={!!rescheduleTargetBooking}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRescheduleTargetBooking(null)
+            setRescheduleStartAt(null)
+            setRescheduleSlots([])
+            setRescheduleSlotsError('')
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reschedule booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              {rescheduleTargetBooking ? `${rescheduleTargetBooking.title} · ${rescheduleTargetBooking.host}` : ''}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3">
+            <Input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} />
+            {rescheduleSlotsLoading ? (
+              <p className="text-sm text-muted-foreground">Loading slots...</p>
+            ) : rescheduleSlotsError ? (
+              <p className="text-sm text-destructive">{rescheduleSlotsError}</p>
+            ) : rescheduleDate && rescheduleSlots.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No available slots for selected date.</p>
             ) : (
-              <EmptyState />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {rescheduleSlots.map((slot) => {
+                  const label = format(parseISO(slot.startAt), 'HH:mm')
+                  const active = rescheduleStartAt === slot.startAt
+                  return (
+                    <Button
+                      key={slot.startAt}
+                      type="button"
+                      variant={active ? 'default' : 'outline'}
+                      onClick={() => setRescheduleStartAt(slot.startAt)}
+                    >
+                      {label}
+                    </Button>
+                  )
+                })}
+              </div>
             )}
-          </TabsContent>
-        ))}
-      </Tabs>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Back</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => rescheduleTargetBooking && void handleReschedule(rescheduleTargetBooking.id)}
+              disabled={!rescheduleStartAt}
+            >
+              Confirm reschedule
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

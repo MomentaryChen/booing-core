@@ -153,6 +153,18 @@ export interface ClientResourceAvailabilityResponseDto {
   slots: ClientResourceAvailabilitySlotDto[]
 }
 
+export interface ClientBookingRescheduleAvailabilitySlotDto {
+  startAt: string
+  endAt: string
+  available: boolean
+  status: string
+}
+
+export interface ClientBookingRescheduleAvailabilityResponseDto {
+  date: string
+  slots: ClientBookingRescheduleAvailabilitySlotDto[]
+}
+
 export async function fetchResourceAvailability(
   resourceId: string,
   dateYmd: string,
@@ -160,6 +172,16 @@ export async function fetchResourceAvailability(
   const q = new URLSearchParams({ date: dateYmd })
   return requestJson<ClientResourceAvailabilityResponseDto>(
     `/api/client/resources/${encodeURIComponent(resourceId)}/availability?${q.toString()}`,
+  )
+}
+
+export async function fetchBookingRescheduleAvailability(
+  bookingId: string,
+  dateYmd: string,
+): Promise<ClientBookingRescheduleAvailabilityResponseDto> {
+  const q = new URLSearchParams({ date: dateYmd })
+  return requestJson<ClientBookingRescheduleAvailabilityResponseDto>(
+    `/api/client/bookings/${encodeURIComponent(bookingId)}/availability?${q.toString()}`,
   )
 }
 

@@ -1,4 +1,8 @@
 target/
 
+# Local Maven cache used by Docker build when M2_HOST_REPO is not set to ~/.m2
+.docker/m2-fallback/*
+!.docker/m2-fallback/.gitkeep
+
 # Maven wrapper binary (optional, usually not required)
 .mvn/wrapper/maven-wrapper.jar

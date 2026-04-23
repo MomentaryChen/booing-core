@@ -401,20 +401,36 @@ public final class ApiDtos {
       String role,
       String suggestedName,
       String suggestedContact,
+      String location,
+      String bio,
       String language,
       String timezone,
       String currency,
+      String theme,
       Boolean emailNotifications,
-      Boolean smsNotifications) {}
+      Boolean smsNotifications,
+      Boolean pushNotifications,
+      Boolean marketingEmails,
+      Boolean securityAlerts,
+      Boolean productUpdates,
+      Boolean twoFactorEnabled) {}
 
   public record ClientProfileUpdateRequest(
       @Size(max = 120) String suggestedName,
       @Size(max = 120) String suggestedContact,
+      @Size(max = 160) String location,
+      @Size(max = 1000) String bio,
       @Size(max = 16) String language,
       @Size(max = 64) String timezone,
       @Size(max = 16) String currency,
+      @Size(max = 16) String theme,
       Boolean emailNotifications,
-      Boolean smsNotifications) {}
+      Boolean smsNotifications,
+      Boolean pushNotifications,
+      Boolean marketingEmails,
+      Boolean securityAlerts,
+      Boolean productUpdates,
+      Boolean twoFactorEnabled) {}
 
   public record ClientPasswordUpdateRequest(
       @NotBlank @Size(min = 8, max = 120) String currentPassword,
@@ -424,15 +440,25 @@ public final class ApiDtos {
       String language,
       String timezone,
       String currency,
+      String theme,
       Boolean emailNotifications,
-      Boolean smsNotifications) {}
+      Boolean smsNotifications,
+      Boolean pushNotifications,
+      Boolean marketingEmails,
+      Boolean securityAlerts,
+      Boolean productUpdates) {}
 
   public record ClientProfilePreferencesUpdateRequest(
       @Size(max = 16) String language,
       @Size(max = 64) String timezone,
       @Size(max = 16) String currency,
+      @Size(max = 16) String theme,
       Boolean emailNotifications,
-      Boolean smsNotifications) {}
+      Boolean smsNotifications,
+      Boolean pushNotifications,
+      Boolean marketingEmails,
+      Boolean securityAlerts,
+      Boolean productUpdates) {}
 
   public record ClientPasswordUpdateResponse(LocalDateTime updatedAt) {}
 
@@ -476,6 +502,7 @@ public final class ApiDtos {
       UUID id,
       String name,
       String category,
+      String resourceType,
       BigDecimal price,
       Integer durationMinutes,
       Double rating,

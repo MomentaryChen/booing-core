@@ -51,6 +51,7 @@ public class ClientBookingService {
   private final MerchantRepository merchantRepository;
   private final BookingRepository bookingRepository;
   private final MerchantAccessService merchantAccessService;
+  private final ClientAvailabilityService clientAvailabilityService;
   private final ObjectMapper objectMapper;
   private final Map<String, ClientBookingValidationStrategy> strategies;
   private final PlatformAuditService platformAuditService;
@@ -61,6 +62,7 @@ public class ClientBookingService {
       MerchantRepository merchantRepository,
       BookingRepository bookingRepository,
       MerchantAccessService merchantAccessService,
+      ClientAvailabilityService clientAvailabilityService,
       ObjectMapper objectMapper,
       List<ClientBookingValidationStrategy> strategies,
       PlatformAuditService platformAuditService) {
@@ -69,6 +71,7 @@ public class ClientBookingService {
     this.merchantRepository = merchantRepository;
     this.bookingRepository = bookingRepository;
     this.merchantAccessService = merchantAccessService;
+    this.clientAvailabilityService = clientAvailabilityService;
     this.objectMapper = objectMapper;
     this.strategies = toStrategyMap(strategies);
     this.platformAuditService = platformAuditService;
@@ -272,9 +275,24 @@ public class ClientBookingService {
   }
 
   @Transactional(readOnly = true)
+  public com.bookingcore.api.ApiDtos.AvailabilityResponse getMyBookingRescheduleAvailability(
+      UUID bookingId, java.time.LocalDate date) {
+    PlatformUser user = merchantAccessService.currentPlatformUserOrNull();
+    if (user == null) {
+      throw new ApiException("Unauthorized", HttpStatus.UNAUTHORIZED);
+    }
+    Booking booking =
+        bookingRepository
+            .findByIdAndPlatformUserId(bookingId, user.getId())
+            .orElseThrow(() -> new ApiException("Booking not found", HttpStatus.NOT_FOUND));
+    return clientAvailabilityService.getAvailability(
+        booking.getMerchant().getId(), booking.getServiceItem().getId(), null, date);
+  }
+
+  @Transactional(readOnly = true)
   public List<ClientCatalogResourceSummary> listFeaturedResources(int limit) {
     List<ClientCatalogResourceSummary> all =
-        listClientResources(null, null, "rating", 0, Integer.MAX_VALUE).items();
+        listClientResources(null, null, null, "rating", 0, Integer.MAX_VALUE).items();
     int safeLimit = Math.max(1, Math.min(limit, 20));
     return all.stream().limit(safeLimit).toList();
   }
@@ -283,12 +301,13 @@ public class ClientBookingService {
 
   @Transactional(readOnly = true)
   public ClientCatalogResourcesPage listClientResources(
-      String q, String category, String sort, int page, int size) {
+      String q, String category, String resourceType, String sort, int page, int size) {
     int safePage = Math.max(0, page);
     int safeSize = Math.min(Math.max(1, size), 100);
     String keyword = q == null ? "" : q.trim().toLowerCase(Locale.ROOT);
     String categoryFilter =
         category == null ? "" : category.trim().toLowerCase(Locale.ROOT);
+    String resourceTypeFilter = resourceType == null ? "" : resourceType.trim().toLowerCase(Locale.ROOT);
     List<ClientCatalogResourceSummary> flattened =
         merchantRepository.findByActiveTrueOrderByIdAsc().stream()
             .filter(this::clientCanAccessMerchant)
@@ -305,6 +324,11 @@ public class ClientBookingService {
                     categoryFilter.isBlank()
                         || "all".equals(categoryFilter)
                         || item.category().equalsIgnoreCase(categoryFilter))
+            .filter(
+                item ->
+                    resourceTypeFilter.isBlank()
+                        || "all".equals(resourceTypeFilter)
+                        || item.resourceType().equalsIgnoreCase(resourceTypeFilter))
             .sorted(comparatorForSort(sort))
             .toList();
     int from = Math.min(safePage * safeSize, flattened.size());
@@ -315,7 +339,7 @@ public class ClientBookingService {
   @Transactional(readOnly = true)
   public List<ClientCategorySummary> listClientCategories() {
     var grouped =
-        listClientResources(null, null, "relevance", 0, Integer.MAX_VALUE).items().stream()
+        listClientResources(null, null, null, "relevance", 0, Integer.MAX_VALUE).items().stream()
             .collect(
                 java.util.stream.Collectors.groupingBy(
                     item -> item.category() == null ? "general" : item.category().toLowerCase(Locale.ROOT),
@@ -468,11 +492,34 @@ public class ClientBookingService {
         resource.getId(),
         resource.getName(),
         resource.getCategory(),
+        normalizeCatalogResourceType(resource.getType()),
         resource.getPrice(),
         primary == null ? 60 : primary.getDurationMinutes(),
         4.5d,
         primary == null ? null : primary.getImageUrl(),
         merchant.getName());
+  }
+
+  private String normalizeCatalogResourceType(String rawType) {
+    if (rawType == null) {
+      return "service";
+    }
+    String normalized = rawType.trim().toLowerCase(Locale.ROOT);
+    if (normalized.isBlank()) {
+      return "service";
+    }
+    if (normalized.contains("space")
+        || normalized.contains("room")
+        || normalized.contains("court")
+        || normalized.contains("spot")) {
+      return "space";
+    }
+    if (normalized.contains("class")
+        || normalized.contains("course")
+        || normalized.contains("session")) {
+      return "class";
+    }
+    return "service";
   }
 
   private ServiceItem resolvePrimaryServiceFromResource(ResourceItem resource, UUID merchantId) {

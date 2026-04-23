@@ -27,6 +27,10 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      args:
+        # Host Maven repo for faster rebuilds (Docker Desktop: enable file sharing for this path).
+        # Windows example in infra/.env: M2_HOST_REPO=C:/Users/you/.m2/repository
+        M2_HOST_REPO: ${M2_HOST_REPO:-.docker/m2-fallback}
     container_name: booking-core-backend
     restart: unless-stopped
     environment:

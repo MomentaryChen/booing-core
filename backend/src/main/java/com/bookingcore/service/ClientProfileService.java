@@ -42,14 +42,19 @@ public class ClientProfileService {
     PlatformUser user = requireCurrentClientUser();
     ClientProfile profile = clientProfileRepository.findByPlatformUserId(user.getId()).orElse(null);
     if (profile == null) {
-      return new ClientProfilePreferencesResponse(null, null, null, null, null);
+      return new ClientProfilePreferencesResponse(null, null, null, null, null, null, null, null, null, null);
     }
     return new ClientProfilePreferencesResponse(
         profile.getLanguage(),
         profile.getTimezone(),
         profile.getCurrency(),
+        profile.getTheme(),
         profile.getEmailNotifications(),
-        profile.getSmsNotifications());
+        profile.getSmsNotifications(),
+        profile.getPushNotifications(),
+        profile.getMarketingEmails(),
+        profile.getSecurityAlerts(),
+        profile.getProductUpdates());
   }
 
   @Transactional
@@ -65,11 +70,36 @@ public class ClientProfileService {
                   created.setPlatformUser(user);
                   return created;
                 });
-    profile.setLanguage(trimToNull(request.language()));
-    profile.setTimezone(trimToNull(request.timezone()));
-    profile.setCurrency(trimToNull(request.currency()));
-    profile.setEmailNotifications(request.emailNotifications());
-    profile.setSmsNotifications(request.smsNotifications());
+    if (request.language() != null) {
+      profile.setLanguage(trimToNull(request.language()));
+    }
+    if (request.timezone() != null) {
+      profile.setTimezone(trimToNull(request.timezone()));
+    }
+    if (request.currency() != null) {
+      profile.setCurrency(trimToNull(request.currency()));
+    }
+    if (request.theme() != null) {
+      profile.setTheme(trimToNull(request.theme()));
+    }
+    if (request.emailNotifications() != null) {
+      profile.setEmailNotifications(request.emailNotifications());
+    }
+    if (request.smsNotifications() != null) {
+      profile.setSmsNotifications(request.smsNotifications());
+    }
+    if (request.pushNotifications() != null) {
+      profile.setPushNotifications(request.pushNotifications());
+    }
+    if (request.marketingEmails() != null) {
+      profile.setMarketingEmails(request.marketingEmails());
+    }
+    if (request.securityAlerts() != null) {
+      profile.setSecurityAlerts(request.securityAlerts());
+    }
+    if (request.productUpdates() != null) {
+      profile.setProductUpdates(request.productUpdates());
+    }
     ClientProfile saved = clientProfileRepository.save(profile);
     platformAuditService.recordForCurrentUser(
         "client.profile.preferences.update",
@@ -80,13 +110,20 @@ public class ClientProfileService {
             + ",timezone="
             + saved.getTimezone()
             + ",currency="
-            + saved.getCurrency());
+            + saved.getCurrency()
+            + ",theme="
+            + saved.getTheme());
     return new ClientProfilePreferencesResponse(
         saved.getLanguage(),
         saved.getTimezone(),
         saved.getCurrency(),
+        saved.getTheme(),
         saved.getEmailNotifications(),
-        saved.getSmsNotifications());
+        saved.getSmsNotifications(),
+        saved.getPushNotifications(),
+        saved.getMarketingEmails(),
+        saved.getSecurityAlerts(),
+        saved.getProductUpdates());
   }
 
   @Transactional

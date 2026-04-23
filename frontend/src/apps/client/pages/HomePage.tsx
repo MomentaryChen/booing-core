@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, ArrowRight, Scissors, Volleyball, GraduationCap, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { useAuth } from '@/shared/hooks/useAuth'
 import { enableMerchant, fetchAuthMe, isApiError } from '@/shared/lib/authContextApi'
 import { isCanonicalMerchantRole } from '@/shared/lib/roleCompat'
 import {
@@ -15,9 +16,34 @@ import {
   type ClientCategoryDto,
   type ClientCatalogResourceDto,
 } from '@/shared/lib/clientCatalogApi'
+import {
+  fetchHomepageConfig,
+  fetchHomepageSeo,
+  postHomepageTrackingEvents,
+  type HomepageConfigData,
+} from '@/shared/lib/homepagePublicApi'
+import { PageHeader } from '@/apps/client/components/PageHeader'
+import { AsyncStateBlock } from '@/apps/client/components/AsyncStateBlock'
+
+const CAMPAIGN = 'homepage_client'
+const SECTION_IDS = ['nav', 'hero', 'features', 'process', 'use_cases', 'faq', 'cta', 'footer'] as const
+type HomepageSectionId = (typeof SECTION_IDS)[number]
+
+const CLIENT_SECTION_MAPPING: Record<
+  'hero' | 'discovery' | 'categories' | 'featured' | 'become_merchant',
+  HomepageSectionId[]
+> = {
+  hero: ['hero'],
+  discovery: ['features'],
+  categories: ['use_cases'],
+  featured: ['process'],
+  become_merchant: ['cta'],
+}
 
 export function HomePage() {
-  const { t } = useTranslation(['client', 'common'])
+  const { t, i18n } = useTranslation(['client', 'common'])
+  const { user } = useAuth()
+  const locale = i18n.language === 'zh-TW' ? 'zh-TW' : 'en-US'
   const [loadingState, setLoadingState] = useState<'loading' | 'ready' | 'error' | 'forbidden'>('loading')
   const [merchantEnabled, setMerchantEnabled] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -27,6 +53,9 @@ export function HomePage() {
   const [featuredResources, setFeaturedResources] = useState<ClientCatalogResourceDto[]>([])
   const [categories, setCategories] = useState<ClientCategoryDto[]>([])
   const [catalogError, setCatalogError] = useState('')
+  const [homepageConfig, setHomepageConfig] = useState<HomepageConfigData | null>(null)
+  const tenantId = user?.tenantId ?? 'default'
+  const viewedSections = useRef(new Set<string>())
 
   useEffect(() => {
     let mounted = true
@@ -57,13 +86,27 @@ export function HomePage() {
 
   useEffect(() => {
     let mounted = true
-    const loadMerchants = async () => {
+    const loadHomepage = async () => {
       setCatalogError('')
       try {
-        const [featured, categoryList] = await Promise.all([fetchFeaturedResources(6), fetchClientCategories()])
+        const [featured, categoryList, config, seo] = await Promise.all([
+          fetchFeaturedResources(6),
+          fetchClientCategories(),
+          fetchHomepageConfig({ tenantId, locale, pageVariant: 'default' }),
+          fetchHomepageSeo({ tenantId, locale, variant: 'default' }),
+        ])
         if (!mounted) return
         setFeaturedResources(featured)
         setCategories(categoryList)
+        setHomepageConfig(config)
+        document.title = seo.title
+        let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null
+        if (!meta) {
+          meta = document.createElement('meta')
+          meta.name = 'description'
+          document.head.appendChild(meta)
+        }
+        meta.content = seo.description
       } catch (err) {
         if (!mounted) return
         setCatalogError(
@@ -71,11 +114,11 @@ export function HomePage() {
         )
       }
     }
-    void loadMerchants()
+    void loadHomepage()
     return () => {
       mounted = false
     }
-  }, [t])
+  }, [locale, t, tenantId])
 
   const canSubmit = useMemo(
     () => merchantName.trim().length > 0 && merchantSlug.trim().length > 0 && !creating,
@@ -100,49 +143,140 @@ export function HomePage() {
     }
   }
 
+  const sectionVisible = useCallback(
+    (ids: HomepageSectionId[]): boolean => {
+      if (!homepageConfig) return true
+      const indexed = new Set(homepageConfig.sections.map((section) => section.id))
+      const hasAnyMappedSection = ids.some((id) => indexed.has(id))
+      if (!hasAnyMappedSection) return true
+      return homepageConfig.sections.some(
+        (section) => ids.includes(section.id as HomepageSectionId) && section.enabled,
+      )
+    },
+    [homepageConfig],
+  )
+
+  const trackEvent = useCallback(
+    async (eventType: 'cta_click' | 'section_view', sectionId: string, metadata?: Record<string, unknown>) => {
+      try {
+        await postHomepageTrackingEvents([
+          {
+            eventType,
+            tenantId,
+            locale,
+            sectionId,
+            campaign: CAMPAIGN,
+            pageVariant: 'default',
+            metadata,
+          },
+        ])
+      } catch {
+        // Tracking should never block user flow.
+      }
+    },
+    [locale, tenantId],
+  )
+
+  const trackCta = useCallback(
+    (sectionId: string, ctaId: string, metadata?: Record<string, unknown>) =>
+      trackEvent('cta_click', sectionId, { ctaId, surface: 'client_home', ...(metadata ?? {}) }),
+    [trackEvent],
+  )
+
+  useEffect(() => {
+    viewedSections.current.clear()
+  }, [tenantId, locale])
+
+  useEffect(() => {
+    const nodes = document.querySelectorAll<HTMLElement>('[data-client-home-section]')
+    if (!nodes.length) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue
+          const sectionId = (entry.target as HTMLElement).dataset.clientHomeSection
+          if (!sectionId || viewedSections.current.has(sectionId)) continue
+          viewedSections.current.add(sectionId)
+          void trackEvent('section_view', sectionId)
+        }
+      },
+      { threshold: 0.25 },
+    )
+    nodes.forEach((node) => observer.observe(node))
+    return () => observer.disconnect()
+  }, [trackEvent, homepageConfig, featuredResources.length, categories.length, loadingState])
+
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="mx-auto w-full max-w-7xl space-y-10 px-4 py-6 md:py-8">
+      <PageHeader title={t('home.hero.title')} subtitle={t('home.hero.subtitle')} />
       {/* Hero Section */}
-      <section className="mb-12 text-center">
-        <h1 className="text-4xl font-bold tracking-tight mb-4 text-balance">
-          {t('home.hero.title')}
-        </h1>
-        <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-          {t('home.hero.subtitle')}
-        </p>
+      {sectionVisible(CLIENT_SECTION_MAPPING.hero) ? (
+        <section className="text-center" data-client-home-section="hero">
         <Link to="/search">
-          <Button size="lg" className="gap-2">
+          <Button
+            size="lg"
+            className="gap-2"
+            onClick={() => {
+              void trackCta('hero', 'hero_search')
+            }}
+          >
             <Search className="h-5 w-5" />
             {t('home.hero.cta')}
           </Button>
         </Link>
       </section>
+      ) : null}
 
-      <section className="mb-12">
+      {sectionVisible(CLIENT_SECTION_MAPPING.discovery) ? (
+        <section data-client-home-section="discovery">
         <h2 className="mb-4 text-2xl font-semibold">{t('home.discovery.title')}</h2>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Link to="/search?resourceType=service" className="rounded-lg border p-4 hover:border-primary/50">
+          <Link
+            to="/search?resourceType=service"
+            className="rounded-lg border p-4 hover:border-primary/50"
+            onClick={() => {
+              void trackCta('discovery', 'discovery_service', { resourceType: 'service' })
+            }}
+          >
             <div className="mb-2 inline-flex rounded-md bg-muted p-2">
               <Scissors className="h-4 w-4" />
             </div>
             <p className="font-medium">{t('home.discovery.types.service.title')}</p>
             <p className="text-sm text-muted-foreground">{t('home.discovery.types.service.subtitle')}</p>
           </Link>
-          <Link to="/search?resourceType=space" className="rounded-lg border p-4 hover:border-primary/50">
+          <Link
+            to="/search?resourceType=space"
+            className="rounded-lg border p-4 hover:border-primary/50"
+            onClick={() => {
+              void trackCta('discovery', 'discovery_space', { resourceType: 'space' })
+            }}
+          >
             <div className="mb-2 inline-flex rounded-md bg-muted p-2">
               <Volleyball className="h-4 w-4" />
             </div>
             <p className="font-medium">{t('home.discovery.types.space.title')}</p>
             <p className="text-sm text-muted-foreground">{t('home.discovery.types.space.subtitle')}</p>
           </Link>
-          <Link to="/search?resourceType=class" className="rounded-lg border p-4 hover:border-primary/50">
+          <Link
+            to="/search?resourceType=class"
+            className="rounded-lg border p-4 hover:border-primary/50"
+            onClick={() => {
+              void trackCta('discovery', 'discovery_class', { resourceType: 'class' })
+            }}
+          >
             <div className="mb-2 inline-flex rounded-md bg-muted p-2">
               <GraduationCap className="h-4 w-4" />
             </div>
             <p className="font-medium">{t('home.discovery.types.class.title')}</p>
             <p className="text-sm text-muted-foreground">{t('home.discovery.types.class.subtitle')}</p>
           </Link>
-          <Link to="/search?availability=today" className="rounded-lg border p-4 hover:border-primary/50">
+          <Link
+            to="/search?availability=today"
+            className="rounded-lg border p-4 hover:border-primary/50"
+            onClick={() => {
+              void trackCta('discovery', 'discovery_nearby', { availability: 'today' })
+            }}
+          >
             <div className="mb-2 inline-flex rounded-md bg-muted p-2">
               <MapPin className="h-4 w-4" />
             </div>
@@ -151,13 +285,21 @@ export function HomePage() {
           </Link>
         </div>
       </section>
+      ) : null}
 
       {/* Categories */}
-      <section className="mb-12">
+      {sectionVisible(CLIENT_SECTION_MAPPING.categories) ? (
+        <section data-client-home-section="categories">
         <h2 className="text-2xl font-semibold mb-6">{t('home.categories.title')}</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {categories.map((category) => (
-            <Link key={category.key} to={`/search?category=${category.key}`}>
+            <Link
+              key={category.key}
+              to={`/search?category=${category.key}`}
+              onClick={() => {
+                void trackCta('categories', 'category_select', { categoryKey: category.key })
+              }}
+            >
               <Card className="hover:border-primary/50 transition-colors cursor-pointer">
                 <CardContent className="p-4 text-center">
                   <div className="font-medium">{t(`home.dynamic.categories.${category.key}`)}</div>
@@ -170,12 +312,19 @@ export function HomePage() {
           ))}
         </div>
       </section>
+      ) : null}
 
       {/* Featured Services */}
-      <section>
+      {sectionVisible(CLIENT_SECTION_MAPPING.featured) ? (
+        <section className="space-y-4" data-client-home-section="featured">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-semibold">{t('home.featured.title')}</h2>
-          <Link to="/search">
+          <Link
+            to="/search"
+            onClick={() => {
+              void trackCta('featured', 'featured_view_all')
+            }}
+          >
             <Button variant="ghost" className="gap-2">
               {t('home.featured.viewAll')}
               <ArrowRight className="h-4 w-4" />
@@ -184,7 +333,16 @@ export function HomePage() {
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {featuredResources.map((resource) => (
-            <Link key={resource.id} to={`/booking/${resource.id}`}>
+            <Link
+              key={resource.id}
+              to={`/booking/${resource.id}`}
+              onClick={() => {
+                void trackCta('featured', 'featured_open_resource', {
+                  resourceId: resource.id,
+                  category: resource.category,
+                })
+              }}
+            >
               <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
                 <CardHeader className="p-0">
                   <div className="aspect-video bg-muted rounded-t-lg flex items-center justify-center">
@@ -204,17 +362,25 @@ export function HomePage() {
             </Link>
           ))}
         </div>
-        {catalogError ? <p className="mt-4 text-sm text-destructive">{catalogError}</p> : null}
+        {catalogError ? (
+          <AsyncStateBlock
+            type="error"
+            title={t('common:errors.generic')}
+            description={catalogError}
+          />
+        ) : null}
       </section>
+      ) : null}
 
-      <section className="mt-12">
+      {sectionVisible(CLIENT_SECTION_MAPPING.become_merchant) ? (
+        <section data-client-home-section="become_merchant">
         <Card>
           <CardHeader>
             <CardTitle>{t('home.becomeMerchant.title')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {loadingState === 'loading' ? (
-              <p className="text-sm text-muted-foreground">{t('home.becomeMerchant.loading')}</p>
+              <AsyncStateBlock type="loading" description={t('home.becomeMerchant.loading')} />
             ) : null}
             {loadingState === 'error' ? (
               <p className="text-sm text-destructive">{t('home.becomeMerchant.error')}</p>
@@ -226,7 +392,13 @@ export function HomePage() {
               <div className="flex items-center justify-between gap-4">
                 <p className="text-sm text-muted-foreground">{t('home.becomeMerchant.success')}</p>
                 <Link to="/merchant">
-                  <Button>{t('home.becomeMerchant.goToMerchant')}</Button>
+                  <Button
+                    onClick={() => {
+                      void trackCta('become_merchant', 'become_merchant_go_portal')
+                    }}
+                  >
+                    {t('home.becomeMerchant.goToMerchant')}
+                  </Button>
                 </Link>
               </div>
             ) : null}
@@ -244,7 +416,13 @@ export function HomePage() {
                   placeholder={t('home.becomeMerchant.slugPlaceholder')}
                   disabled={creating}
                 />
-                <Button onClick={onEnableMerchant} disabled={!canSubmit}>
+                <Button
+                  onClick={() => {
+                    void trackCta('become_merchant', 'become_merchant_submit')
+                    void onEnableMerchant()
+                  }}
+                  disabled={!canSubmit}
+                >
                   {creating ? t('home.becomeMerchant.submitting') : t('home.becomeMerchant.cta')}
                 </Button>
                 {createError ? <p className="text-sm text-destructive md:col-span-3">{createError}</p> : null}
@@ -253,6 +431,7 @@ export function HomePage() {
           </CardContent>
         </Card>
       </section>
+      ) : null}
     </div>
   )
 }
